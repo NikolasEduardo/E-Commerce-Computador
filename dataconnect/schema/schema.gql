@@ -1,0 +1,202 @@
+type Usuario @table {
+  authId: String! @unique # ID do provedor de autenticação (ex: Auth0, Firebase)
+  codigoUser: String! @unique # Ex: "USER-001", "USER-002"
+  nome: String!
+  genero: String!
+  dataNascimento: Date!
+  cpf: String! @unique
+  email: String! @unique
+  ranking: Int!
+  status: StatusUsuario!
+}
+
+type StatusUsuario @table {
+  nome: String! # Ex: "ATIVO", "INATIVO", "ADMIN"
+}
+
+type Endereco @table {
+  usuario: Usuario!
+  tipo: String!
+  tipoResidencia: TipoResidencia!
+  tipoLogradouro: TipoLogradouro!
+  logradouro: String!
+  numero: String!
+  bairro: String!
+  cep: String!
+  cidade: String!
+  estado: String!
+  pais: String!
+  observacoes: String
+}
+
+type TipoResidencia @table {
+  nome: String!
+}
+
+type TipoLogradouro @table {
+  nome: String!
+  sigla: String!
+}
+
+type Produto @table {
+  nome: String!
+  marca: Marca!
+  modelo: String!
+  descricaoTecnica: String!
+  especificacoesTecnicas: String!
+  garantia: String!
+  codigoBarras: String! @unique
+  codigoProduto: String! @unique # Ex: "PROD-001", "PROD-002"
+  grupoPrecificacao: GrupoPrecificacao!
+  status: String!
+  motivoInativacao: String
+  categoriaInativacao: String
+  justificativaAtivacao: String
+  categoriaAtivacao: String
+  estoqueFisico: Int!
+  estoqueReservado: Int!
+  quantidadeVendida: Int! # Valor deve ser reiniciado quando o estoqueFisico for zerado
+}
+
+type ImagemProduto @table {
+  produto: Produto!
+  url: String!
+  capa: Boolean! # Indica se a imagem é a capa do produto
+}
+
+type Marca @table {
+  nome: String! @unique # Ex: "DELL", "NVIDIA", "LENOVO", "INTEL", "AMD"
+}
+
+type Categoria @table {
+  nome: String! @unique
+  vendaMinimaInativacao: Float
+}
+
+type ProdutoCategoria @table(key: ["produto", "categoria"]) {
+  produto: Produto!
+  categoria: Categoria!
+}
+
+type Pedido @table {
+  usuario: Usuario!
+  enderecoEntrega: Endereco!
+  valorFrete: Float!
+  status: StatusPedido!
+  valorTotal: Float!
+  dataCriacao: Timestamp!
+  dataExpiracaoCarrinho: Timestamp
+}
+
+type Pagamento @table {
+  pedido: Pedido!
+  valorTotalPago: Float!
+  cupomPromocional: Cupom
+  dataPagamento: Timestamp!
+}
+
+type PagamentoCartao @table(key: ["pagamento", "cartaoCredito"]) {
+  pagamento: Pagamento!
+  cartaoCredito: CartaoCredito!
+  valorParcela: Float!
+}
+
+type PagamentoCupomTroca @table(key: ["pagamento", "cupomTroca"]) {
+  pagamento: Pagamento!
+  cupomTroca: Cupom!
+}
+
+type StatusPedido @table {
+  nome: String! @unique # Ex: "CARRINHO", "EM PROCESSAMENTO", "APROVADA", "REPROVADA", "EM TRANSPORTE", "ENTREGUE", "EM TROCA", "TROCADO"
+}
+
+type ItemPedido @table(key: ["pedido", "produto"]) {
+  pedido: Pedido!
+  produto: Produto!
+  quantidade: Int!
+  status: StatusItemPedido
+}
+
+type StatusItemPedido @table {
+  nome: String! @unique # Ex: "NO CARRINHO", "FORA DO CARRINHO", "SEM ESTOQUE", "INATIVO"
+}
+
+type Cupom @table {
+  codigo: String! @unique # Ex: "CUPOM-S8X2W3", "CUPOM-YS8XZA"
+  tipo: TipoCupom!
+  valor: Float!
+  validade: Timestamp!
+  status: StatusCupom!
+}
+
+type TipoCupom @table {
+  nome: String! @unique # Ex: "DESCONTO", "FRETE GRÁTIS", "SOBRA", "TROCA"
+}
+
+type StatusCupom @table {
+  nome: String! @unique # Ex: "ATIVO", "USADO", "EXPIRADO"
+}
+
+type CartaoCredito @table {
+  usuario: Usuario!
+  bandeira: BandeiraCartao!
+  numero: String!
+  nomeImpresso: String!
+  codigoSeguranca: String!
+  dataValidade: Date!
+  preferencial: Boolean!
+}
+
+type EntradaEstoque @table {
+  produto: Produto!
+  quantidade: Int!
+  valorCusto: Float!
+  fornecedor: Fornecedor!
+  dataEntrada: Date!
+}
+
+type Fornecedor @table {
+  nome: String!
+  emailContato: String
+  telefoneContato: String
+}
+
+type Troca @table {
+  pedido: Pedido!
+  produto: Produto!
+  motivo: String!
+  descricaoUsuario: String!
+  classificacaoTecnica: String
+  cupomGerado: Cupom
+  data: Timestamp!
+  status: String!
+}
+
+type LogAuditoria @table {
+  dataHora: Timestamp!
+  usuarioResponsavel: Usuario
+  operacao: String!
+  tipoEntidade: String!
+  idEntidade: UUID!
+  mudancas: String
+}
+
+type BandeiraCartao @table {
+  nome: String! @unique # Ex: "VISA", "MASTERCARD", "AMERICAN EXPRESS", "ELO", "HIPERCARD"
+}
+
+type GrupoPrecificacao @table {
+  nome: String!
+  margemLucro: Float!
+}
+
+type Telefone @table {
+  usuario: Usuario!
+  tipo: TipoTelefone!
+  ddd: String!
+  numero: String!
+}
+
+type TipoTelefone @table {
+  nome: String! @unique # Ex: "CELULAR", "RESIDENCIAL", "COMERCIAL"
+}

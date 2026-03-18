@@ -1,0 +1,8 @@
+query UsuarioPorAuthId($authId: String!) @auth(level: USER) {
+  usuarios(where: { authId: { eq: $authId } }, limit: 1) {
+    authId
+    status {
+      nome
+    }
+  }
+}
