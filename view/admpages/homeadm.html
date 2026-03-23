@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin</title>
+  <link rel="stylesheet" href="../../styles/admin.css">
+</head>
+<body>
+  <div class="admin-shell">
+    <header class="admin-header">
+      <div class="admin-logo">LOGO</div>
+      <button id="btn-logout" type="button">DESCONECTAR</button>
+    </header>
+
+    <div class="admin-body">
+      <aside class="admin-nav">
+        <button class="nav-item">PRODUTOS</button>
+        <button class="nav-item is-active">CLIENTES</button>
+        <button class="nav-item">PEDIDOS</button>
+        <button class="nav-item">ESTOQUE</button>
+        <button class="nav-item">GRAFICO</button>
+      </aside>
+
+      <main class="admin-content">
+        <section class="panel">
+          <div class="panel-header">
+            <div class="tab">PESQUISA</div>
+            <div class="tab">FILTRAR POR</div>
+            <div class="tab">CLASSIFICAR POR</div>
+          </div>
+
+          <div class="panel-controls">
+            <div class="search-box">
+              <input type="text" id="searchInput" placeholder="BUSCAR POR NOME, CPF OU EMAIL">
+            </div>
+
+            <div class="filters">
+              <div class="filter-group">
+                <span class="filter-title">STATUS</span>
+                <label><input type="checkbox" value="ATIVO" class="filter-status"> ATIVO</label>
+                <label><input type="checkbox" value="INATIVO" class="filter-status"> INATIVO</label>
+              </div>
+              <div class="filter-group">
+                <span class="filter-title">GENERO</span>
+                <label><input type="checkbox" value="MASCULINO" class="filter-genero"> MASCULINO</label>
+                <label><input type="checkbox" value="FEMININO" class="filter-genero"> FEMININO</label>
+                <label><input type="checkbox" value="OUTRO" class="filter-genero"> OUTRO</label>
+              </div>
+            </div>
+
+            <div class="sorts">
+              <button class="sort-button" data-field="nome">
+                NOME <span class="sort-icon"></span>
+              </button>
+              <button class="sort-button" data-field="ranking">
+                RANKING <span class="sort-icon"></span>
+              </button>
+              <button class="sort-button" data-field="dataNascimento">
+                DATA NASCIMENTO <span class="sort-icon"></span>
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <section id="clientesList" class="clientes-list"></section>
+      </main>
+    </div>
+  </div>
+
+  <script type="module" src="../scripts/admin.js"></script>
+</body>
+</html>

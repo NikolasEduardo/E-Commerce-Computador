@@ -1,0 +1,109 @@
+body {
+  margin: 0;
+  font-family: Arial;
+}
+
+.container {
+  display: flex;
+  min-height: 100vh;
+}
+
+.left {
+  width: 65%;
+  background: #a6a6a6;
+}
+
+.right {
+  width: 35%;
+  background: #e6e6e6;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.cadastro-box {
+  width: 75%;
+}
+
+.logo {
+  background: #b3b3b3;
+  padding: 32px;
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.form-step {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.form-step.hidden {
+  display: none;
+}
+
+.section-title {
+  background: #b3b3b3;
+  padding: 10px;
+  text-align: left;
+}
+
+input,
+select {
+  width: 100%;
+  padding: 12px;
+  border: none;
+  background: #bfbfbf;
+  box-sizing: border-box;
+}
+
+.field-row {
+  display: flex;
+  gap: 10px;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+button {
+  padding: 10px 20px;
+  background: #a6a6a6;
+  border: none;
+  cursor: pointer;
+}
+
+.message {
+  min-height: 18px;
+  margin-bottom: 10px;
+  color: #8a1f1f;
+  font-size: 0.9rem;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.message.is-visible {
+  opacity: 1;
+}
+
+@media (max-width: 900px) {
+  .container {
+    flex-direction: column;
+  }
+
+  .left,
+  .right {
+    width: 100%;
+  }
+
+  .right {
+    padding: 30px 0;
+  }
+
+  .cadastro-box {
+    width: 85%;
+  }
+}

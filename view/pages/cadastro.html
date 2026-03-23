@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cadastro</title>
+  <link rel="stylesheet" href="../../styles/cadastro.css">
+</head>
+<body>
+  <div class="container">
+    <div class="left"></div>
+    <div class="right">
+      <div class="cadastro-box">
+        <div class="logo">LOGO</div>
+
+        <div id="cadastro-message" class="message" role="alert"></div>
+
+        <div id="step-1" class="form-step">
+          <input type="text" id="nome" placeholder="NOME">
+          <input type="text" id="cpf" inputmode="numeric" placeholder="CPF (000.000.000-00)">
+          <input type="date" id="dataNascimento" placeholder="DATA DE NASCIMENTO">
+
+          <select id="genero">
+            <option value="MASCULINO">MASCULINO</option>
+            <option value="FEMININO">FEMININO</option>
+            <option value="OUTRO">OUTRO</option>
+          </select>
+
+          <div class="field-row">
+            <select id="telefoneTipo">
+              <option value="">TIPO TELEFONE</option>
+            </select>
+            <input type="text" id="telefoneDdd" inputmode="numeric" placeholder="DDD">
+          </div>
+
+          <input type="text" id="telefoneNumero" inputmode="numeric" placeholder="TELEFONE">
+          <input type="email" id="email" placeholder="EMAIL">
+          <input type="password" id="senha" placeholder="SENHA">
+          <input type="password" id="senhaConfirmar" placeholder="CONFIRMAR SENHA">
+
+          <div class="actions">
+            <a href="../index.html">JA TEM CONTA?</a>
+            <button id="btn-next" type="button">PROXIMO</button>
+          </div>
+        </div>
+
+        <div id="step-2" class="form-step hidden">
+          <div class="section-title">ENDERECO</div>
+
+          <div class="field-row">
+            <input type="text" id="cep" inputmode="numeric" placeholder="CEP">
+            <input type="text" id="estado" placeholder="ESTADO">
+          </div>
+
+          <input type="text" id="bairro" placeholder="BAIRRO">
+
+          <div class="field-row">
+            <select id="tipoLogradouro">
+              <option value="">TIPO LOGRADOURO</option>
+            </select>
+            <select id="tipoResidencia">
+              <option value="">TIPO RESIDENCIA</option>
+            </select>
+          </div>
+
+          <input type="text" id="logradouro" placeholder="RUA">
+          <div class="field-row">
+            <input type="text" id="numero" inputmode="numeric" placeholder="NUMERO">
+            <input type="text" id="pais" placeholder="PAIS" value="Brasil">
+          </div>
+          <input type="text" id="observacoes" placeholder="COMPLEMENTO">
+          <input type="text" id="cidade" placeholder="CIDADE">
+
+          <div class="actions">
+            <button id="btn-back" type="button">VOLTAR</button>
+            <button id="btn-submit" type="button">CADASTRAR</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="../scripts/cadastro.js"></script>
+</body>
+</html>
