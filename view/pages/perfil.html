@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Perfil</title>
+  <link rel="stylesheet" href="../../styles/perfil.css">
+</head>
+<body>
+  <div class="perfil-shell">
+    <header class="perfil-header">
+      <div class="logo"><a href="home.html">LOGO</a></div>
+      <button class="btn">IA</button>
+      <div class="header-spacer"></div>
+      <button id="perfil-btn" class="btn">PERFIL</button>
+      <button class="btn">CARRINHO</button>
+      <button id="btn-logout" class="btn">LOGOUT</button>
+    </header>
+
+    <div class="perfil-body">
+      <nav class="perfil-nav">
+        <button id="nav-detalhes" class="nav-item is-active">DETALHES PERFIL</button>
+        <button id="nav-enderecos" class="nav-item">ENDERECOS</button>
+        <button id="nav-cartoes" class="nav-item">CARTOES E CUPONS</button>
+        <button class="nav-item">PEDIDOS</button>
+      </nav>
+
+      <main class="perfil-content">
+        <div id="perfil-message" class="message" role="alert"></div>
+
+        <!-- SEÇÃO DE DETALHES CADASTRAIS -->
+
+        <section id="section-detalhes" class="section">
+          <div class="panel">
+            <div class="panel-title">DADOS CADASTRAIS</div>
+
+            <div class="field-row">
+              <div class="field field-grow">
+                <label for="nome">NOME</label>
+                <input id="nome" type="text" placeholder="NOME">
+              </div>
+              <div class="field field-narrow">
+                <label for="cpf">CPF</label>
+                <input id="cpf" type="text" placeholder="CPF" disabled>
+              </div>
+            </div>
+
+            <div class="field-row">
+              <div class="field">
+                <label for="dataNascimento">DATA DE NASCIMENTO</label>
+                <input id="dataNascimento" type="date" placeholder="DATA DE NASCIMENTO">
+              </div>
+              <div class="field">
+                <label for="genero">GENERO</label>
+                <select id="genero">
+                  <option value="MASCULINO">MASCULINO</option>
+                  <option value="FEMININO">FEMININO</option>
+                  <option value="OUTRO">OUTRO</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="telefoneTipo">TIPO TELEFONE</label>
+                <select id="telefoneTipo">
+                  <option value="">TIPO TELEFONE</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="field-row">
+              <div class="field field-narrow">
+                <label for="telefoneDdd">DDD</label>
+                <input id="telefoneDdd" type="text" inputmode="numeric" placeholder="DDD">
+              </div>
+              <div class="field field-grow">
+                <label for="telefoneNumero">TELEFONE</label>
+                <input id="telefoneNumero" type="text" inputmode="numeric" placeholder="TELEFONE">
+              </div>
+            </div>
+
+            <div class="field-row">
+              <div class="field field-grow">
+                <label for="email">EMAIL</label>
+                <input id="email" type="email" placeholder="EMAIL" disabled>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-title">ENDERECO RESIDENCIAL</div>
+
+            <div class="field-row">
+              <div class="field">
+                <label for="tipoLogradouro">TIPO LOGRADOURO</label>
+                <select id="tipoLogradouro">
+                  <option value="">TIPO LOGRADOURO</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="tipoResidencia">TIPO RESIDENCIA</label>
+                <select id="tipoResidencia">
+                  <option value="">TIPO RESIDENCIA</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="field-row">
+              <div class="field field-grow">
+                <label for="logradouro">LOGRADOURO</label>
+                <input id="logradouro" type="text" placeholder="RUA">
+              </div>
+              <div class="field field-narrow">
+                <label for="numero">NUMERO</label>
+                <input id="numero" type="text" inputmode="numeric" placeholder="NUMERO">
+              </div>
+            </div>
+
+            <div class="field-row">
+              <div class="field">
+                <label for="bairro">BAIRRO</label>
+                <input id="bairro" type="text" placeholder="BAIRRO">
+              </div>
+              <div class="field">
+                <label for="cep">CEP</label>
+                <input id="cep" type="text" inputmode="numeric" placeholder="CEP">
+              </div>
+            </div>
+
+            <div class="field-row">
+              <div class="field">
+                <label for="cidade">CIDADE</label>
+                <input id="cidade" type="text" placeholder="CIDADE">
+              </div>
+              <div class="field">
+                <label for="estado">ESTADO</label>
+                <input id="estado" type="text" placeholder="ESTADO">
+              </div>
+              <div class="field">
+                <label for="pais">PAIS</label>
+                <input id="pais" type="text" placeholder="PAIS" value="Brasil">
+              </div>
+            </div>
+
+            <div class="field-row">
+              <div class="field field-grow">
+                <label for="observacoes">COMPLEMENTO</label>
+                <input id="observacoes" type="text" placeholder="COMPLEMENTO">
+              </div>
+            </div>
+          </div>
+
+          <div class="actions">
+            <button id="btn-edit" class="btn">EDITAR DADOS</button>
+            <button id="btn-password" class="btn" type="button">ALTERAR SENHA</button>
+          </div>
+        </section>
+
+
+        <!-- SEÇÃO DE ENDEREÇOS -->
+
+        <section id="section-enderecos" class="section hidden">
+          <div class="panel">
+            <div class="panel-header">
+              <div class="panel-title">ENDERECOS CADASTRADOS</div>
+              <button id="btn-add-endereco" class="btn" type="button">ADICIONAR ENDERECO</button>
+            </div>
+            <div id="enderecos-list" class="enderecos-list"></div>
+          </div>
+
+          <div id="endereco-form-panel" class="panel hidden">
+            <div id="endereco-form-title" class="panel-title">NOVO ENDERECO</div>
+
+            <div class="field-row">
+              <div class="field">
+                <label for="end-tipoLogradouro">TIPO LOGRADOURO</label>
+                <select id="end-tipoLogradouro">
+                  <option value="">TIPO LOGRADOURO</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="end-tipoResidencia">TIPO RESIDENCIA</label>
+                <select id="end-tipoResidencia">
+                  <option value="">TIPO RESIDENCIA</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="field-row">
+              <div class="field field-grow">
+                <label for="end-logradouro">LOGRADOURO</label>
+                <input id="end-logradouro" type="text" placeholder="RUA">
+              </div>
+              <div class="field field-narrow">
+                <label for="end-numero">NUMERO</label>
+                <input id="end-numero" type="text" inputmode="numeric" placeholder="NUMERO">
+              </div>
+            </div>
+
+            <div class="field-row">
+              <div class="field">
+                <label for="end-bairro">BAIRRO</label>
+                <input id="end-bairro" type="text" placeholder="BAIRRO">
+              </div>
+              <div class="field">
+                <label for="end-cep">CEP</label>
+                <input id="end-cep" type="text" inputmode="numeric" placeholder="CEP">
+              </div>
+            </div>
+
+            <div class="field-row">
+              <div class="field">
+                <label for="end-cidade">CIDADE</label>
+                <input id="end-cidade" type="text" placeholder="CIDADE">
+              </div>
+              <div class="field">
+                <label for="end-estado">ESTADO</label>
+                <input id="end-estado" type="text" placeholder="ESTADO">
+              </div>
+              <div class="field">
+                <label for="end-pais">PAIS</label>
+                <input id="end-pais" type="text" placeholder="PAIS" value="Brasil">
+              </div>
+            </div>
+
+            <div class="field-row">
+              <div class="field field-grow">
+                <label for="end-observacoes">COMPLEMENTO</label>
+                <input id="end-observacoes" type="text" placeholder="COMPLEMENTO">
+              </div>
+              <div class="field field-checkbox">
+                <label for="end-residencial">RESIDENCIAL</label>
+                <input id="end-residencial" type="checkbox">
+              </div>
+            </div>
+
+            <div class="actions">
+              <button id="btn-cancel-endereco" class="btn" type="button">CANCELAR</button>
+              <button id="btn-save-endereco" class="btn" type="button">SALVAR</button>
+            </div>
+          </div>
+        </section>
+
+        <section id="section-cartoes" class="section hidden">
+          <div class="panel">
+            <div class="panel-header">
+              <div class="panel-title">CARTOES CADASTRADOS</div>
+              <button id="btn-add-cartao" class="btn" type="button">ADICIONAR CARTAO</button>
+            </div>
+            <div id="cartoes-list" class="cartoes-list"></div>
+          </div>
+
+          <div id="cartao-form-panel" class="panel hidden">
+            <div id="cartao-form-title" class="panel-title">NOVO CARTAO</div>
+
+            <div class="field-row">
+              <div class="field">
+                <label for="cartao-bandeira">BANDEIRA</label>
+                <select id="cartao-bandeira">
+                  <option value="">BANDEIRA</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="cartao-numero">NUMERO</label>
+                <input id="cartao-numero" type="text" inputmode="numeric" placeholder="NUMERO">
+              </div>
+            </div>
+
+            <div class="field-row">
+              <div class="field field-grow">
+                <label for="cartao-nome">NOME IMPRESSO</label>
+                <input id="cartao-nome" type="text" placeholder="NOME IMPRESSO">
+              </div>
+              <div class="field field-narrow">
+                <label for="cartao-cvv">CVV</label>
+                <input id="cartao-cvv" type="text" inputmode="numeric" placeholder="CVV">
+              </div>
+            </div>
+
+            <div class="field-row">
+              <div class="field">
+                <label for="cartao-validade">DATA VALIDADE</label>
+                <input id="cartao-validade" type="month" placeholder="DATA VALIDADE">
+              </div>
+            </div>
+
+            <div class="actions">
+              <button id="btn-cancel-cartao" class="btn" type="button">CANCELAR</button>
+              <button id="btn-save-cartao" class="btn" type="button">SALVAR</button>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <script type="module" src="../scripts/perfil.js"></script>
+</body>
+</html>

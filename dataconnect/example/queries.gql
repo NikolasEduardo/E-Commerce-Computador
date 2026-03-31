@@ -1,5 +1,6 @@
+# Sei que não é muito seguro, mas é só para funcionar a autenticação
 query UsuarioPorAuthId($authId: String!) @auth(level: USER) {
-  usuarios(where: { authId: { eq: $authId } }, limit: 1) {
+  usuarios(where: {authId: {eq: $authId}}, limit: 1) {
     authId
     status {
       nome
