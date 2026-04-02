@@ -15,13 +15,49 @@ const serviceAccountPath =
   process.env.GOOGLE_APPLICATION_CREDENTIALS ||
   path.join(__dirname, "serviceAccount.json");
 
+const cloudinaryCloudName = process.env.CLOUDINARY_CLOUD_NAME || "daung4k2j";
+const cloudinaryApiKey = process.env.CLOUDINARY_API_KEY || "351512946589443";
+const cloudinaryApiSecret = process.env.CLOUDINARY_API_SECRET || "FZTiBux6g3BEWqjd3gJBK5-eGKw";
+const cloudinaryUploadPreset = process.env.CLOUDINARY_UPLOAD_PRESET || "ml_default";
+
 const cpfRegex = /^\d{3}\.\d{3}\.\d{3}-\d{2}$/;
 const cepRegex = /^\d{5}-\d{3}$/;
 const TIPO_ENDERECO_PRINCIPAL = "Principal";
 const TIPO_ENDERECO_SECUNDARIO = "Secundario";
+const CARRINHO_STATUS_ID = "657ec9e6e2e743268c7afe6aeb0db479";
+const CARRINHO_EXPIRACAO_MIN = 2; //30 min
+const CARRINHO_AVISO_MIN = 1; //5 min
+const CARRINHO_ESTENDER_MIN = 2; //10 min
+const CARRINHO_MAX_QTD = 99;
 
 function escapeGqlString(value) {
   return value.replace(/\\/g, "\\\\").replace(/"/g, "\\\"");
+}
+
+function ensureCloudinaryConfig() {
+  if (!cloudinaryCloudName || !cloudinaryApiKey || !cloudinaryApiSecret) {
+    throw new Error("Cloudinary nao configurado.");
+  }
+}
+
+function buildCloudinarySignature(params) {
+  const toSign = Object.keys(params)
+    .filter((key) => {
+      const value = params[key];
+      return (
+        value !== undefined &&
+        value !== null &&
+        value !== "" &&
+        key !== "file" &&
+        key !== "api_key" &&
+        key !== "signature"
+      );
+    })
+    .sort()
+    .map((key) => `${key}=${params[key]}`)
+    .join("&");
+
+  return crypto.createHash("sha1").update(`${toSign}${cloudinaryApiSecret}`).digest("hex");
 }
 
 function readServiceAccount() {
@@ -594,6 +630,716 @@ async function fetchUsuarioCartao(accessToken, authId, cartaoId) {
 
   const data = await executeGraphql(accessToken, query, { authId, cartaoId });
   return data?.usuarios?.[0] || null;
+}
+
+async function fetchProdutosMetadata(accessToken) {
+  const query = `
+    query ProdutosMetadata {
+      marcas { id nome }
+      categorias { id nome }
+      grupoPrecificacaos { id nome margemLucro }
+    }
+  `;
+  return executeGraphql(accessToken, query, {});
+}
+
+async function fetchFornecedores(accessToken) {
+  const query = `
+    query Fornecedores {
+      fornecedors(orderBy: [{ nome: ASC }]) {
+        id
+        nome
+        emailContato
+        telefoneContato
+      }
+    }
+  `;
+  const data = await executeGraphql(accessToken, query, {});
+  return data?.fornecedors || [];
+}
+
+async function insertFornecedor(accessToken, data) {
+  const mutation = `
+    mutation InserirFornecedor($nome: String!, $emailContato: String!, $telefoneContato: String!) {
+      fornecedor_insert(data: {
+        nome: $nome,
+        emailContato: $emailContato,
+        telefoneContato: $telefoneContato
+      })
+    }
+  `;
+  await executeGraphql(accessToken, mutation, data);
+}
+
+async function fetchEntradaEstoques(accessToken) {
+  const query = `
+    query EntradasEstoque {
+      entradaEstoques(orderBy: [{ dataEntrada: DESC }]) {
+        id
+        dataEntrada
+        quantidade
+        valorCusto
+        fornecedor { id nome }
+        produto { id nome modelo }
+      }
+    }
+  `;
+  const data = await executeGraphql(accessToken, query, {});
+  return data?.entradaEstoques || [];
+}
+
+async function insertEntradaEstoque(accessToken, data) {
+  const mutation = `
+    mutation InserirEntradaEstoque(
+      $fornecedorId: UUID!,
+      $produtoId: UUID!,
+      $dataEntrada: Date!,
+      $quantidade: Int!,
+      $valorCusto: Float!
+    ) {
+      entradaEstoque_insert(data: {
+        fornecedorId: $fornecedorId,
+        produtoId: $produtoId,
+        dataEntrada: $dataEntrada,
+        quantidade: $quantidade,
+        valorCusto: $valorCusto
+      })
+    }
+  `;
+  await executeGraphql(accessToken, mutation, data);
+}
+
+async function fetchProdutosResumo(accessToken) {
+  const query = `
+    query ProdutosResumo {
+      produtos(orderBy: [{ nome: ASC }], limit: 200) {
+        id
+        nome
+        modelo
+        status
+      }
+    }
+  `;
+  const data = await executeGraphql(accessToken, query, {});
+  return data?.produtos || [];
+}
+
+async function fetchProdutosPopulares(accessToken) {
+  const query = `
+    query ProdutosPopulares {
+      produtos(
+        where: { _and: [
+          { status: { eq: "ATIVO" } },
+          { estoqueFisico: { gt: 0 } }
+        ] },
+        orderBy: [{ quantidadeVendida: DESC }],
+        limit: 6
+      ) {
+        id
+        codigoProduto
+        nome
+        modelo
+        estoqueFisico
+        quantidadeVendida
+        marca { nome }
+        grupoPrecificacao { margemLucro }
+        produtoCategorias_on_produto {
+          categoria { nome }
+        }
+        imagemProdutos_on_produto(where: { capa: { eq: true } }, limit: 1) {
+          url
+        }
+        entradaEstoques_on_produto(orderBy: [{ valorCusto: DESC }], limit: 1) {
+          valorCusto
+        }
+      }
+    }
+  `;
+  const data = await executeGraphql(accessToken, query, {});
+  return data?.produtos || [];
+}
+
+async function fetchProdutoEstoque(accessToken, produtoId) {
+  const query = `
+    query ProdutoEstoque($id: UUID!) {
+      produto(id: $id) {
+        id
+        estoqueFisico
+        estoqueReservado
+        status
+      }
+    }
+  `;
+  const data = await executeGraphql(accessToken, query, { id: produtoId });
+  return data?.produto || null;
+}
+
+async function updateProdutoEstoque(accessToken, data) {
+  const mutation = `
+    mutation AtualizarEstoqueProduto($id: UUID!, $estoqueFisico: Int!) {
+      produto_update(id: $id, data: { estoqueFisico: $estoqueFisico })
+    }
+  `;
+  await executeGraphql(accessToken, mutation, data);
+}
+
+async function updateProdutoReservado(accessToken, data) {
+  const mutation = `
+    mutation AtualizarReservadoProduto($id: UUID!, $estoqueReservado: Int!) {
+      produto_update(id: $id, data: { estoqueReservado: $estoqueReservado })
+    }
+  `;
+  await executeGraphql(accessToken, mutation, data);
+}
+
+function calcularNovaExpiracao(minutos) {
+  return new Date(Date.now() + minutos * 60 * 1000).toISOString();
+}
+
+function calcularExpiracaoExtendida(atual, minutos) {
+  const now = new Date();
+  const base = atual ? new Date(atual) : now;
+  const baseTime = base > now ? base : now;
+  return new Date(baseTime.getTime() + minutos * 60 * 1000).toISOString();
+}
+
+function calcularPrecoProduto(produto) {
+  const custo = Number(produto?.entradaEstoques_on_produto?.[0]?.valorCusto || 0);
+  const margem = Number(produto?.grupoPrecificacao?.margemLucro || 0);
+  if (!custo || !margem) {
+    return 0;
+  }
+  return custo * margem;
+}
+
+async function fetchUsuarioIdByAuthId(accessToken, authId) {
+  const query = `
+    query UsuarioIdPorAuth($authId: String!) {
+      usuarios(where: { authId: { eq: $authId } }, limit: 1) { id }
+    }
+  `;
+  const data = await executeGraphql(accessToken, query, { authId });
+  return data?.usuarios?.[0]?.id || null;
+}
+
+async function fetchCarrinhoPedido(accessToken, usuarioId) {
+  const query = `
+    query PedidoCarrinho($usuarioId: UUID!, $statusId: UUID!) {
+      pedidos(where: { usuarioId: { eq: $usuarioId }, statusId: { eq: $statusId } }, limit: 1) {
+        id
+        valorTotal
+        dataExpiracaoCarrinho
+      }
+    }
+  `;
+  const data = await executeGraphql(accessToken, query, {
+    usuarioId,
+    statusId: CARRINHO_STATUS_ID
+  });
+  return data?.pedidos?.[0] || null;
+}
+
+async function fetchProdutoPorCodigo(accessToken, codigo) {
+  const query = `
+    query ProdutoPorCodigo($codigo: String!) {
+      produtos(where: { codigoProduto: { eq: $codigo } }, limit: 1) {
+        id
+        status
+        estoqueFisico
+        estoqueReservado
+      }
+    }
+  `;
+  const data = await executeGraphql(accessToken, query, { codigo });
+  return data?.produtos?.[0] || null;
+}
+
+async function fetchItemPedido(accessToken, pedidoId, produtoId) {
+  const query = `
+    query ItemCarrinho($pedidoId: UUID!, $produtoId: UUID!) {
+      itemPedidos(where: { pedidoId: { eq: $pedidoId }, produtoId: { eq: $produtoId } }, limit: 1) {
+        produtoId
+        quantidade
+      }
+    }
+  `;
+  const data = await executeGraphql(accessToken, query, { pedidoId, produtoId });
+  return data?.itemPedidos?.[0] || null;
+}
+
+async function insertItemPedido(accessToken, data) {
+  const mutation = `
+    mutation InserirItemPedido($pedidoId: UUID!, $produtoId: UUID!, $quantidade: Int!) {
+      itemPedido_insert(data: { pedidoId: $pedidoId, produtoId: $produtoId, quantidade: $quantidade })
+    }
+  `;
+  await executeGraphql(accessToken, mutation, data);
+}
+
+async function updateItemPedidoQuantidade(accessToken, data) {
+  const mutation = `
+    mutation AtualizarItemPedido($pedidoId: UUID!, $produtoId: UUID!, $quantidade: Int!) {
+      itemPedido_update(key: { pedidoId: $pedidoId, produtoId: $produtoId }, data: { quantidade: $quantidade })
+    }
+  `;
+  await executeGraphql(accessToken, mutation, data);
+}
+
+async function deleteItemPedido(accessToken, data) {
+  const mutation = `
+    mutation RemoverItemPedido($pedidoId: UUID!, $produtoId: UUID!) {
+      itemPedido_delete(key: { pedidoId: $pedidoId, produtoId: $produtoId })
+    }
+  `;
+  await executeGraphql(accessToken, mutation, data);
+}
+
+async function zerarItensPedido(accessToken, pedidoId) {
+  const mutation = `
+    mutation ZerarItensPedido($pedidoId: UUID!) {
+      itemPedido_updateMany(where: { pedidoId: { eq: $pedidoId } }, data: { quantidade: 0 })
+    }
+  `;
+  await executeGraphql(accessToken, mutation, { pedidoId });
+}
+
+async function updatePedidoCarrinho(accessToken, data) {
+  const mutation = `
+    mutation AtualizarPedidoCarrinho(
+      $id: UUID!,
+      $valorTotal: Float!,
+      $dataExpiracaoCarrinho: Timestamp
+    ) {
+      pedido_update(id: $id, data: {
+        valorTotal: $valorTotal,
+        dataExpiracaoCarrinho: $dataExpiracaoCarrinho
+      })
+    }
+  `;
+  await executeGraphql(accessToken, mutation, data);
+}
+
+async function fetchCarrinhoDetalhes(accessToken, pedidoId) {
+  const query = `
+    query CarrinhoDetalhes($pedidoId: UUID!) {
+      pedido(id: $pedidoId) {
+        id
+        valorTotal
+        dataExpiracaoCarrinho
+        itemPedidos_on_pedido {
+          quantidade
+          produto {
+            id
+            codigoProduto
+            nome
+            modelo
+            marca { nome }
+            grupoPrecificacao { margemLucro }
+            produtoCategorias_on_produto { categoria { nome } }
+            imagemProdutos_on_produto(where: { capa: { eq: true } }, limit: 1) { url }
+            entradaEstoques_on_produto(orderBy: [{ valorCusto: DESC }], limit: 1) {
+              valorCusto
+            }
+          }
+        }
+      }
+    }
+  `;
+  const data = await executeGraphql(accessToken, query, { pedidoId });
+  return data?.pedido || null;
+}
+
+async function fetchItensPedidoReservas(accessToken, pedidoId) {
+  const query = `
+    query ItensPedidoReservas($pedidoId: UUID!) {
+      itemPedidos(where: { pedidoId: { eq: $pedidoId } }) {
+        quantidade
+        produto {
+          id
+          estoqueReservado
+        }
+      }
+    }
+  `;
+  const data = await executeGraphql(accessToken, query, { pedidoId });
+  return data?.itemPedidos || [];
+}
+
+function montarCarrinhoResposta(pedido) {
+  if (!pedido) {
+    return { itens: [], valorTotal: 0 };
+  }
+
+  const itens = (pedido.itemPedidos_on_pedido || []).map((item) => {
+    const produto = item.produto || {};
+    const precoUnitario = calcularPrecoProduto(produto);
+    const quantidade = Number(item.quantidade || 0);
+    return {
+      produtoId: produto.id,
+      codigoProduto: produto.codigoProduto,
+      nome: produto.nome,
+      modelo: produto.modelo,
+      marca: produto?.marca?.nome || "",
+      categorias: (produto?.produtoCategorias_on_produto || [])
+        .map((c) => c?.categoria?.nome)
+        .filter(Boolean),
+      imagem: produto?.imagemProdutos_on_produto?.[0]?.url || "",
+      precoUnitario,
+      precoTotal: precoUnitario * quantidade,
+      quantidade
+    };
+  });
+
+  const valorTotal = itens.reduce((acc, item) => acc + item.precoTotal, 0);
+  return { itens, valorTotal };
+}
+
+function carrinhoTemItensAtivos(itens) {
+  return (itens || []).some((item) => Number(item?.quantidade || 0) > 0);
+}
+
+async function aplicarExpiracaoCarrinho(accessToken, pedido) {
+  if (!pedido?.dataExpiracaoCarrinho) {
+    return false;
+  }
+  const expiraEm = new Date(pedido.dataExpiracaoCarrinho).getTime();
+  if (!expiraEm || Date.now() <= expiraEm) {
+    return false;
+  }
+
+  const itens = await fetchItensPedidoReservas(accessToken, pedido.id);
+  for (const item of itens) {
+    const quantidade = Number(item.quantidade || 0);
+    const produto = item.produto;
+    if (quantidade > 0 && produto) {
+      const reservadoAtual = Number(produto.estoqueReservado || 0);
+      const novoReservado = Math.max(0, reservadoAtual - quantidade);
+      await updateProdutoReservado(accessToken, { id: produto.id, estoqueReservado: novoReservado });
+    }
+  }
+
+  await zerarItensPedido(accessToken, pedido.id);
+  await updatePedidoCarrinho(accessToken, {
+    id: pedido.id,
+    valorTotal: 0,
+    dataExpiracaoCarrinho: null
+  });
+
+  return true;
+}
+
+async function getMarcaId(accessToken, nome) {
+  const query = `
+    query MarcaPorNome($nome: String!) {
+      marcas(where: { nome: { eq: $nome } }, limit: 1) { id }
+    }
+  `;
+  const data = await executeGraphql(accessToken, query, { nome });
+  return data?.marcas?.[0]?.id || null;
+}
+
+async function ensureMarca(accessToken, nome) {
+  const existing = await getMarcaId(accessToken, nome);
+  if (existing) {
+    return existing;
+  }
+
+  const mutation = `
+    mutation InserirMarca($nome: String!) {
+      marca_insert(data: { nome: $nome })
+    }
+  `;
+  await executeGraphql(accessToken, mutation, { nome });
+  return getMarcaId(accessToken, nome);
+}
+
+async function getCategoriaId(accessToken, nome) {
+  const query = `
+    query CategoriaPorNome($nome: String!) {
+      categorias(where: { nome: { eq: $nome } }, limit: 1) { id }
+    }
+  `;
+  const data = await executeGraphql(accessToken, query, { nome });
+  return data?.categorias?.[0]?.id || null;
+}
+
+async function ensureCategoria(accessToken, nome) {
+  const existing = await getCategoriaId(accessToken, nome);
+  if (existing) {
+    return existing;
+  }
+
+  const mutation = `
+    mutation InserirCategoria($nome: String!) {
+      categoria_insert(data: { nome: $nome })
+    }
+  `;
+  await executeGraphql(accessToken, mutation, { nome });
+  return getCategoriaId(accessToken, nome);
+}
+
+async function insertProduto(accessToken, data) {
+  const mutation = `
+    mutation InserirProduto(
+      $id: UUID!,
+      $nome: String!,
+      $marcaId: UUID!,
+      $modelo: String!,
+      $descricaoTecnica: String!,
+      $especificacoesTecnicas: String!,
+      $garantia: String!,
+      $codigoBarras: String!,
+      $codigoProduto: String!,
+      $grupoPrecificacaoId: UUID!,
+      $status: String!,
+      $motivoInativacao: String,
+      $categoriaInativacao: String,
+      $justificativaAtivacao: String,
+      $categoriaAtivacao: String,
+      $estoqueFisico: Int!,
+      $estoqueReservado: Int!,
+      $quantidadeVendida: Int!
+    ) {
+      produto_insert(data: {
+        id: $id,
+        nome: $nome,
+        marcaId: $marcaId,
+        modelo: $modelo,
+        descricaoTecnica: $descricaoTecnica,
+        especificacoesTecnicas: $especificacoesTecnicas,
+        garantia: $garantia,
+        codigoBarras: $codigoBarras,
+        codigoProduto: $codigoProduto,
+        grupoPrecificacaoId: $grupoPrecificacaoId,
+        status: $status,
+        motivoInativacao: $motivoInativacao,
+        categoriaInativacao: $categoriaInativacao,
+        justificativaAtivacao: $justificativaAtivacao,
+        categoriaAtivacao: $categoriaAtivacao,
+        estoqueFisico: $estoqueFisico,
+        estoqueReservado: $estoqueReservado,
+        quantidadeVendida: $quantidadeVendida
+      })
+    }
+  `;
+
+  await executeGraphql(accessToken, mutation, data);
+}
+
+async function updateProduto(accessToken, data) {
+  const mutation = `
+    mutation AtualizarProduto(
+      $id: UUID!,
+      $nome: String!,
+      $marcaId: UUID!,
+      $modelo: String!,
+      $descricaoTecnica: String!,
+      $especificacoesTecnicas: String!,
+      $garantia: String!,
+      $grupoPrecificacaoId: UUID!
+    ) {
+      produto_update(id: $id, data: {
+        nome: $nome,
+        marcaId: $marcaId,
+        modelo: $modelo,
+        descricaoTecnica: $descricaoTecnica,
+        especificacoesTecnicas: $especificacoesTecnicas,
+        garantia: $garantia,
+        grupoPrecificacaoId: $grupoPrecificacaoId
+      })
+    }
+  `;
+
+  await executeGraphql(accessToken, mutation, data);
+}
+
+async function updateProdutoStatus(accessToken, data) {
+  const mutation = `
+    mutation AtualizarStatusProduto(
+      $id: UUID!,
+      $status: String!,
+      $motivoInativacao: String,
+      $categoriaInativacao: String,
+      $justificativaAtivacao: String,
+      $categoriaAtivacao: String
+    ) {
+      produto_update(id: $id, data: {
+        status: $status,
+        motivoInativacao: $motivoInativacao,
+        categoriaInativacao: $categoriaInativacao,
+        justificativaAtivacao: $justificativaAtivacao,
+        categoriaAtivacao: $categoriaAtivacao
+      })
+    }
+  `;
+
+  await executeGraphql(accessToken, mutation, data);
+}
+
+async function insertProdutoCategoria(accessToken, data) {
+  const mutation = `
+    mutation InserirProdutoCategoria($produtoId: UUID!, $categoriaId: UUID!) {
+      produtoCategoria_insert(data: { produtoId: $produtoId, categoriaId: $categoriaId })
+    }
+  `;
+  await executeGraphql(accessToken, mutation, data);
+}
+
+async function deleteProdutoCategorias(accessToken, data) {
+  const mutation = `
+    mutation RemoverCategoriasProduto($produtoId: UUID!) {
+      produtoCategoria_deleteMany(where: { produtoId: { eq: $produtoId } })
+    }
+  `;
+  await executeGraphql(accessToken, mutation, data);
+}
+
+async function insertImagemProduto(accessToken, data) {
+  const mutation = `
+    mutation InserirImagemProduto($produtoId: UUID!, $url: String!, $capa: Boolean!) {
+      imagemProduto_insert(data: { produtoId: $produtoId, url: $url, capa: $capa })
+    }
+  `;
+  await executeGraphql(accessToken, mutation, data);
+}
+
+async function deleteImagemProdutos(accessToken, data) {
+  const mutation = `
+    mutation RemoverImagensProduto($produtoId: UUID!) {
+      imagemProduto_deleteMany(where: { produtoId: { eq: $produtoId } })
+    }
+  `;
+  await executeGraphql(accessToken, mutation, data);
+}
+
+function gerarNumeroProduto() {
+  return Math.floor(10000 + Math.random() * 90000);
+}
+
+function gerarCodigoProduto(numero) {
+  return `PROD-${numero}`;
+}
+
+function gerarCodigoBarras(numero) {
+  return Number(numero).toString(2);
+}
+
+async function gerarCodigoProdutoUnico(accessToken) {
+  for (let attempt = 0; attempt < 6; attempt += 1) {
+    const numero = gerarNumeroProduto();
+    const codigoProduto = gerarCodigoProduto(numero);
+    const codigoBarras = gerarCodigoBarras(numero);
+
+    const query = `
+      query ProdutoPorCodigo($codigoProduto: String!, $codigoBarras: String!) {
+        byCodigoProduto: produtos(where: { codigoProduto: { eq: $codigoProduto } }, limit: 1) { id }
+        byCodigoBarras: produtos(where: { codigoBarras: { eq: $codigoBarras } }, limit: 1) { id }
+      }
+    `;
+
+    const data = await executeGraphql(accessToken, query, { codigoProduto, codigoBarras });
+    const existsProduto = (data?.byCodigoProduto || []).length > 0;
+    const existsBarras = (data?.byCodigoBarras || []).length > 0;
+    if (!existsProduto && !existsBarras) {
+      return { codigoProduto, codigoBarras };
+    }
+  }
+
+  const fallback = gerarNumeroProduto();
+  return {
+    codigoProduto: gerarCodigoProduto(fallback),
+    codigoBarras: gerarCodigoBarras(fallback)
+  };
+}
+
+function buildProdutosQuery({ search, status, marcaId, sortField, sortOrder }) {
+  const whereParts = [];
+
+  if (status) {
+    whereParts.push(`status: { eq: "${escapeGqlString(status)}" }`);
+  }
+
+  if (marcaId) {
+    whereParts.push(`marcaId: { eq: "${escapeGqlString(marcaId)}" }`);
+  }
+
+  const searchValue = (search || "").trim();
+  if (searchValue) {
+    const escaped = escapeGqlString(searchValue);
+    whereParts.push(`_or: [{ nome: { contains: "${escaped}" } }, { modelo: { contains: "${escaped}" } }]`);
+  }
+
+  const whereClause =
+    whereParts.length === 0
+      ? ""
+      : whereParts.length === 1
+        ? `where: { ${whereParts[0]} }`
+        : `where: { _and: [${whereParts.join(", ")}] }`;
+
+  const orderClause = sortField && sortOrder ? `orderBy: [{ ${sortField}: ${sortOrder} }]` : "";
+  const args = [whereClause, orderClause, "limit: 100"].filter(Boolean).join(", ");
+
+  return `
+    query ListarProdutos {
+      produtos(${args}) {
+        id
+        nome
+        modelo
+        status
+        estoqueFisico
+        quantidadeVendida
+        motivoInativacao
+        categoriaInativacao
+        justificativaAtivacao
+        categoriaAtivacao
+        marca { id nome }
+        produtoCategorias_on_produto {
+          categoria { id nome }
+        }
+        imagemProdutos_on_produto(where: { capa: { eq: true } }, limit: 1) {
+          url
+          capa
+        }
+      }
+    }
+  `;
+}
+
+async function fetchProdutoDetalhe(accessToken, produtoId) {
+  const query = `
+    query ProdutoDetalhe($id: UUID!) {
+      produto(id: $id) {
+        id
+        nome
+        modelo
+        garantia
+        descricaoTecnica
+        especificacoesTecnicas
+        codigoProduto
+        codigoBarras
+        status
+        motivoInativacao
+        categoriaInativacao
+        justificativaAtivacao
+        categoriaAtivacao
+        estoqueFisico
+        quantidadeVendida
+        marca { id nome }
+        grupoPrecificacao { id nome margemLucro }
+        produtoCategorias_on_produto {
+          categoria { id nome }
+        }
+        imagemProdutos_on_produto(orderBy: [{ capa: DESC }]) {
+          id
+          url
+          capa
+        }
+      }
+    }
+  `;
+
+  const data = await executeGraphql(accessToken, query, { id: produtoId });
+  return data?.produto || null;
 }
 
 function generateCodigoUser() {
@@ -1435,6 +2181,1143 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  if (req.method === "GET" && url.pathname === "/api/cloudinary/config") {
+    try {
+      const authHeader = req.headers.authorization || "";
+      const idToken = authHeader.startsWith("Bearer ")
+        ? authHeader.slice("Bearer ".length)
+        : "";
+
+      if (!idToken) {
+        sendJson(res, 400, { error: "idToken ausente." });
+        return;
+      }
+
+      await verifyIdToken(idToken);
+      ensureCloudinaryConfig();
+      sendJson(res, 200, {
+        cloudName: cloudinaryCloudName,
+        apiKey: cloudinaryApiKey,
+        uploadPreset: cloudinaryUploadPreset || null
+      });
+    } catch (error) {
+      sendJson(res, 500, { error: error?.message || "Erro ao carregar Cloudinary." });
+    }
+    return;
+  }
+
+  if (req.method === "POST" && url.pathname === "/api/cloudinary/signature") {
+    try {
+      const authHeader = req.headers.authorization || "";
+      const idToken = authHeader.startsWith("Bearer ")
+        ? authHeader.slice("Bearer ".length)
+        : "";
+
+      if (!idToken) {
+        sendJson(res, 400, { error: "idToken ausente." });
+        return;
+      }
+
+      await verifyIdToken(idToken);
+      ensureCloudinaryConfig();
+
+      const rawBody = await readBody(req);
+      const body = rawBody ? JSON.parse(rawBody) : {};
+      const timestamp = body.timestamp || Math.floor(Date.now() / 1000);
+      const params = typeof body.params === "object" && body.params ? { ...body.params } : {};
+      if (!params.timestamp) {
+        params.timestamp = timestamp;
+      }
+      if (cloudinaryUploadPreset && !params.upload_preset) {
+        params.upload_preset = cloudinaryUploadPreset;
+      }
+
+      const signature = buildCloudinarySignature(params);
+
+      sendJson(res, 200, {
+        signature,
+        timestamp: params.timestamp,
+        apiKey: cloudinaryApiKey,
+        cloudName: cloudinaryCloudName,
+        uploadPreset: cloudinaryUploadPreset || null
+      });
+    } catch (error) {
+      sendJson(res, 500, { error: error?.message || "Erro ao assinar upload." });
+    }
+    return;
+  }
+
+  if (req.method === "GET" && url.pathname === "/api/admin/produtos/metadata") {
+    try {
+      const accessToken = await getAccessToken();
+      const data = await fetchProdutosMetadata(accessToken);
+      sendJson(res, 200, data);
+    } catch (error) {
+      sendJson(res, 500, { error: error?.message || "Erro ao carregar metadata." });
+    }
+    return;
+  }
+
+  if (req.method === "GET" && url.pathname === "/api/admin/produtos") {
+    try {
+      const search = url.searchParams.get("q") || "";
+      const status = (url.searchParams.get("status") || "").trim().toUpperCase();
+      const marcaId = url.searchParams.get("marcaId") || "";
+      const categoriaId = url.searchParams.get("categoriaId") || "";
+      const sortField = url.searchParams.get("sortField") || "";
+      const sortOrder = (url.searchParams.get("sortOrder") || "").toUpperCase();
+
+      const allowedStatus = new Set(["ATIVO", "INATIVO"]);
+      const allowedSortFields = new Set(["nome", "estoqueFisico", "quantidadeVendida"]);
+      const allowedSortOrders = new Set(["ASC", "DESC"]);
+
+      const accessToken = await getAccessToken();
+      const query = buildProdutosQuery({
+        search,
+        status: allowedStatus.has(status) ? status : "",
+        marcaId,
+        sortField: allowedSortFields.has(sortField) ? sortField : "",
+        sortOrder: allowedSortOrders.has(sortOrder) ? sortOrder : ""
+      });
+
+      const data = await executeGraphql(accessToken, query, {});
+      let produtos = data?.produtos || [];
+
+      if (categoriaId) {
+        produtos = produtos.filter((produto) =>
+          (produto?.produtoCategorias_on_produto || []).some(
+            (item) => item?.categoria?.id === categoriaId
+          )
+        );
+      }
+
+      sendJson(res, 200, { produtos });
+    } catch (error) {
+      sendJson(res, 500, { error: error?.message || "Erro ao listar produtos." });
+    }
+    return;
+  }
+
+  if (req.method === "GET" && url.pathname === "/api/admin/produto") {
+    try {
+      const produtoId = url.searchParams.get("id") || "";
+      if (!produtoId) {
+        sendJson(res, 400, { error: "Produto invalido." });
+        return;
+      }
+
+      const accessToken = await getAccessToken();
+      const produto = await fetchProdutoDetalhe(accessToken, produtoId);
+
+      if (!produto) {
+        sendJson(res, 404, { error: "Produto nao encontrado." });
+        return;
+      }
+
+      sendJson(res, 200, { produto });
+    } catch (error) {
+      sendJson(res, 500, { error: error?.message || "Erro ao carregar produto." });
+    }
+    return;
+  }
+
+  if (req.method === "POST" && url.pathname === "/api/admin/produtos/criar") {
+    try {
+      const rawBody = await readBody(req);
+      const body = rawBody ? JSON.parse(rawBody) : {};
+      const produto = body.produto || {};
+      const imagens = Array.isArray(body.imagens) ? body.imagens : [];
+      const categoriasInput = Array.isArray(body.categorias) ? body.categorias : [];
+
+      if (
+        !produto.nome ||
+        !produto.modelo ||
+        !produto.garantia ||
+        !produto.descricaoTecnica ||
+        !produto.especificacoesTecnicas ||
+        !produto.grupoPrecificacaoId
+      ) {
+        sendJson(res, 400, { error: "Dados do produto incompletos." });
+        return;
+      }
+
+      if (!imagens.length) {
+        sendJson(res, 400, { error: "Adicione pelo menos uma imagem." });
+        return;
+      }
+
+      const capaCount = imagens.filter((img) => img?.capa).length;
+      if (capaCount !== 1) {
+        sendJson(res, 400, { error: "Defina exatamente uma imagem como capa." });
+        return;
+      }
+
+      const accessToken = await getAccessToken();
+
+      const marcaNome = (produto.marcaNome || "").trim();
+      const marcaId = marcaNome
+        ? await ensureMarca(accessToken, marcaNome)
+        : produto.marcaId;
+
+      if (!marcaId) {
+        sendJson(res, 400, { error: "Marca invalida." });
+        return;
+      }
+
+      const categoriasIds = [];
+      for (const categoria of categoriasInput) {
+        const nome = (categoria?.nome || "").trim();
+        const id = categoria?.id;
+        if (id) {
+          categoriasIds.push(id);
+          continue;
+        }
+        if (nome) {
+          const catId = await ensureCategoria(accessToken, nome);
+          if (catId) {
+            categoriasIds.push(catId);
+          }
+        }
+      }
+
+      if (!categoriasIds.length) {
+        sendJson(res, 400, { error: "Informe pelo menos uma categoria." });
+        return;
+      }
+
+      const codigos = await gerarCodigoProdutoUnico(accessToken);
+      const produtoId = crypto.randomUUID();
+
+      await insertProduto(accessToken, {
+        id: produtoId,
+        nome: produto.nome,
+        marcaId,
+        modelo: produto.modelo,
+        descricaoTecnica: produto.descricaoTecnica,
+        especificacoesTecnicas: produto.especificacoesTecnicas,
+        garantia: produto.garantia,
+        codigoBarras: codigos.codigoBarras,
+        codigoProduto: codigos.codigoProduto,
+        grupoPrecificacaoId: produto.grupoPrecificacaoId,
+        status: "ATIVO",
+        motivoInativacao: null,
+        categoriaInativacao: null,
+        justificativaAtivacao: null,
+        categoriaAtivacao: null,
+        estoqueFisico: 0,
+        estoqueReservado: 0,
+        quantidadeVendida: 0
+      });
+
+      for (const categoriaId of categoriasIds) {
+        await insertProdutoCategoria(accessToken, {
+          produtoId,
+          categoriaId
+        });
+      }
+
+      for (const imagem of imagens) {
+        if (imagem?.url) {
+          await insertImagemProduto(accessToken, {
+            produtoId,
+            url: imagem.url,
+            capa: Boolean(imagem.capa)
+          });
+        }
+      }
+
+      sendJson(res, 201, { id: produtoId });
+    } catch (error) {
+      sendJson(res, 500, { error: error?.message || "Erro ao criar produto." });
+    }
+    return;
+  }
+
+  if (req.method === "POST" && url.pathname === "/api/admin/produtos/editar") {
+    try {
+      const rawBody = await readBody(req);
+      const body = rawBody ? JSON.parse(rawBody) : {};
+      const produto = body.produto || {};
+      const produtoId = produto.id;
+      const imagens = Array.isArray(body.imagens) ? body.imagens : [];
+      const categoriasInput = Array.isArray(body.categorias) ? body.categorias : [];
+
+      if (!produtoId) {
+        sendJson(res, 400, { error: "Produto invalido." });
+        return;
+      }
+
+      if (
+        !produto.nome ||
+        !produto.modelo ||
+        !produto.garantia ||
+        !produto.descricaoTecnica ||
+        !produto.especificacoesTecnicas ||
+        !produto.grupoPrecificacaoId
+      ) {
+        sendJson(res, 400, { error: "Dados do produto incompletos." });
+        return;
+      }
+
+      if (!imagens.length) {
+        sendJson(res, 400, { error: "Adicione pelo menos uma imagem." });
+        return;
+      }
+
+      const capaCount = imagens.filter((img) => img?.capa).length;
+      if (capaCount !== 1) {
+        sendJson(res, 400, { error: "Defina exatamente uma imagem como capa." });
+        return;
+      }
+
+      const accessToken = await getAccessToken();
+
+      const marcaNome = (produto.marcaNome || "").trim();
+      const marcaId = marcaNome
+        ? await ensureMarca(accessToken, marcaNome)
+        : produto.marcaId;
+
+      if (!marcaId) {
+        sendJson(res, 400, { error: "Marca invalida." });
+        return;
+      }
+
+      const categoriasIds = [];
+      for (const categoria of categoriasInput) {
+        const nome = (categoria?.nome || "").trim();
+        const id = categoria?.id;
+        if (id) {
+          categoriasIds.push(id);
+          continue;
+        }
+        if (nome) {
+          const catId = await ensureCategoria(accessToken, nome);
+          if (catId) {
+            categoriasIds.push(catId);
+          }
+        }
+      }
+
+      if (!categoriasIds.length) {
+        sendJson(res, 400, { error: "Informe pelo menos uma categoria." });
+        return;
+      }
+
+      await updateProduto(accessToken, {
+        id: produtoId,
+        nome: produto.nome,
+        marcaId,
+        modelo: produto.modelo,
+        descricaoTecnica: produto.descricaoTecnica,
+        especificacoesTecnicas: produto.especificacoesTecnicas,
+        garantia: produto.garantia,
+        grupoPrecificacaoId: produto.grupoPrecificacaoId
+      });
+
+      await deleteProdutoCategorias(accessToken, { produtoId });
+      for (const categoriaId of categoriasIds) {
+        await insertProdutoCategoria(accessToken, {
+          produtoId,
+          categoriaId
+        });
+      }
+
+      await deleteImagemProdutos(accessToken, { produtoId });
+      for (const imagem of imagens) {
+        if (imagem?.url) {
+          await insertImagemProduto(accessToken, {
+            produtoId,
+            url: imagem.url,
+            capa: Boolean(imagem.capa)
+          });
+        }
+      }
+
+      sendJson(res, 200, { ok: true });
+    } catch (error) {
+      sendJson(res, 500, { error: error?.message || "Erro ao editar produto." });
+    }
+    return;
+  }
+
+  if (req.method === "POST" && url.pathname === "/api/admin/produtos/status") {
+    try {
+      const rawBody = await readBody(req);
+      const body = rawBody ? JSON.parse(rawBody) : {};
+      const produtoId = body.id;
+      const status = (body.status || "").toUpperCase();
+      const titulo = (body.titulo || "").trim();
+      const descricao = (body.descricao || "").trim();
+
+      if (!produtoId || (status !== "ATIVO" && status !== "INATIVO")) {
+        sendJson(res, 400, { error: "Dados invalidos." });
+        return;
+      }
+
+      if (!titulo || !descricao) {
+        sendJson(res, 400, { error: "Informe titulo e descricao da justificativa." });
+        return;
+      }
+
+      const accessToken = await getAccessToken();
+      const data = {
+        id: produtoId,
+        status,
+        motivoInativacao: null,
+        categoriaInativacao: null,
+        justificativaAtivacao: null,
+        categoriaAtivacao: null
+      };
+
+      if (status === "INATIVO") {
+        data.motivoInativacao = descricao;
+        data.categoriaInativacao = titulo;
+      } else {
+        data.justificativaAtivacao = descricao;
+        data.categoriaAtivacao = titulo;
+      }
+
+      await updateProdutoStatus(accessToken, data);
+      sendJson(res, 200, { ok: true });
+    } catch (error) {
+      sendJson(res, 500, { error: error?.message || "Erro ao atualizar status." });
+    }
+    return;
+  }
+
+  if (req.method === "GET" && url.pathname === "/api/admin/estoque/fornecedores") {
+    try {
+      const accessToken = await getAccessToken();
+      const fornecedores = await fetchFornecedores(accessToken);
+      sendJson(res, 200, { fornecedores });
+    } catch (error) {
+      sendJson(res, 500, { error: error?.message || "Erro ao carregar fornecedores." });
+    }
+    return;
+  }
+
+  if (req.method === "POST" && url.pathname === "/api/admin/estoque/fornecedores") {
+    try {
+      const rawBody = await readBody(req);
+      const body = rawBody ? JSON.parse(rawBody) : {};
+      const nome = (body.nome || "").trim();
+      const emailContato = (body.emailContato || "").trim();
+      const telefoneContato = (body.telefoneContato || "").trim();
+
+      if (!nome || !emailContato || !telefoneContato) {
+        sendJson(res, 400, { error: "Dados do fornecedor incompletos." });
+        return;
+      }
+
+      const accessToken = await getAccessToken();
+      await insertFornecedor(accessToken, { nome, emailContato, telefoneContato });
+      sendJson(res, 201, { ok: true });
+    } catch (error) {
+      sendJson(res, 500, { error: error?.message || "Erro ao cadastrar fornecedor." });
+    }
+    return;
+  }
+
+  if (req.method === "GET" && url.pathname === "/api/admin/estoque/entradas") {
+    try {
+      const accessToken = await getAccessToken();
+      const entradas = await fetchEntradaEstoques(accessToken);
+      sendJson(res, 200, { entradas });
+    } catch (error) {
+      sendJson(res, 500, { error: error?.message || "Erro ao carregar entradas." });
+    }
+    return;
+  }
+
+  if (req.method === "POST" && url.pathname === "/api/admin/estoque/entradas") {
+    try {
+      const rawBody = await readBody(req);
+      const body = rawBody ? JSON.parse(rawBody) : {};
+      const produtoId = body.produtoId;
+      const fornecedorId = body.fornecedorId;
+      const quantidade = Number(body.quantidade);
+      const valorCusto = Number(body.valorCusto);
+
+      if (!produtoId || !fornecedorId || !Number.isFinite(quantidade) || quantidade <= 0) {
+        sendJson(res, 400, { error: "Dados da entrada invalidos." });
+        return;
+      }
+
+      if (!Number.isFinite(valorCusto) || valorCusto <= 0) {
+        sendJson(res, 400, { error: "Valor de custo invalido." });
+        return;
+      }
+
+      const accessToken = await getAccessToken();
+      const produto = await fetchProdutoEstoque(accessToken, produtoId);
+      if (!produto) {
+        sendJson(res, 404, { error: "Produto nao encontrado." });
+        return;
+      }
+
+      const dataEntrada = new Date().toISOString().split("T")[0];
+      const quantidadeFinal = Math.round(quantidade);
+
+      await insertEntradaEstoque(accessToken, {
+        fornecedorId,
+        produtoId,
+        dataEntrada,
+        quantidade: quantidadeFinal,
+        valorCusto
+      });
+
+      const novoEstoque = (produto.estoqueFisico || 0) + quantidadeFinal;
+      await updateProdutoEstoque(accessToken, { id: produtoId, estoqueFisico: novoEstoque });
+
+      sendJson(res, 201, { ok: true });
+    } catch (error) {
+      sendJson(res, 500, { error: error?.message || "Erro ao registrar entrada." });
+    }
+    return;
+  }
+
+  if (req.method === "GET" && url.pathname === "/api/admin/estoque/produtos") {
+    try {
+      const accessToken = await getAccessToken();
+      const produtos = await fetchProdutosResumo(accessToken);
+      sendJson(res, 200, { produtos });
+    } catch (error) {
+      sendJson(res, 500, { error: error?.message || "Erro ao carregar produtos." });
+    }
+    return;
+  }
+
+  if (req.method === "GET" && url.pathname === "/api/home/produtos-populares") {
+    try {
+      const accessToken = await getAccessToken();
+      const produtos = await fetchProdutosPopulares(accessToken);
+      const formatted = produtos.map((produto) => {
+        const maxEntrada = produto?.entradaEstoques_on_produto?.[0];
+        const custo = Number(maxEntrada?.valorCusto || 0);
+        const margem = Number(produto?.grupoPrecificacao?.margemLucro || 0);
+        const preco = custo && margem ? custo * margem : 0;
+        return {
+          id: produto.id,
+          codigoProduto: produto.codigoProduto,
+          nome: produto.nome,
+          modelo: produto.modelo,
+          marca: produto?.marca?.nome || "",
+          categorias: (produto?.produtoCategorias_on_produto || [])
+            .map((item) => item?.categoria?.nome)
+            .filter(Boolean),
+          imagem: produto?.imagemProdutos_on_produto?.[0]?.url || "",
+          preco
+        };
+      });
+      sendJson(res, 200, { produtos: formatted });
+    } catch (error) {
+      sendJson(res, 500, { error: error?.message || "Erro ao carregar produtos." });
+    }
+    return;
+  }
+
+  if (req.method === "GET" && url.pathname === "/api/home/produto") {
+    try {
+      const codigo = (url.searchParams.get("codigo") || "").trim();
+      if (!codigo) {
+        sendJson(res, 400, { error: "Codigo do produto nao informado." });
+        return;
+      }
+
+      const accessToken = await getAccessToken();
+      const query = `
+        query ProdutoPublico($codigo: String!) {
+          produtos(
+            where: {
+              _and: [
+                { codigoProduto: { eq: $codigo } },
+                { status: { eq: "ATIVO" } }
+              ]
+            },
+            limit: 1
+          ) {
+            id
+            codigoProduto
+            nome
+            modelo
+            descricaoTecnica
+            especificacoesTecnicas
+            marca { nome }
+            grupoPrecificacao { margemLucro }
+            produtoCategorias_on_produto {
+              categoria { nome }
+            }
+            imagemProdutos_on_produto(orderBy: [{ capa: DESC }]) {
+              url
+              capa
+            }
+            entradaEstoques_on_produto(orderBy: [{ valorCusto: DESC }], limit: 1) {
+              valorCusto
+            }
+          }
+        }
+      `;
+
+      const data = await executeGraphql(accessToken, query, { codigo });
+      const produto = data?.produtos?.[0];
+      if (!produto) {
+        sendJson(res, 404, { error: "Produto nao encontrado." });
+        return;
+      }
+
+      const maxEntrada = produto?.entradaEstoques_on_produto?.[0];
+      const custo = Number(maxEntrada?.valorCusto || 0);
+      const margem = Number(produto?.grupoPrecificacao?.margemLucro || 0);
+      const preco = custo && margem ? custo * margem : 0;
+      const imagens = (produto?.imagemProdutos_on_produto || []).map((img) => ({
+        url: img.url,
+        capa: Boolean(img.capa)
+      }));
+
+      sendJson(res, 200, {
+        produto: {
+          codigoProduto: produto.codigoProduto,
+          nome: produto.nome,
+          modelo: produto.modelo,
+          marca: produto?.marca?.nome || "",
+          categorias: (produto?.produtoCategorias_on_produto || [])
+            .map((item) => item?.categoria?.nome)
+            .filter(Boolean),
+          descricaoTecnica: produto.descricaoTecnica || "",
+          especificacoesTecnicas: produto.especificacoesTecnicas || "",
+          imagens,
+          preco
+        }
+      });
+    } catch (error) {
+      sendJson(res, 500, { error: error?.message || "Erro ao carregar produto." });
+    }
+    return;
+  }
+
+  if (req.method === "GET" && url.pathname === "/api/carrinho/status") {
+    try {
+      const authHeader = req.headers.authorization || "";
+      const idToken = authHeader.startsWith("Bearer ")
+        ? authHeader.slice("Bearer ".length)
+        : "";
+      if (!idToken) {
+        sendJson(res, 401, { error: "Usuario nao autenticado." });
+        return;
+      }
+
+      const authId = await verifyIdToken(idToken);
+      const accessToken = await getAccessToken();
+      const usuarioId = await fetchUsuarioIdByAuthId(accessToken, authId);
+      if (!usuarioId) {
+        sendJson(res, 404, { error: "Usuario nao encontrado." });
+        return;
+      }
+
+      const pedido = await fetchCarrinhoPedido(accessToken, usuarioId);
+      if (!pedido) {
+        sendJson(res, 404, { error: "Carrinho nao encontrado." });
+        return;
+      }
+
+      const expirou = await aplicarExpiracaoCarrinho(accessToken, pedido);
+      const pedidoAtual = expirou
+        ? await fetchCarrinhoPedido(accessToken, usuarioId)
+        : pedido;
+
+        const detalhes = await fetchCarrinhoDetalhes(accessToken, pedidoAtual.id);
+        const { itens, valorTotal } = montarCarrinhoResposta(detalhes);
+        const temItensAtivos = carrinhoTemItensAtivos(itens);
+        let dataExpiracaoCarrinho = pedidoAtual?.dataExpiracaoCarrinho || null;
+
+        if (!temItensAtivos && dataExpiracaoCarrinho) {
+          await updatePedidoCarrinho(accessToken, {
+            id: pedidoAtual.id,
+            valorTotal,
+            dataExpiracaoCarrinho: null
+          });
+          dataExpiracaoCarrinho = null;
+        }
+
+        sendJson(res, 200, {
+          dataExpiracaoCarrinho,
+          warningMinutes: CARRINHO_AVISO_MIN,
+          extendMinutes: CARRINHO_ESTENDER_MIN
+        });
+    } catch (error) {
+      sendJson(res, 500, { error: error?.message || "Erro ao carregar status." });
+    }
+    return;
+  }
+
+  if (req.method === "GET" && url.pathname === "/api/carrinho") {
+    try {
+      const authHeader = req.headers.authorization || "";
+      const idToken = authHeader.startsWith("Bearer ")
+        ? authHeader.slice("Bearer ".length)
+        : "";
+      if (!idToken) {
+        sendJson(res, 401, { error: "Usuario nao autenticado." });
+        return;
+      }
+
+      const authId = await verifyIdToken(idToken);
+      const accessToken = await getAccessToken();
+      const usuarioId = await fetchUsuarioIdByAuthId(accessToken, authId);
+      if (!usuarioId) {
+        sendJson(res, 404, { error: "Usuario nao encontrado." });
+        return;
+      }
+
+      const pedido = await fetchCarrinhoPedido(accessToken, usuarioId);
+      if (!pedido) {
+        sendJson(res, 404, { error: "Carrinho nao encontrado." });
+        return;
+      }
+
+      const expirou = await aplicarExpiracaoCarrinho(accessToken, pedido);
+      const pedidoAtual = expirou
+        ? await fetchCarrinhoPedido(accessToken, usuarioId)
+        : pedido;
+
+        const detalhes = await fetchCarrinhoDetalhes(accessToken, pedidoAtual.id);
+        const { itens, valorTotal } = montarCarrinhoResposta(detalhes);
+        const temItensAtivos = carrinhoTemItensAtivos(itens);
+        const dataExpiracaoCarrinho = temItensAtivos ? pedidoAtual.dataExpiracaoCarrinho : null;
+
+        await updatePedidoCarrinho(accessToken, {
+          id: pedidoAtual.id,
+          valorTotal,
+          dataExpiracaoCarrinho
+        });
+
+      sendJson(res, 200, {
+        pedidoId: pedidoAtual.id,
+          dataExpiracaoCarrinho,
+          valorTotal,
+          itens
+        });
+    } catch (error) {
+      sendJson(res, 500, { error: error?.message || "Erro ao carregar carrinho." });
+    }
+    return;
+  }
+
+  if (req.method === "POST" && url.pathname === "/api/carrinho/adicionar") {
+    try {
+      const authHeader = req.headers.authorization || "";
+      const idToken = authHeader.startsWith("Bearer ")
+        ? authHeader.slice("Bearer ".length)
+        : "";
+      if (!idToken) {
+        sendJson(res, 401, { error: "Usuario nao autenticado." });
+        return;
+      }
+
+      const rawBody = await readBody(req);
+      const body = rawBody ? JSON.parse(rawBody) : {};
+      const codigoProduto = (body.codigoProduto || "").trim();
+      const produtoId = body.produtoId || "";
+
+      if (!codigoProduto && !produtoId) {
+        sendJson(res, 400, { error: "Produto nao informado." });
+        return;
+      }
+
+      const authId = await verifyIdToken(idToken);
+      const accessToken = await getAccessToken();
+      const usuarioId = await fetchUsuarioIdByAuthId(accessToken, authId);
+      if (!usuarioId) {
+        sendJson(res, 404, { error: "Usuario nao encontrado." });
+        return;
+      }
+
+      let pedido = await fetchCarrinhoPedido(accessToken, usuarioId);
+      if (!pedido) {
+        sendJson(res, 404, { error: "Carrinho nao encontrado." });
+        return;
+      }
+
+      const expirou = await aplicarExpiracaoCarrinho(accessToken, pedido);
+      if (expirou) {
+        pedido = await fetchCarrinhoPedido(accessToken, usuarioId);
+      }
+
+      const produto = produtoId
+        ? await fetchProdutoEstoque(accessToken, produtoId)
+        : await fetchProdutoPorCodigo(accessToken, codigoProduto);
+
+      if (!produto) {
+        sendJson(res, 404, { error: "Produto nao encontrado." });
+        return;
+      }
+
+      if (produto.status && produto.status !== "ATIVO") {
+        sendJson(res, 400, { error: "Produto inativo." });
+        return;
+      }
+
+      const item = await fetchItemPedido(accessToken, pedido.id, produto.id);
+      const quantidadeAtual = Number(item?.quantidade || 0);
+      let quantidadeDesejada = Math.min(quantidadeAtual + 1, CARRINHO_MAX_QTD);
+      const maxPermitido = Math.max(
+        0,
+        Number(produto.estoqueFisico || 0) - Number(produto.estoqueReservado || 0) + quantidadeAtual
+      );
+
+      let aviso = "";
+      if (quantidadeDesejada > maxPermitido) {
+        quantidadeDesejada = quantidadeAtual > 0 ? quantidadeAtual : 0;
+        aviso = "Esse produto esta com pedidos demais, favor aguardar para aumentar a quantidade.";
+      }
+
+      const delta = quantidadeDesejada - quantidadeAtual;
+      if (!item) {
+        await insertItemPedido(accessToken, {
+          pedidoId: pedido.id,
+          produtoId: produto.id,
+          quantidade: quantidadeDesejada
+        });
+      } else if (delta !== 0) {
+        await updateItemPedidoQuantidade(accessToken, {
+          pedidoId: pedido.id,
+          produtoId: produto.id,
+          quantidade: quantidadeDesejada
+        });
+      }
+
+      if (delta !== 0) {
+        const reservadoAtual = Number(produto.estoqueReservado || 0);
+        const novoReservado = Math.max(0, reservadoAtual + delta);
+        await updateProdutoReservado(accessToken, { id: produto.id, estoqueReservado: novoReservado });
+      }
+
+        const novaExpiracao = calcularNovaExpiracao(CARRINHO_EXPIRACAO_MIN);
+        const detalhes = await fetchCarrinhoDetalhes(accessToken, pedido.id);
+        const { itens, valorTotal } = montarCarrinhoResposta(detalhes);
+        const temItensAtivos = carrinhoTemItensAtivos(itens);
+        const dataExpiracaoCarrinho = temItensAtivos ? novaExpiracao : null;
+        await updatePedidoCarrinho(accessToken, {
+          id: pedido.id,
+          valorTotal,
+          dataExpiracaoCarrinho
+        });
+
+      sendJson(res, 200, {
+        ok: true,
+        quantidade: quantidadeDesejada,
+        warning: aviso || null,
+          dataExpiracaoCarrinho
+        });
+    } catch (error) {
+      sendJson(res, 500, { error: error?.message || "Erro ao adicionar produto." });
+    }
+    return;
+  }
+
+  if (req.method === "POST" && url.pathname === "/api/carrinho/quantidade") {
+    try {
+      const authHeader = req.headers.authorization || "";
+      const idToken = authHeader.startsWith("Bearer ")
+        ? authHeader.slice("Bearer ".length)
+        : "";
+      if (!idToken) {
+        sendJson(res, 401, { error: "Usuario nao autenticado." });
+        return;
+      }
+
+      const rawBody = await readBody(req);
+      const body = rawBody ? JSON.parse(rawBody) : {};
+      const codigoProduto = (body.codigoProduto || "").trim();
+      const produtoId = body.produtoId || "";
+      const quantidadeReq = Number(body.quantidade);
+
+      if (!Number.isFinite(quantidadeReq)) {
+        sendJson(res, 400, { error: "Quantidade invalida." });
+        return;
+      }
+
+      if (!codigoProduto && !produtoId) {
+        sendJson(res, 400, { error: "Produto nao informado." });
+        return;
+      }
+
+      const authId = await verifyIdToken(idToken);
+      const accessToken = await getAccessToken();
+      const usuarioId = await fetchUsuarioIdByAuthId(accessToken, authId);
+      if (!usuarioId) {
+        sendJson(res, 404, { error: "Usuario nao encontrado." });
+        return;
+      }
+
+      let pedido = await fetchCarrinhoPedido(accessToken, usuarioId);
+      if (!pedido) {
+        sendJson(res, 404, { error: "Carrinho nao encontrado." });
+        return;
+      }
+
+      const expirou = await aplicarExpiracaoCarrinho(accessToken, pedido);
+      if (expirou) {
+        pedido = await fetchCarrinhoPedido(accessToken, usuarioId);
+      }
+
+      const produto = produtoId
+        ? await fetchProdutoEstoque(accessToken, produtoId)
+        : await fetchProdutoPorCodigo(accessToken, codigoProduto);
+
+      if (!produto) {
+        sendJson(res, 404, { error: "Produto nao encontrado." });
+        return;
+      }
+
+      const item = await fetchItemPedido(accessToken, pedido.id, produto.id);
+      const quantidadeAtual = Number(item?.quantidade || 0);
+      let quantidadeDesejada = Math.min(Math.max(Math.round(quantidadeReq), 0), CARRINHO_MAX_QTD);
+
+      const maxPermitido = Math.max(
+        0,
+        Number(produto.estoqueFisico || 0) - Number(produto.estoqueReservado || 0) + quantidadeAtual
+      );
+
+      let aviso = "";
+      if (quantidadeDesejada > maxPermitido) {
+        quantidadeDesejada = quantidadeAtual;
+        aviso = "Esse produto esta com pedidos demais, favor aguardar para aumentar a quantidade.";
+      }
+
+      const delta = quantidadeDesejada - quantidadeAtual;
+      if (!item) {
+        await insertItemPedido(accessToken, {
+          pedidoId: pedido.id,
+          produtoId: produto.id,
+          quantidade: quantidadeDesejada
+        });
+      } else if (delta !== 0) {
+        await updateItemPedidoQuantidade(accessToken, {
+          pedidoId: pedido.id,
+          produtoId: produto.id,
+          quantidade: quantidadeDesejada
+        });
+      }
+
+      if (delta !== 0) {
+        const reservadoAtual = Number(produto.estoqueReservado || 0);
+        const novoReservado = Math.max(0, reservadoAtual + delta);
+        await updateProdutoReservado(accessToken, { id: produto.id, estoqueReservado: novoReservado });
+      }
+
+        const novaExpiracao = calcularNovaExpiracao(CARRINHO_EXPIRACAO_MIN);
+        const detalhes = await fetchCarrinhoDetalhes(accessToken, pedido.id);
+        const { itens, valorTotal } = montarCarrinhoResposta(detalhes);
+        const temItensAtivos = carrinhoTemItensAtivos(itens);
+        const dataExpiracaoCarrinho = temItensAtivos ? novaExpiracao : null;
+        await updatePedidoCarrinho(accessToken, {
+          id: pedido.id,
+          valorTotal,
+          dataExpiracaoCarrinho
+        });
+
+      sendJson(res, 200, {
+        ok: true,
+        quantidade: quantidadeDesejada,
+        warning: aviso || null,
+          dataExpiracaoCarrinho
+        });
+    } catch (error) {
+      sendJson(res, 500, { error: error?.message || "Erro ao atualizar quantidade." });
+    }
+    return;
+  }
+
+  if (req.method === "POST" && url.pathname === "/api/carrinho/remover") {
+    try {
+      const authHeader = req.headers.authorization || "";
+      const idToken = authHeader.startsWith("Bearer ")
+        ? authHeader.slice("Bearer ".length)
+        : "";
+      if (!idToken) {
+        sendJson(res, 401, { error: "Usuario nao autenticado." });
+        return;
+      }
+
+      const rawBody = await readBody(req);
+      const body = rawBody ? JSON.parse(rawBody) : {};
+      const codigoProduto = (body.codigoProduto || "").trim();
+      const produtoId = body.produtoId || "";
+
+      if (!codigoProduto && !produtoId) {
+        sendJson(res, 400, { error: "Produto nao informado." });
+        return;
+      }
+
+      const authId = await verifyIdToken(idToken);
+      const accessToken = await getAccessToken();
+      const usuarioId = await fetchUsuarioIdByAuthId(accessToken, authId);
+      if (!usuarioId) {
+        sendJson(res, 404, { error: "Usuario nao encontrado." });
+        return;
+      }
+
+      let pedido = await fetchCarrinhoPedido(accessToken, usuarioId);
+      if (!pedido) {
+        sendJson(res, 404, { error: "Carrinho nao encontrado." });
+        return;
+      }
+
+      const expirou = await aplicarExpiracaoCarrinho(accessToken, pedido);
+      if (expirou) {
+        pedido = await fetchCarrinhoPedido(accessToken, usuarioId);
+      }
+
+      const produto = produtoId
+        ? await fetchProdutoEstoque(accessToken, produtoId)
+        : await fetchProdutoPorCodigo(accessToken, codigoProduto);
+
+      if (!produto) {
+        sendJson(res, 404, { error: "Produto nao encontrado." });
+        return;
+      }
+
+      const item = await fetchItemPedido(accessToken, pedido.id, produto.id);
+      if (item) {
+        const quantidadeAtual = Number(item.quantidade || 0);
+        if (quantidadeAtual > 0) {
+          const reservadoAtual = Number(produto.estoqueReservado || 0);
+          const novoReservado = Math.max(0, reservadoAtual - quantidadeAtual);
+          await updateProdutoReservado(accessToken, { id: produto.id, estoqueReservado: novoReservado });
+        }
+        await deleteItemPedido(accessToken, { pedidoId: pedido.id, produtoId: produto.id });
+      }
+
+        const novaExpiracao = calcularNovaExpiracao(CARRINHO_EXPIRACAO_MIN);
+        const detalhes = await fetchCarrinhoDetalhes(accessToken, pedido.id);
+        const { itens, valorTotal } = montarCarrinhoResposta(detalhes);
+        const temItensAtivos = carrinhoTemItensAtivos(itens);
+        const dataExpiracaoCarrinho = temItensAtivos ? novaExpiracao : null;
+        await updatePedidoCarrinho(accessToken, {
+          id: pedido.id,
+          valorTotal,
+          dataExpiracaoCarrinho
+        });
+
+        sendJson(res, 200, { ok: true, dataExpiracaoCarrinho });
+    } catch (error) {
+      sendJson(res, 500, { error: error?.message || "Erro ao remover item." });
+    }
+    return;
+  }
+
+  if (req.method === "POST" && url.pathname === "/api/carrinho/estender") {
+    try {
+      const authHeader = req.headers.authorization || "";
+      const idToken = authHeader.startsWith("Bearer ")
+        ? authHeader.slice("Bearer ".length)
+        : "";
+      if (!idToken) {
+        sendJson(res, 401, { error: "Usuario nao autenticado." });
+        return;
+      }
+
+      const authId = await verifyIdToken(idToken);
+      const accessToken = await getAccessToken();
+      const usuarioId = await fetchUsuarioIdByAuthId(accessToken, authId);
+      if (!usuarioId) {
+        sendJson(res, 404, { error: "Usuario nao encontrado." });
+        return;
+      }
+
+      const pedido = await fetchCarrinhoPedido(accessToken, usuarioId);
+      if (!pedido) {
+        sendJson(res, 404, { error: "Carrinho nao encontrado." });
+        return;
+      }
+
+      const expirou = await aplicarExpiracaoCarrinho(accessToken, pedido);
+      if (expirou) {
+        sendJson(res, 200, { dataExpiracaoCarrinho: null });
+        return;
+      }
+
+        const detalhes = await fetchCarrinhoDetalhes(accessToken, pedido.id);
+        const { itens, valorTotal } = montarCarrinhoResposta(detalhes);
+        const temItensAtivos = carrinhoTemItensAtivos(itens);
+        if (!temItensAtivos) {
+          await updatePedidoCarrinho(accessToken, {
+            id: pedido.id,
+            valorTotal,
+            dataExpiracaoCarrinho: null
+          });
+          sendJson(res, 200, { dataExpiracaoCarrinho: null });
+          return;
+        }
+
+        const novaExpiracao = calcularExpiracaoExtendida(
+          pedido.dataExpiracaoCarrinho,
+          CARRINHO_ESTENDER_MIN
+        );
+        await updatePedidoCarrinho(accessToken, {
+          id: pedido.id,
+          valorTotal,
+          dataExpiracaoCarrinho: novaExpiracao
+        });
+
+        sendJson(res, 200, { dataExpiracaoCarrinho: novaExpiracao });
+    } catch (error) {
+      sendJson(res, 500, { error: error?.message || "Erro ao estender carrinho." });
+    }
+    return;
+  }
+
+  if (req.method === "POST" && url.pathname === "/api/carrinho/cancelar") {
+    try {
+      const authHeader = req.headers.authorization || "";
+      const idToken = authHeader.startsWith("Bearer ")
+        ? authHeader.slice("Bearer ".length)
+        : "";
+      if (!idToken) {
+        sendJson(res, 401, { error: "Usuario nao autenticado." });
+        return;
+      }
+
+      const authId = await verifyIdToken(idToken);
+      const accessToken = await getAccessToken();
+      const usuarioId = await fetchUsuarioIdByAuthId(accessToken, authId);
+      if (!usuarioId) {
+        sendJson(res, 404, { error: "Usuario nao encontrado." });
+        return;
+      }
+
+      const pedido = await fetchCarrinhoPedido(accessToken, usuarioId);
+      if (!pedido) {
+        sendJson(res, 404, { error: "Carrinho nao encontrado." });
+        return;
+      }
+
+      const itens = await fetchItensPedidoReservas(accessToken, pedido.id);
+      for (const item of itens) {
+        const quantidade = Number(item.quantidade || 0);
+        const produto = item.produto;
+        if (quantidade > 0 && produto) {
+          const reservadoAtual = Number(produto.estoqueReservado || 0);
+          const novoReservado = Math.max(0, reservadoAtual - quantidade);
+          await updateProdutoReservado(accessToken, { id: produto.id, estoqueReservado: novoReservado });
+        }
+      }
+
+      await zerarItensPedido(accessToken, pedido.id);
+      await updatePedidoCarrinho(accessToken, {
+        id: pedido.id,
+        valorTotal: 0,
+        dataExpiracaoCarrinho: null
+      });
+
+      sendJson(res, 200, { ok: true });
+    } catch (error) {
+      sendJson(res, 500, { error: error?.message || "Erro ao cancelar carrinho." });
+    }
+    return;
+  }
+
   if (req.method === "GET" && url.pathname === "/api/admin/clientes") {
     try {
       const search = url.searchParams.get("q") || "";
@@ -1642,7 +3525,7 @@ const server = http.createServer(async (req, res) => {
         id: crypto.randomUUID(),
         usuarioId,
         enderecoEntregaId: enderecoId,
-        statusId: "657ec9e6e2e743268c7afe6aeb0db479",
+        statusId: CARRINHO_STATUS_ID,
         valorFrete: 0,
         valorTotal: 0,
         dataCriacao: new Date().toISOString()

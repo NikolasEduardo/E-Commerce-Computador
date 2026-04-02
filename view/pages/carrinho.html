@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Carrinho</title>
+  <link rel="stylesheet" href="../../styles/carrinho.css">
+  <link rel="stylesheet" href="../../styles/cart-notice.css">
+</head>
+<body>
+  <div class="cart-shell">
+    <header class="cart-header">
+      <div class="logo"><a href="home.html">LOGO</a></div>
+      <button class="btn">IA</button>
+      <div class="header-spacer"></div>
+      <button id="perfil-btn" class="btn">PERFIL</button>
+      <button id="btn-carrinho" class="btn">CARRINHO</button>
+    </header>
+
+    <h2 class="cart-title">CARRINHO DE COMPRAS</h2>
+
+    <div class="cart-body">
+      <section class="cart-items">
+        <div id="cart-items-list"></div>
+      </section>
+
+      <aside class="cart-summary">
+        <h3>DETALHES DE PRECO DOS PRODUTOS NO CARRINHO</h3>
+        <div id="cart-summary-details" class="summary-details"></div>
+        <button id="btn-finalizar" class="btn summary-btn">FINALIZAR COMPRA</button>
+        <button id="btn-continuar" class="btn summary-btn">CONTINUAR COMPRANDO</button>
+      </aside>
+    </div>
+  </div>
+
+  <script type="module" src="../scripts/carrinho.js"></script>
+</body>
+</html>

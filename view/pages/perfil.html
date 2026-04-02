@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Perfil</title>
   <link rel="stylesheet" href="../../styles/perfil.css">
+  <link rel="stylesheet" href="../../styles/cart-notice.css">
 </head>
 <body>
   <div class="perfil-shell">
@@ -13,7 +14,7 @@
       <button class="btn">IA</button>
       <div class="header-spacer"></div>
       <button id="perfil-btn" class="btn">PERFIL</button>
-      <button class="btn">CARRINHO</button>
+      <button id="btn-carrinho" class="btn">CARRINHO</button>
       <button id="btn-logout" class="btn">LOGOUT</button>
     </header>
 
@@ -158,14 +159,6 @@
         <!-- SEÇÃO DE ENDEREÇOS -->
 
         <section id="section-enderecos" class="section hidden">
-          <div class="panel">
-            <div class="panel-header">
-              <div class="panel-title">ENDERECOS CADASTRADOS</div>
-              <button id="btn-add-endereco" class="btn" type="button">ADICIONAR ENDERECO</button>
-            </div>
-            <div id="enderecos-list" class="enderecos-list"></div>
-          </div>
-
           <div id="endereco-form-panel" class="panel hidden">
             <div id="endereco-form-title" class="panel-title">NOVO ENDERECO</div>
 
@@ -237,17 +230,17 @@
               <button id="btn-save-endereco" class="btn" type="button">SALVAR</button>
             </div>
           </div>
+
+          <div class="panel">
+            <div class="panel-header">
+              <div class="panel-title">ENDERECOS CADASTRADOS</div>
+              <button id="btn-add-endereco" class="btn" type="button">ADICIONAR ENDERECO</button>
+            </div>
+            <div id="enderecos-list" class="enderecos-list"></div>
+          </div>
         </section>
 
         <section id="section-cartoes" class="section hidden">
-          <div class="panel">
-            <div class="panel-header">
-              <div class="panel-title">CARTOES CADASTRADOS</div>
-              <button id="btn-add-cartao" class="btn" type="button">ADICIONAR CARTAO</button>
-            </div>
-            <div id="cartoes-list" class="cartoes-list"></div>
-          </div>
-
           <div id="cartao-form-panel" class="panel hidden">
             <div id="cartao-form-title" class="panel-title">NOVO CARTAO</div>
 
@@ -286,6 +279,14 @@
               <button id="btn-cancel-cartao" class="btn" type="button">CANCELAR</button>
               <button id="btn-save-cartao" class="btn" type="button">SALVAR</button>
             </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-header">
+              <div class="panel-title">CARTOES CADASTRADOS</div>
+              <button id="btn-add-cartao" class="btn" type="button">ADICIONAR CARTAO</button>
+            </div>
+            <div id="cartoes-list" class="cartoes-list"></div>
           </div>
         </section>
       </main>

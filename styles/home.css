@@ -74,14 +74,27 @@ body {
 .product-image {
   background: #a8a8a8;
   text-align: center;
-  padding: 60px 0;
   font-weight: bold;
+  height: 160px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.product-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 .product-details {
   background: #cfcfcf;
   padding: 12px;
   min-height: 70px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
 .product-actions {

@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Produto</title>
+  <link rel="stylesheet" href="../../styles/produto.css">
+  <link rel="stylesheet" href="../../styles/cart-notice.css">
+</head>
+<body>
+  <div class="produto-shell">
+    <header class="produto-header">
+      <div class="logo">LOGO</div>
+      <input class="search" type="text" placeholder="PESQUISA">
+      <button class="btn">IA</button>
+      <button id="perfil-btn" class="btn">PERFIL</button>
+      <button id="btn-carrinho" class="btn">CARRINHO</button>
+    </header>
+
+    <main class="produto-main">
+      <section class="produto-left">
+        <div class="image-panel">
+          <div id="main-image" class="main-image">IMAGEM</div>
+          <div id="thumbs" class="thumbs"></div>
+        </div>
+        <div class="produto-detalhes">
+          <h3 id="produto-nome">NOME</h3>
+          <p id="produto-modelo">MODELO</p>
+          <p id="produto-marca">MARCA</p>
+          <p id="produto-categorias">CATEGORIAS</p>
+        </div>
+      </section>
+
+      <section class="produto-right">
+        <div class="produto-texto" id="produto-texto">
+          <h3>DESCRICAO TECNICA</h3>
+          <p id="produto-descricao"></p>
+          <h3>ESPECIFICACOES TECNICAS</h3>
+          <p id="produto-especificacoes"></p>
+        </div>
+        <button id="btn-add-carrinho" class="btn add-cart">PRECO - ADICIONAR AO CARRINHO</button>
+      </section>
+    </main>
+
+    <div id="produto-message" class="produto-message hidden"></div>
+  </div>
+
+  <script type="module" src="../scripts/produto.js"></script>
+</body>
+</html>

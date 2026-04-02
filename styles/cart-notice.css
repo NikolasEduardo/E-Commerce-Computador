@@ -1,0 +1,46 @@
+.cart-popup {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 2000;
+}
+
+.cart-popup.hidden {
+  display: none;
+}
+
+.cart-popup-content {
+  background: #cfcfcf;
+  padding: 16px;
+  width: 100%;
+  max-width: 420px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.cart-popup-content h3 {
+  margin: 0;
+}
+
+.cart-popup-content p {
+  margin: 0;
+}
+
+.cart-popup-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+.cart-popup-actions button {
+  background: #a9a9a9;
+  border: none;
+  padding: 8px 14px;
+  cursor: pointer;
+}

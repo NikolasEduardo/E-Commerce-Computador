@@ -69,12 +69,35 @@ body {
   gap: 16px;
 }
 
+.admin-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.hidden {
+  display: none !important;
+}
+
 .panel {
   background: #bdbdbd;
   padding: 12px;
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+
+.panel-title {
+  background: #a9a9a9;
+  padding: 8px;
+  text-align: center;
+  font-weight: bold;
+}
+
+.form-message {
+  background: #a9a9a9;
+  padding: 8px 12px;
+  font-size: 0.9rem;
 }
 
 .panel-header {
@@ -144,6 +167,35 @@ body {
   text-align: center;
 }
 
+.product-toolbar {
+  align-items: flex-start;
+}
+
+.product-toolbar button {
+  background: #a9a9a9;
+  border: none;
+  padding: 10px 16px;
+  cursor: pointer;
+}
+
+.estoque-toolbar {
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.estoque-toolbar button {
+  background: #a9a9a9;
+  border: none;
+  padding: 10px 16px;
+  cursor: pointer;
+}
+
+.estoque-toolbar .form-message {
+  flex-basis: 100%;
+}
+
 .clientes-list {
   display: flex;
   flex-direction: column;
@@ -181,6 +233,204 @@ body {
   cursor: pointer;
 }
 
+.produtos-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.produto-card {
+  background: #bdbdbd;
+  padding: 14px;
+  display: grid;
+  grid-template-columns: 90px 1fr auto;
+  gap: 12px;
+  align-items: center;
+}
+
+.produto-image {
+  width: 80px;
+  height: 80px;
+  background: #a9a9a9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.produto-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.produto-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.9rem;
+}
+
+.produto-info strong {
+  font-size: 1rem;
+}
+
+.produto-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.produto-actions button {
+  background: #a9a9a9;
+  border: none;
+  padding: 8px 14px;
+  cursor: pointer;
+}
+
+.fornecedores-list,
+.entradas-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.fornecedor-card,
+.entrada-card {
+  background: #bdbdbd;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.field-row {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.9rem;
+}
+
+.field input,
+.field select,
+.field textarea {
+  padding: 8px;
+  border: none;
+  background: #d7d7d7;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chip {
+  background: #a9a9a9;
+  padding: 6px 10px;
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.chip button {
+  border: none;
+  background: #8f8f8f;
+  padding: 2px 6px;
+  cursor: pointer;
+}
+
+.imagens-preview {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 12px;
+}
+
+.imagem-card {
+  background: #a9a9a9;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: center;
+}
+
+.imagem-card img {
+  width: 100%;
+  height: 90px;
+  object-fit: cover;
+  background: #cfcfcf;
+}
+
+.imagem-card button {
+  background: #8f8f8f;
+  border: none;
+  padding: 4px 8px;
+  cursor: pointer;
+}
+
+.actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.actions button {
+  background: #a9a9a9;
+  border: none;
+  padding: 10px 16px;
+  cursor: pointer;
+}
+
+.modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: #cfcfcf;
+  padding: 16px;
+  width: 100%;
+  max-width: 480px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.modal-content input,
+.modal-content textarea {
+  padding: 8px;
+  border: none;
+  background: #e0e0e0;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.modal-actions button {
+  background: #a9a9a9;
+  border: none;
+  padding: 8px 14px;
+  cursor: pointer;
+}
+
 .empty-state {
   padding: 20px;
   background: #bdbdbd;
@@ -194,5 +444,17 @@ body {
 
   .panel-controls {
     grid-template-columns: 1fr;
+  }
+
+  .field-row {
+    grid-template-columns: 1fr;
+  }
+
+  .produto-card {
+    grid-template-columns: 1fr;
+  }
+
+  .actions {
+    justify-content: flex-start;
   }
 }

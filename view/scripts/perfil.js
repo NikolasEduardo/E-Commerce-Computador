@@ -15,11 +15,13 @@ import {
 } from "../../controller/PerfilController.js";
 import { signOut } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
 import { auth } from "../../model/firebaseApp.js";
+import { initCartNotice } from "./cart-notice.js";
 
 const messageBox = document.getElementById("perfil-message");
 const editButton = document.getElementById("btn-edit");
 const perfilButton = document.getElementById("perfil-btn");
 const logoutButton = document.getElementById("btn-logout");
+const carrinhoButton = document.getElementById("btn-carrinho");
 const navDetalhes = document.getElementById("nav-detalhes");
 const navEnderecos = document.getElementById("nav-enderecos");
 const navCartoes = document.getElementById("nav-cartoes");
@@ -820,6 +822,10 @@ logoutButton.addEventListener("click", async () => {
   }
 });
 
+carrinhoButton.addEventListener("click", () => {
+  window.location.href = "./carrinho.html";
+});
+
 navDetalhes.addEventListener("click", () => {
   setNavActive("detalhes");
 });
@@ -938,3 +944,4 @@ btnSaveCartao.addEventListener("click", async () => {
 setEditable(false);
 const metadataPromise = carregarMetadata();
 metadataPromise.then(() => carregarDados());
+initCartNotice();

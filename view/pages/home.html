@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Home</title>
   <link rel="stylesheet" href="../../styles/home.css">
+  <link rel="stylesheet" href="../../styles/cart-notice.css">
 </head>
 <body>
   <div class="home-shell">
@@ -13,7 +14,7 @@
       <input class="search" type="text" placeholder="PESQUISA">
       <button class="btn">IA</button>
       <button id="perfil-btn" class="btn">PERFIL</button>
-      <button class="btn">CARRINHO</button>
+      <button id="btn-carrinho" class="btn">CARRINHO</button>
     </header>
 
     <section class="categories">
@@ -27,32 +28,7 @@
 
     <h2 class="section-title">PRODUTOS POPULARES</h2>
 
-    <section class="products">
-      <article class="product-card">
-        <div class="product-image">IMAGEM</div>
-        <div class="product-details">DETALHES E CATEGORIA</div>
-        <div class="product-actions">
-          <button class="btn">COMPRAR</button>
-          <button class="btn">INFO</button>
-        </div>
-      </article>
-      <article class="product-card">
-        <div class="product-image">IMAGEM</div>
-        <div class="product-details">DETALHES E CATEGORIA</div>
-        <div class="product-actions">
-          <button class="btn">COMPRAR</button>
-          <button class="btn">INFO</button>
-        </div>
-      </article>
-      <article class="product-card">
-        <div class="product-image">IMAGEM</div>
-        <div class="product-details">DETALHES E CATEGORIA</div>
-        <div class="product-actions">
-          <button class="btn">COMPRAR</button>
-          <button class="btn">INFO</button>
-        </div>
-      </article>
-    </section>
+    <section id="productsList" class="products"></section>
   </div>
 
   <script type="module" src="../scripts/home.js"></script>

@@ -1,0 +1,170 @@
+body {
+  margin: 0;
+  font-family: Arial;
+  background: #d7d7d7;
+}
+
+.produto-shell {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 16px;
+  box-sizing: border-box;
+}
+
+.produto-header {
+  display: grid;
+  grid-template-columns: 140px 1fr 80px 120px 110px;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 28px;
+}
+
+.logo {
+  background: #b0b0b0;
+  text-align: center;
+  padding: 10px;
+}
+
+.search {
+  background: #b0b0b0;
+  border: none;
+  padding: 10px;
+}
+
+.btn {
+  background: #b0b0b0;
+  border: none;
+  padding: 10px;
+  cursor: pointer;
+}
+
+.produto-main {
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr;
+  gap: 18px;
+}
+
+.produto-left {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.image-panel {
+  background: #bdbdbd;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.main-image {
+  background: #a9a9a9;
+  height: 320px;
+  width: 320px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  margin-bottom: 12px;
+}
+
+.main-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.thumbs {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.thumb-button {
+  background: #cfcfcf;
+  border: none;
+  padding: 6px;
+  cursor: pointer;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.thumb-button img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.thumb-button.is-active {
+  outline: 2px solid #8a8a8a;
+}
+
+.produto-detalhes {
+  background: #cfcfcf;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.produto-right {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.produto-texto {
+  background: #cfcfcf;
+  padding: 16px;
+  height: 360px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.produto-texto h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.produto-texto p {
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.add-cart {
+  background: #a9a9a9;
+  text-align: left;
+}
+
+.produto-message {
+  margin-top: 16px;
+  background: #bdbdbd;
+  padding: 12px;
+  text-align: center;
+}
+
+.hidden {
+  display: none;
+}
+
+@media (max-width: 1000px) {
+  .produto-header {
+    grid-template-columns: 1fr;
+  }
+
+  .produto-main {
+    grid-template-columns: 1fr;
+  }
+
+  .produto-texto {
+    height: auto;
+    max-height: 300px;
+  }
+}

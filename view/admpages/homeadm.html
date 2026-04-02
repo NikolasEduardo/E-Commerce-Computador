@@ -15,56 +15,291 @@
 
     <div class="admin-body">
       <aside class="admin-nav">
-        <button class="nav-item">PRODUTOS</button>
-        <button class="nav-item is-active">CLIENTES</button>
+        <button id="nav-produtos" class="nav-item">PRODUTOS</button>
+        <button id="nav-clientes" class="nav-item is-active">CLIENTES</button>
         <button class="nav-item">PEDIDOS</button>
-        <button class="nav-item">ESTOQUE</button>
+        <button id="nav-estoque" class="nav-item">ESTOQUE</button>
         <button class="nav-item">GRAFICO</button>
       </aside>
 
       <main class="admin-content">
-        <section class="panel">
-          <div class="panel-header">
-            <div class="tab">PESQUISA</div>
-            <div class="tab">FILTRAR POR</div>
-            <div class="tab">CLASSIFICAR POR</div>
+        <section id="produtos-section" class="admin-section hidden">
+          <section class="panel">
+            <div class="panel-header">
+              <div class="tab">PESQUISA</div>
+              <div class="tab">FILTRAR POR</div>
+              <div class="tab">CLASSIFICAR POR</div>
+            </div>
+
+            <div class="panel-controls">
+              <div class="search-box">
+                <input type="text" id="prodSearchInput" placeholder="BUSCAR POR NOME OU MODELO">
+              </div>
+
+              <div class="filters">
+                <div class="filter-group">
+                  <span class="filter-title">STATUS</span>
+                  <select id="prodStatusSelect">
+                    <option value="">TODOS</option>
+                    <option value="ATIVO">ATIVO</option>
+                    <option value="INATIVO">INATIVO</option>
+                  </select>
+                </div>
+                <div class="filter-group">
+                  <span class="filter-title">MARCA</span>
+                  <select id="prodMarcaSelect">
+                    <option value="">TODAS</option>
+                  </select>
+                </div>
+                <div class="filter-group">
+                  <span class="filter-title">CATEGORIA</span>
+                  <select id="prodCategoriaSelect">
+                    <option value="">TODAS</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="sorts">
+                <button class="sort-button prod-sort-button" data-field="nome">
+                  NOME <span class="sort-icon"></span>
+                </button>
+                <button class="sort-button prod-sort-button" data-field="estoqueFisico">
+                  ESTOQUE FISICO <span class="sort-icon"></span>
+                </button>
+                <button class="sort-button prod-sort-button" data-field="quantidadeVendida">
+                  QUANTIDADE VENDIDA <span class="sort-icon"></span>
+                </button>
+              </div>
+            </div>
+          </section>
+
+          <div class="panel product-toolbar">
+            <button id="btn-add-produto" type="button">ADICIONAR PRODUTO</button>
           </div>
 
-          <div class="panel-controls">
-            <div class="search-box">
-              <input type="text" id="searchInput" placeholder="BUSCAR POR NOME, CPF OU EMAIL">
+          <section id="produtosList" class="produtos-list"></section>
+        </section>
+
+        <section id="produto-form-section" class="admin-section hidden">
+          <div class="panel">
+            <div class="panel-title" id="produto-form-title">NOVO PRODUTO</div>
+            <div id="produto-form-message" class="form-message hidden"></div>
+
+            <div class="field-row">
+              <div class="field">
+                <label for="produto-nome">NOME</label>
+                <input type="text" id="produto-nome" placeholder="NOME">
+              </div>
+              <div class="field">
+                <label for="produto-modelo">MODELO</label>
+                <input type="text" id="produto-modelo" placeholder="MODELO">
+              </div>
             </div>
 
-            <div class="filters">
-              <div class="filter-group">
-                <span class="filter-title">STATUS</span>
-                <label><input type="checkbox" value="ATIVO" class="filter-status"> ATIVO</label>
-                <label><input type="checkbox" value="INATIVO" class="filter-status"> INATIVO</label>
+            <div class="field-row">
+              <div class="field">
+                <label for="produto-garantia">GARANTIA</label>
+                <input type="text" id="produto-garantia" placeholder="GARANTIA">
               </div>
-              <div class="filter-group">
-                <span class="filter-title">GENERO</span>
-                <label><input type="checkbox" value="MASCULINO" class="filter-genero"> MASCULINO</label>
-                <label><input type="checkbox" value="FEMININO" class="filter-genero"> FEMININO</label>
-                <label><input type="checkbox" value="OUTRO" class="filter-genero"> OUTRO</label>
+              <div class="field">
+                <label for="produto-marca-select">MARCA</label>
+                <select id="produto-marca-select">
+                  <option value="">SELECIONE</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="produto-marca-nova">NOVA MARCA</label>
+                <input type="text" id="produto-marca-nova" placeholder="NOVA MARCA">
               </div>
             </div>
 
-            <div class="sorts">
-              <button class="sort-button" data-field="nome">
-                NOME <span class="sort-icon"></span>
-              </button>
-              <button class="sort-button" data-field="ranking">
-                RANKING <span class="sort-icon"></span>
-              </button>
-              <button class="sort-button" data-field="dataNascimento">
-                DATA NASCIMENTO <span class="sort-icon"></span>
-              </button>
+            <div class="field-row">
+              <div class="field">
+                <label for="produto-grupo-select">GRUPO PRECIFICACAO</label>
+                <select id="produto-grupo-select">
+                  <option value="">SELECIONE</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="produto-categoria-select">CATEGORIA</label>
+                <select id="produto-categoria-select">
+                  <option value="">SELECIONE</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="produto-categoria-nova">NOVA CATEGORIA</label>
+                <input type="text" id="produto-categoria-nova" placeholder="NOVA CATEGORIA">
+              </div>
+              <div class="field">
+                <label>&nbsp;</label>
+                <button id="btn-add-categoria" type="button">ADICIONAR</button>
+              </div>
+            </div>
+
+            <div class="chip-list" id="categorias-selecionadas"></div>
+
+            <div class="field">
+              <label for="produto-descricao">DESCRICAO TECNICA</label>
+              <textarea id="produto-descricao" rows="3" placeholder="DESCRICAO TECNICA"></textarea>
+            </div>
+
+            <div class="field">
+              <label for="produto-especificacoes">ESPECIFICACOES TECNICAS</label>
+              <textarea id="produto-especificacoes" rows="3" placeholder="ESPECIFICACOES TECNICAS"></textarea>
+            </div>
+
+            <div class="field">
+              <label for="produto-imagens">IMAGENS (SELECIONE 1 CAPA)</label>
+              <input type="file" id="produto-imagens" multiple accept="image/*">
+            </div>
+
+            <div id="imagens-preview" class="imagens-preview"></div>
+
+            <div class="actions">
+              <button id="btn-cancel-produto" type="button">CANCELAR</button>
+              <button id="btn-save-produto" type="button">SALVAR</button>
             </div>
           </div>
         </section>
 
-        <section id="clientesList" class="clientes-list"></section>
+        <section id="estoque-section" class="admin-section hidden">
+          <div class="panel estoque-toolbar">
+            <button id="btn-add-fornecedor" type="button">ADICIONAR FORNECEDOR</button>
+            <button id="btn-add-entrada" type="button">DAR ENTRADA DE ESTOQUE</button>
+            <div id="estoque-message" class="form-message hidden"></div>
+          </div>
+
+          <div id="fornecedor-form-panel" class="panel hidden">
+            <div class="panel-title">NOVO FORNECEDOR</div>
+            <div class="field-row">
+              <div class="field">
+                <label for="fornecedor-nome">NOME</label>
+                <input type="text" id="fornecedor-nome" placeholder="NOME">
+              </div>
+              <div class="field">
+                <label for="fornecedor-email">EMAIL CONTATO</label>
+                <input type="email" id="fornecedor-email" placeholder="EMAIL">
+              </div>
+              <div class="field">
+                <label for="fornecedor-telefone">TELEFONE CONTATO</label>
+                <input type="text" id="fornecedor-telefone" placeholder="TELEFONE">
+              </div>
+            </div>
+            <div class="actions">
+              <button id="btn-cancel-fornecedor" type="button">CANCELAR</button>
+              <button id="btn-save-fornecedor" type="button">SALVAR</button>
+            </div>
+          </div>
+
+          <div id="entrada-form-panel" class="panel hidden">
+            <div class="panel-title">ENTRADA DE ESTOQUE</div>
+            <div class="field-row">
+              <div class="field">
+                <label for="entrada-produto">PRODUTO</label>
+                <select id="entrada-produto">
+                  <option value="">SELECIONE</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="entrada-quantidade">QUANTIDADE</label>
+                <input type="number" id="entrada-quantidade" min="1" placeholder="QUANTIDADE">
+              </div>
+              <div class="field">
+                <label for="entrada-custo">CUSTO</label>
+                <input type="number" id="entrada-custo" min="0" step="0.01" placeholder="CUSTO">
+              </div>
+              <div class="field">
+                <label for="entrada-custo-tipo">TIPO DE CUSTO</label>
+                <select id="entrada-custo-tipo">
+                  <option value="unitario">POR UNIDADE</option>
+                  <option value="total">TOTAL DA QUANTIDADE</option>
+                </select>
+              </div>
+            </div>
+            <div class="field-row">
+              <div class="field">
+                <label for="entrada-fornecedor">FORNECEDOR</label>
+                <select id="entrada-fornecedor">
+                  <option value="">SELECIONE</option>
+                </select>
+              </div>
+            </div>
+            <div class="actions">
+              <button id="btn-cancel-entrada" type="button">CANCELAR</button>
+              <button id="btn-save-entrada" type="button">SALVAR</button>
+            </div>
+          </div>
+
+          <section class="panel">
+            <div class="panel-title">FORNECEDORES</div>
+            <div id="fornecedoresList" class="fornecedores-list"></div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-title">ENTRADA ESTOQUE</div>
+            <div id="entradasList" class="entradas-list"></div>
+          </section>
+        </section>
+
+        <section id="clientes-section" class="admin-section">
+          <section class="panel">
+            <div class="panel-header">
+              <div class="tab">PESQUISA</div>
+              <div class="tab">FILTRAR POR</div>
+              <div class="tab">CLASSIFICAR POR</div>
+            </div>
+
+            <div class="panel-controls">
+              <div class="search-box">
+                <input type="text" id="searchInput" placeholder="BUSCAR POR NOME, CPF OU EMAIL">
+              </div>
+
+              <div class="filters">
+                <div class="filter-group">
+                  <span class="filter-title">STATUS</span>
+                  <label><input type="checkbox" value="ATIVO" class="filter-status"> ATIVO</label>
+                  <label><input type="checkbox" value="INATIVO" class="filter-status"> INATIVO</label>
+                </div>
+                <div class="filter-group">
+                  <span class="filter-title">GENERO</span>
+                  <label><input type="checkbox" value="MASCULINO" class="filter-genero"> MASCULINO</label>
+                  <label><input type="checkbox" value="FEMININO" class="filter-genero"> FEMININO</label>
+                  <label><input type="checkbox" value="OUTRO" class="filter-genero"> OUTRO</label>
+                </div>
+              </div>
+
+              <div class="sorts">
+                <button class="sort-button client-sort-button" data-field="nome">
+                  NOME <span class="sort-icon"></span>
+                </button>
+                <button class="sort-button client-sort-button" data-field="ranking">
+                  RANKING <span class="sort-icon"></span>
+                </button>
+                <button class="sort-button client-sort-button" data-field="dataNascimento">
+                  DATA NASCIMENTO <span class="sort-icon"></span>
+                </button>
+              </div>
+            </div>
+          </section>
+
+          <section id="clientesList" class="clientes-list"></section>
+        </section>
       </main>
+    </div>
+  </div>
+
+  <div id="status-modal" class="modal hidden">
+    <div class="modal-content">
+      <h3 id="status-modal-title">CONFIRMAR ACAO</h3>
+      <p id="status-modal-context"></p>
+      <label for="status-modal-titulo">TITULO DA JUSTIFICATIVA</label>
+      <input id="status-modal-titulo" type="text" placeholder="TITULO">
+      <label for="status-modal-descricao">DESCRICAO DA JUSTIFICATIVA</label>
+      <textarea id="status-modal-descricao" rows="3" placeholder="DESCRICAO"></textarea>
+      <div class="modal-actions">
+        <button id="status-modal-cancel" type="button">CANCELAR</button>
+        <button id="status-modal-confirm" type="button">CONFIRMAR</button>
+      </div>
     </div>
   </div>
 
