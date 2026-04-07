@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Finalizar Compra</title>
+  <link rel="stylesheet" href="../../styles/finalizar.css">
+  <link rel="stylesheet" href="../../styles/cart-notice.css">
+</head>
+<body>
+  <div class="checkout-shell">
+    <header class="checkout-header">
+      <div class="logo"><a href="home.html">LOGO</a></div>
+      <button class="btn">IA</button>
+      <div class="header-spacer"></div>
+      <button id="perfil-btn" class="btn">PERFIL</button>
+      <button id="btn-carrinho" class="btn">CARRINHO</button>
+    </header>
+
+    <div class="checkout-body">
+      <section class="checkout-items">
+        <h2 class="checkout-title">FINALIZAR COMPRA</h2>
+        <div id="checkout-items-list" class="checkout-items-list"></div>
+      </section>
+
+      <aside class="checkout-summary">
+        <div class="checkout-panel">
+          <h3>ENDERECO DE ENTREGA</h3>
+          <div class="field-row">
+            <select id="endereco-select"></select>
+            <button id="btn-endereco-add" class="btn small">NOVO</button>
+          </div>
+          <div id="endereco-info" class="hint"></div>
+        </div>
+
+        <div class="checkout-panel">
+          <h3>CARTOES DE CREDITO</h3>
+          <div id="cartao-empty" class="hint hidden">Nenhum cartao cadastrado.</div>
+          <div class="field-row stack">
+            <label for="cartao-principal" class="field-label">Cartao principal</label>
+            <select id="cartao-principal"></select>
+          </div>
+          <label class="field-toggle">
+            <input type="checkbox" id="cartao-extra-toggle">
+            Usar segundo cartao
+          </label>
+          <div id="cartao-extra-row" class="field-row stack hidden">
+            <label for="cartao-extra" class="field-label">Cartao adicional</label>
+            <div class="field-row triple">
+              <select id="cartao-extra"></select>
+              <input id="cartao-extra-valor" type="number" min="10" step="0.01" placeholder="Valor">
+            </div>
+          </div>
+          <div id="cartao-msg" class="hint"></div>
+        </div>
+
+        <div class="checkout-panel">
+          <h3>CUPOM PROMOCIONAL</h3>
+          <select id="cupom-promo"></select>
+          <div id="cupom-promo-msg" class="hint"></div>
+        </div>
+
+        <div class="checkout-panel">
+          <h3>CUPONS DE TROCA</h3>
+          <div id="cupom-troca-list" class="coupon-list"></div>
+        </div>
+
+        <div class="checkout-panel">
+          <h3>RESUMO DA COMPRA</h3>
+          <div id="checkout-totals" class="totals"></div>
+        </div>
+
+        <button id="btn-comprar" class="btn summary-btn">COMPRAR</button>
+      </aside>
+    </div>
+  </div>
+
+  <div id="endereco-modal" class="modal hidden">
+    <div class="modal-content">
+      <h3>NOVO ENDERECO</h3>
+      <div class="modal-grid">
+        <select id="end-tipoResidencia"></select>
+        <select id="end-tipoLogradouro"></select>
+        <input id="end-logradouro" type="text" placeholder="Logradouro">
+        <input id="end-numero" type="text" placeholder="Numero">
+        <input id="end-bairro" type="text" placeholder="Bairro">
+        <input id="end-cep" type="text" placeholder="CEP">
+        <input id="end-cidade" type="text" placeholder="Cidade">
+        <input id="end-estado" type="text" placeholder="Estado">
+        <input id="end-pais" type="text" placeholder="Pais">
+        <input id="end-observacoes" type="text" placeholder="Observacoes">
+      </div>
+      <div class="modal-actions">
+        <button id="btn-endereco-cancelar" class="btn small">CANCELAR</button>
+        <button id="btn-endereco-salvar" class="btn small">CADASTRAR</button>
+      </div>
+      <div id="endereco-modal-msg" class="hint"></div>
+    </div>
+  </div>
+
+  <script type="module" src="../scripts/finalizar.js"></script>
+</body>
+</html>

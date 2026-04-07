@@ -11,6 +11,7 @@ const carrinhoButton = document.getElementById("btn-carrinho");
 const itemsList = document.getElementById("cart-items-list");
 const summaryDetails = document.getElementById("cart-summary-details");
 const btnContinuar = document.getElementById("btn-continuar");
+const btnFinalizar = document.getElementById("btn-finalizar");
 
 function formatCurrency(value) {
   if (!Number.isFinite(value)) {
@@ -110,9 +111,49 @@ function renderItems(itens) {
       }
     });
 
-    const qty = document.createElement("span");
+    const qty = document.createElement("input");
     qty.className = "qty";
-    qty.textContent = item.quantidade ?? 0;
+    qty.type = "text";
+    qty.inputMode = "numeric";
+    qty.pattern = "\\d*";
+    qty.value = item.quantidade ?? 0;
+
+    const commitQuantidade = async () => {
+      const raw = `${qty.value || ""}`.trim();
+      const parsed = raw === "" ? 0 : Number(raw);
+      const novaQtd = Math.min(Math.max(Number.isFinite(parsed) ? parsed : 0, 0), 99);
+      if (novaQtd === Number(item.quantidade || 0)) {
+        qty.value = novaQtd;
+        return;
+      }
+      try {
+        const resp = await atualizarQuantidadeItem(item.codigoProduto, novaQtd);
+        if (resp?.warning) {
+          showWarning(resp.warning);
+        }
+        await carregarCarrinhoPagina();
+        await refreshCartNotice();
+      } catch (error) {
+        showWarning(error?.message || "Erro ao atualizar quantidade.");
+        qty.value = item.quantidade ?? 0;
+      }
+    };
+
+    qty.addEventListener("input", () => {
+      const cleaned = qty.value.replace(/\D/g, "").slice(0, 2);
+      qty.value = cleaned;
+    });
+
+    qty.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        commitQuantidade();
+      }
+    });
+
+    qty.addEventListener("blur", () => {
+      commitQuantidade();
+    });
 
     const btnPlus = document.createElement("button");
     btnPlus.textContent = "+";
@@ -171,6 +212,10 @@ carrinhoButton.addEventListener("click", () => {
 
 btnContinuar.addEventListener("click", () => {
   window.location.href = "./home.html";
+});
+
+btnFinalizar.addEventListener("click", () => {
+  window.location.href = "./finalizar.html";
 });
 
 window.addEventListener("cart-updated", () => {

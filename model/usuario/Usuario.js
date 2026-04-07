@@ -1,5 +1,5 @@
 export class Usuario {
-    constructor(id, authId, codigoUser, nome, genero, dataNascimento, cpf, email, senha, ranking, status){
+    constructor(id, authId, codigoUser, nome, genero, dataNascimento, cpf, email, ranking, status){
         this.id = id
         this.authId = authId
         this.codigoUser = codigoUser

@@ -109,9 +109,12 @@ body {
 }
 
 .cart-item-actions .qty {
-  min-width: 24px;
+  width: 44px;
   text-align: center;
   font-weight: bold;
+  border: none;
+  background: #d9d9d9;
+  padding: 4px 6px;
 }
 
 .cart-summary {

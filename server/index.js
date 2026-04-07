@@ -593,9 +593,9 @@ async function fetchUsuarioEnderecos(accessToken, authId) {
 
 async function fetchUsuarioCartoes(accessToken, authId) {
   const query = `
-    query UsuarioCartoes($authId: String!) {
-      usuarios(where: { authId: { eq: $authId } }, limit: 1) {
-        id
+      query UsuarioCartoes($authId: String!) {
+        usuarios(where: { authId: { eq: $authId } }, limit: 1) {
+          id
         cartaoCreditos_on_usuario(where: { ativo: { eq: true } }) {
           id
           numero
@@ -614,10 +614,120 @@ async function fetchUsuarioCartoes(accessToken, authId) {
   return data?.usuarios?.[0] || null;
 }
 
+async function fetchCuponsPromocionais(accessToken, tipos) {
+  const query = `
+      query CuponsPromocionais($tipos: [String!]!, $status: String!) {
+        cupoms(
+          where: {
+            status: { nome: { eq: $status } }
+            tipo: { nome: { in: $tipos } }
+          }
+        ) {
+          id
+          codigo
+          valor
+          validade
+          tipo { nome }
+          status { nome }
+        }
+      }
+    `;
+
+  const data = await executeGraphql(accessToken, query, {
+    tipos,
+    status: "ATIVO"
+  });
+  return data?.cupoms || [];
+}
+
+async function fetchCuponsTrocaPorUsuario(accessToken, usuarioId, tipos) {
+  const queryComStatus = `
+        query CuponsTrocaUsuario($usuarioId: UUID!, $tipos: [String!]!, $status: String!) {
+          trocas(
+            where: {
+              pedido: { usuarioId: { eq: $usuarioId } }
+              cupomGerado: {
+                status: { nome: { eq: $status } }
+                tipo: { nome: { in: $tipos } }
+              }
+            }
+          ) {
+            cupomGerado {
+              id
+              codigo
+              valor
+              validade
+              tipo { nome }
+              status { nome }
+            }
+          }
+        }
+      `;
+
+  const querySemStatus = `
+        query CuponsTrocaUsuarioSemStatus($usuarioId: UUID!, $tipos: [String!]!) {
+          trocas(
+            where: {
+              pedido: { usuarioId: { eq: $usuarioId } }
+              cupomGerado: {
+                tipo: { nome: { in: $tipos } }
+              }
+            }
+          ) {
+            cupomGerado {
+              id
+              codigo
+              valor
+              validade
+              tipo { nome }
+              status { nome }
+            }
+          }
+        }
+      `;
+
+  const dataComStatus = await executeGraphql(accessToken, queryComStatus, {
+    usuarioId,
+    tipos,
+    status: "ATIVO"
+  });
+
+  let encontrados = (dataComStatus?.trocas || [])
+    .map((troca) => troca?.cupomGerado)
+    .filter(Boolean);
+
+  if (!encontrados.length) {
+    const dataSemStatus = await executeGraphql(accessToken, querySemStatus, {
+      usuarioId,
+      tipos
+    });
+    encontrados = (dataSemStatus?.trocas || [])
+      .map((troca) => troca?.cupomGerado)
+      .filter(Boolean);
+  }
+
+  const normalize = (valor) =>
+    `${valor || ""}`.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
+  const tiposNormalizados = new Set(tipos.map((t) => normalize(t)));
+
+  const unique = new Map();
+  encontrados.forEach((cupom) => {
+    if (!cupom?.id || unique.has(cupom.id)) {
+      return;
+    }
+    const statusOk = !cupom.status?.nome || normalize(cupom.status?.nome) === "ATIVO";
+    const tipoOk = tiposNormalizados.has(normalize(cupom.tipo?.nome));
+    if (statusOk && tipoOk) {
+      unique.set(cupom.id, cupom);
+    }
+  });
+  return Array.from(unique.values());
+}
+
 async function fetchUsuarioCartao(accessToken, authId, cartaoId) {
   const query = `
-    query UsuarioCartao($authId: String!, $cartaoId: UUID!) {
-      usuarios(where: { authId: { eq: $authId } }, limit: 1) {
+      query UsuarioCartao($authId: String!, $cartaoId: UUID!) {
+        usuarios(where: { authId: { eq: $authId } }, limit: 1) {
         id
         cartaoCreditos_on_usuario(where: { id: { eq: $cartaoId } }, limit: 1) {
           id
@@ -2128,9 +2238,9 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  if (req.method === "POST" && url.pathname === "/api/usuario/cartoes/preferencial") {
-    try {
-      const authHeader = req.headers.authorization || "";
+    if (req.method === "POST" && url.pathname === "/api/usuario/cartoes/preferencial") {
+      try {
+        const authHeader = req.headers.authorization || "";
       const idToken = authHeader.startsWith("Bearer ")
         ? authHeader.slice("Bearer ".length)
         : "";
@@ -2177,13 +2287,48 @@ const server = http.createServer(async (req, res) => {
       sendJson(res, 200, { ok: true });
     } catch (error) {
       sendJson(res, 500, { error: error?.message || "Erro ao definir cartao preferencial." });
+      }
+      return;
     }
-    return;
-  }
 
-  if (req.method === "GET" && url.pathname === "/api/cloudinary/config") {
-    try {
-      const authHeader = req.headers.authorization || "";
+    if (req.method === "GET" && url.pathname === "/api/usuario/cupons") {
+      try {
+        const authHeader = req.headers.authorization || "";
+        const idToken = authHeader.startsWith("Bearer ")
+          ? authHeader.slice("Bearer ".length)
+          : "";
+
+        if (!idToken) {
+          sendJson(res, 400, { error: "idToken ausente." });
+          return;
+        }
+
+        const authId = await verifyIdToken(idToken);
+        const accessToken = await getAccessToken();
+        const usuarioId = await fetchUsuarioIdByAuthId(accessToken, authId);
+        if (!usuarioId) {
+          sendJson(res, 404, { error: "Usuario nao encontrado." });
+          return;
+        }
+
+        const promoTipos = ["DESCONTO", "FRETE GRATIS", "FRETE GRÁTIS"];
+        const trocaTipos = ["TROCA", "SOBRA"];
+
+        const [promocionais, troca] = await Promise.all([
+          fetchCuponsPromocionais(accessToken, promoTipos),
+          fetchCuponsTrocaPorUsuario(accessToken, usuarioId, trocaTipos)
+        ]);
+
+        sendJson(res, 200, { promocionais, troca });
+      } catch (error) {
+        sendJson(res, 500, { error: error?.message || "Erro ao buscar cupons." });
+      }
+      return;
+    }
+
+    if (req.method === "GET" && url.pathname === "/api/cloudinary/config") {
+      try {
+        const authHeader = req.headers.authorization || "";
       const idToken = authHeader.startsWith("Bearer ")
         ? authHeader.slice("Bearer ".length)
         : "";

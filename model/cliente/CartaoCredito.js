@@ -1,5 +1,5 @@
 export class CartaoCredito {
-    constructor(usuario, id, bandeira, numero, nomeImpresso, codigoSeguranca, preferencial){
+    constructor(usuario, id, bandeira, numero, nomeImpresso, codigoSeguranca, preferencial, ativo){
         this.usuario = usuario
         this.id = id
         this.bandeira = bandeira
@@ -7,5 +7,6 @@ export class CartaoCredito {
         this.nomeImpresso = nomeImpresso
         this.codigoSeguranca = codigoSeguranca
         this.preferencial = preferencial
+        this.ativo = ativo
     }
 }
