@@ -257,6 +257,47 @@ async function ensureStatusUsuario(accessToken, nome) {
   return getStatusUsuarioId(accessToken, nome);
 }
 
+async function getStatusPedidoId(accessToken, nome) {
+  const query = `
+    query StatusPedidoPorNome($nome: String!) {
+      statusPedidos(where: { nome: { eq: $nome } }, limit: 1) { id }
+    }
+  `;
+
+  const data = await executeGraphql(accessToken, query, { nome });
+  return data?.statusPedidos?.[0]?.id || null;
+}
+
+async function getStatusCupomId(accessToken, nome) {
+  const query = `
+    query StatusCupomPorNome($nome: String!) {
+      statusCupoms(where: { nome: { eq: $nome } }, limit: 1) { id }
+    }
+  `;
+  const data = await executeGraphql(accessToken, query, { nome });
+  return data?.statusCupoms?.[0]?.id || null;
+}
+
+async function getTipoCupomId(accessToken, nome) {
+  const query = `
+    query TipoCupomPorNome($nome: String!) {
+      tipoCupoms(where: { nome: { eq: $nome } }, limit: 1) { id }
+    }
+  `;
+  const data = await executeGraphql(accessToken, query, { nome });
+  return data?.tipoCupoms?.[0]?.id || null;
+}
+
+async function updatePedidoStatus(accessToken, data) {
+  const mutation = `
+    mutation AtualizarStatusPedido($id: UUID!, $statusId: UUID!) {
+      pedido_update(id: $id, data: { statusId: $statusId })
+    }
+  `;
+
+  await executeGraphql(accessToken, mutation, data);
+}
+
 async function insertUsuario(accessToken, data) {
   const mutation = `
     mutation InserirUsuario(
@@ -370,6 +411,96 @@ async function insertPedido(accessToken, data) {
     }
   `;
 
+  await executeGraphql(accessToken, mutation, data);
+}
+
+async function insertPagamento(accessToken, data) {
+  const mutation = `
+    mutation InserirPagamento(
+      $id: UUID!,
+      $pedidoId: UUID!,
+      $valorTotalPago: Float!,
+      $dataPagamento: Timestamp!,
+      $cupomPromocionalId: UUID
+    ) {
+      pagamento_insert(data: {
+        id: $id,
+        pedidoId: $pedidoId,
+        valorTotalPago: $valorTotalPago,
+        dataPagamento: $dataPagamento,
+        cupomPromocionalId: $cupomPromocionalId
+      })
+    }
+  `;
+
+  await executeGraphql(accessToken, mutation, data);
+}
+
+async function insertPagamentoCartao(accessToken, data) {
+  const mutation = `
+    mutation InserirPagamentoCartao(
+      $pagamentoId: UUID!,
+      $cartaoCreditoId: UUID!,
+      $valorParcela: Float!
+    ) {
+      pagamentoCartao_insert(data: {
+        pagamentoId: $pagamentoId,
+        cartaoCreditoId: $cartaoCreditoId,
+        valorParcela: $valorParcela
+      })
+    }
+  `;
+
+  await executeGraphql(accessToken, mutation, data);
+}
+
+async function insertPagamentoCupomTroca(accessToken, data) {
+  const mutation = `
+    mutation InserirPagamentoCupomTroca(
+      $pagamentoId: UUID!,
+      $cupomTrocaId: UUID!
+    ) {
+      pagamentoCupomTroca_insert(data: {
+        pagamentoId: $pagamentoId,
+        cupomTrocaId: $cupomTrocaId
+      })
+    }
+  `;
+
+  await executeGraphql(accessToken, mutation, data);
+}
+
+async function updateCupomStatus(accessToken, data) {
+  const mutation = `
+    mutation AtualizarStatusCupom($id: UUID!, $statusId: UUID!) {
+      cupom_update(id: $id, data: { statusId: $statusId })
+    }
+  `;
+  await executeGraphql(accessToken, mutation, data);
+}
+
+async function insertCupom(accessToken, data) {
+  const mutation = `
+    mutation InserirCupom(
+      $id: UUID!,
+      $clienteId: UUID!,
+      $statusId: UUID!,
+      $tipoId: UUID!,
+      $codigo: String!,
+      $valor: Float!,
+      $validade: Timestamp!
+    ) {
+      cupom_insert(data: {
+        id: $id,
+        clienteId: $clienteId,
+        statusId: $statusId,
+        tipoId: $tipoId,
+        codigo: $codigo,
+        valor: $valor,
+        validade: $validade
+      })
+    }
+  `;
   await executeGraphql(accessToken, mutation, data);
 }
 
@@ -614,74 +745,78 @@ async function fetchUsuarioCartoes(accessToken, authId) {
   return data?.usuarios?.[0] || null;
 }
 
-async function fetchCuponsPromocionais(accessToken, tipos) {
+async function fetchUsuarioEnderecoPorId(accessToken, usuarioId, enderecoId) {
   const query = `
-      query CuponsPromocionais($tipos: [String!]!, $status: String!) {
-        cupoms(
-          where: {
-            status: { nome: { eq: $status } }
-            tipo: { nome: { in: $tipos } }
-          }
-        ) {
+      query UsuarioEnderecoPorId($usuarioId: UUID!, $enderecoId: UUID!) {
+        usuarios(where: { id: { eq: $usuarioId } }, limit: 1) {
           id
-          codigo
-          valor
-          validade
-          tipo { nome }
-          status { nome }
+          enderecos_on_usuario(where: { id: { eq: $enderecoId } }, limit: 1) {
+            id
+            cep
+            cidade
+            estado
+          }
         }
       }
     `;
-
-  const data = await executeGraphql(accessToken, query, {
-    tipos,
-    status: "ATIVO"
-  });
-  return data?.cupoms || [];
+  const data = await executeGraphql(accessToken, query, { usuarioId, enderecoId });
+  const usuario = data?.usuarios?.[0] || null;
+  return usuario?.enderecos_on_usuario?.[0] || null;
 }
 
-async function fetchCuponsTrocaPorUsuario(accessToken, usuarioId, tipos) {
+async function fetchUsuarioCartoesPorIds(accessToken, usuarioId, cartaoIds) {
+  const query = `
+      query UsuarioCartoesPorIds($usuarioId: UUID!, $ids: [UUID!]) {
+        usuarios(where: { id: { eq: $usuarioId } }, limit: 1) {
+          id
+          cartaoCreditos_on_usuario(where: { id: { in: $ids }, ativo: { eq: true } }) {
+            id
+            numero
+            dataValidade
+            ativo
+            preferencial
+          }
+        }
+      }
+    `;
+  const data = await executeGraphql(accessToken, query, { usuarioId, ids: cartaoIds });
+  return data?.usuarios?.[0]?.cartaoCreditos_on_usuario || [];
+}
+
+async function fetchCuponsPorCliente(accessToken, usuarioId, tipos, statusNome) {
   const queryComStatus = `
-        query CuponsTrocaUsuario($usuarioId: UUID!, $tipos: [String!]!, $status: String!) {
-          trocas(
+        query CuponsCliente($usuarioId: UUID!, $tipos: [String!]!, $status: String!) {
+          cupoms(
             where: {
-              pedido: { usuarioId: { eq: $usuarioId } }
-              cupomGerado: {
-                status: { nome: { eq: $status } }
-                tipo: { nome: { in: $tipos } }
-              }
+              clienteId: { eq: $usuarioId }
+              status: { nome: { eq: $status } }
+              tipo: { nome: { in: $tipos } }
             }
           ) {
-            cupomGerado {
-              id
-              codigo
-              valor
-              validade
-              tipo { nome }
-              status { nome }
-            }
+            id
+            codigo
+            valor
+            validade
+            tipo { nome }
+            status { nome }
           }
         }
       `;
 
   const querySemStatus = `
-        query CuponsTrocaUsuarioSemStatus($usuarioId: UUID!, $tipos: [String!]!) {
-          trocas(
+        query CuponsClienteSemStatus($usuarioId: UUID!, $tipos: [String!]!) {
+          cupoms(
             where: {
-              pedido: { usuarioId: { eq: $usuarioId } }
-              cupomGerado: {
-                tipo: { nome: { in: $tipos } }
-              }
+              clienteId: { eq: $usuarioId }
+              tipo: { nome: { in: $tipos } }
             }
           ) {
-            cupomGerado {
-              id
-              codigo
-              valor
-              validade
-              tipo { nome }
-              status { nome }
-            }
+            id
+            codigo
+            valor
+            validade
+            tipo { nome }
+            status { nome }
           }
         }
       `;
@@ -689,21 +824,17 @@ async function fetchCuponsTrocaPorUsuario(accessToken, usuarioId, tipos) {
   const dataComStatus = await executeGraphql(accessToken, queryComStatus, {
     usuarioId,
     tipos,
-    status: "ATIVO"
+    status: statusNome || "ATIVO"
   });
 
-  let encontrados = (dataComStatus?.trocas || [])
-    .map((troca) => troca?.cupomGerado)
-    .filter(Boolean);
+  let encontrados = dataComStatus?.cupoms || [];
 
   if (!encontrados.length) {
     const dataSemStatus = await executeGraphql(accessToken, querySemStatus, {
       usuarioId,
       tipos
     });
-    encontrados = (dataSemStatus?.trocas || [])
-      .map((troca) => troca?.cupomGerado)
-      .filter(Boolean);
+    encontrados = dataSemStatus?.cupoms || [];
   }
 
   const normalize = (valor) =>
@@ -722,6 +853,23 @@ async function fetchCuponsTrocaPorUsuario(accessToken, usuarioId, tipos) {
     }
   });
   return Array.from(unique.values());
+}
+
+async function fetchCuponsPorClienteIds(accessToken, usuarioId, cupomIds) {
+  const query = `
+      query CuponsClientePorIds($usuarioId: UUID!, $ids: [UUID!]) {
+        cupoms(where: { clienteId: { eq: $usuarioId }, id: { in: $ids } }) {
+          id
+          codigo
+          valor
+          validade
+          tipo { nome }
+          status { nome }
+        }
+      }
+    `;
+  const data = await executeGraphql(accessToken, query, { usuarioId, ids: cupomIds });
+  return data?.cupoms || [];
 }
 
 async function fetchUsuarioCartao(accessToken, authId, cartaoId) {
@@ -744,19 +892,71 @@ async function fetchUsuarioCartao(accessToken, authId, cartaoId) {
 
 async function fetchProdutosMetadata(accessToken) {
   const query = `
-    query ProdutosMetadata {
-      marcas { id nome }
-      categorias { id nome }
-      grupoPrecificacaos { id nome margemLucro }
+      query ProdutosMetadata {
+        marcas { id nome }
+        categorias { id nome }
+        grupoPrecificacaos { id nome margemLucro }
     }
   `;
   return executeGraphql(accessToken, query, {});
 }
 
+async function fetchPedidoDetalhe(accessToken, pedidoId) {
+  const query = `
+      query PedidoDetalhe($id: UUID!) {
+        pedido(id: $id) {
+          id
+          dataCriacao
+          valorTotal
+          valorFrete
+          status { nome }
+          usuario { nome }
+          itemPedidos_on_pedido {
+            quantidade
+            produto {
+              id
+              nome
+              modelo
+              imagemProdutos_on_produto(where: { capa: { eq: true } }, limit: 1) { url }
+            }
+          }
+          pagamentos_on_pedido(orderBy: [{ dataPagamento: DESC }], limit: 1) {
+            dataPagamento
+            valorTotalPago
+            cupomPromocional { codigo valor tipo { nome } }
+            pagamentoCartaos_on_pagamento {
+              valorParcela
+              cartaoCredito { numero nomeImpresso dataValidade }
+            }
+            pagamentoCupomTrocas_on_pagamento {
+              cupomTroca { codigo valor tipo { nome } }
+            }
+          }
+        }
+      }
+    `;
+
+  const data = await executeGraphql(accessToken, query, { id: pedidoId });
+  return data?.pedido || null;
+}
+
+async function fetchPedidoStatus(accessToken, pedidoId) {
+  const query = `
+      query PedidoStatus($id: UUID!) {
+        pedido(id: $id) {
+          id
+          status { nome }
+        }
+      }
+    `;
+  const data = await executeGraphql(accessToken, query, { id: pedidoId });
+  return data?.pedido || null;
+}
+
 async function fetchFornecedores(accessToken) {
   const query = `
-    query Fornecedores {
-      fornecedors(orderBy: [{ nome: ASC }]) {
+      query Fornecedores {
+        fornecedors(orderBy: [{ nome: ASC }]) {
         id
         nome
         emailContato
@@ -871,34 +1071,68 @@ async function fetchProdutosPopulares(accessToken) {
 
 async function fetchProdutoEstoque(accessToken, produtoId) {
   const query = `
-    query ProdutoEstoque($id: UUID!) {
-      produto(id: $id) {
-        id
-        estoqueFisico
-        estoqueReservado
-        status
+      query ProdutoEstoque($id: UUID!) {
+        produto(id: $id) {
+          id
+          estoqueFisico
+          estoqueReservado
+          quantidadeVendida
+          status
+        }
       }
-    }
-  `;
+    `;
   const data = await executeGraphql(accessToken, query, { id: produtoId });
   return data?.produto || null;
 }
 
+async function fetchProdutosInventario(accessToken, ids) {
+  const query = `
+      query ProdutosInventario($ids: [UUID!]) {
+        produtos(where: { id: { in: $ids } }) {
+          id
+          estoqueFisico
+          estoqueReservado
+          quantidadeVendida
+        }
+      }
+    `;
+  const data = await executeGraphql(accessToken, query, { ids });
+  return data?.produtos || [];
+}
+
 async function updateProdutoEstoque(accessToken, data) {
   const mutation = `
-    mutation AtualizarEstoqueProduto($id: UUID!, $estoqueFisico: Int!) {
-      produto_update(id: $id, data: { estoqueFisico: $estoqueFisico })
-    }
-  `;
+      mutation AtualizarEstoqueProduto($id: UUID!, $estoqueFisico: Int!) {
+        produto_update(id: $id, data: { estoqueFisico: $estoqueFisico })
+      }
+    `;
   await executeGraphql(accessToken, mutation, data);
 }
 
 async function updateProdutoReservado(accessToken, data) {
   const mutation = `
-    mutation AtualizarReservadoProduto($id: UUID!, $estoqueReservado: Int!) {
-      produto_update(id: $id, data: { estoqueReservado: $estoqueReservado })
-    }
-  `;
+      mutation AtualizarReservadoProduto($id: UUID!, $estoqueReservado: Int!) {
+        produto_update(id: $id, data: { estoqueReservado: $estoqueReservado })
+      }
+    `;
+  await executeGraphql(accessToken, mutation, data);
+}
+
+async function updateProdutoInventario(accessToken, data) {
+  const mutation = `
+      mutation AtualizarInventarioProduto(
+        $id: UUID!,
+        $estoqueFisico: Int!,
+        $estoqueReservado: Int!,
+        $quantidadeVendida: Int!
+      ) {
+        produto_update(id: $id, data: {
+          estoqueFisico: $estoqueFisico,
+          estoqueReservado: $estoqueReservado,
+          quantidadeVendida: $quantidadeVendida
+        })
+      }
+    `;
   await executeGraphql(accessToken, mutation, data);
 }
 
@@ -911,6 +1145,76 @@ function calcularExpiracaoExtendida(atual, minutos) {
   const base = atual ? new Date(atual) : now;
   const baseTime = base > now ? base : now;
   return new Date(baseTime.getTime() + minutos * 60 * 1000).toISOString();
+}
+
+function normalizeTexto(valor) {
+  return `${valor || ""}`
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toUpperCase();
+}
+
+function calcularFretePorCep(cep) {
+  const digits = `${cep || ""}`.replace(/\D/g, "");
+  if (digits.length !== 8) {
+    return 0;
+  }
+  const numero = Number(digits);
+  if (numero >= 1000000 && numero <= 19999999) {
+    return 100;
+  }
+  return 150;
+}
+
+function validarLuhn(numero) {
+  const digits = `${numero || ""}`.replace(/\D/g, "");
+  if (!digits) {
+    return false;
+  }
+  let soma = 0;
+  let alternar = false;
+  for (let i = digits.length - 1; i >= 0; i -= 1) {
+    let n = Number(digits[i]);
+    if (alternar) {
+      n *= 2;
+      if (n > 9) n -= 9;
+    }
+    soma += n;
+    alternar = !alternar;
+  }
+  return soma % 10 === 0;
+}
+
+function cartaoExpirado(dataValidade) {
+  if (!dataValidade) {
+    return true;
+  }
+  const parsed = new Date(dataValidade);
+  let ano = parsed.getFullYear();
+  let mes = parsed.getMonth() + 1;
+  if (Number.isNaN(parsed.getTime())) {
+    const parts = `${dataValidade}`.split("-").map((p) => Number(p));
+    if (parts.length >= 2) {
+      [ano, mes] = parts;
+    } else {
+      return true;
+    }
+  }
+  if (!ano || !mes) {
+    return true;
+  }
+  const expiraEm = new Date(ano, mes, 0, 23, 59, 59, 999);
+  return Date.now() > expiraEm.getTime();
+}
+
+function gerarCodigoCupom() {
+  const numero = Math.floor(10000 + Math.random() * 90000);
+  return `CUPOM-${numero}`;
+}
+
+function adicionarAno(dataBase) {
+  const base = dataBase ? new Date(dataBase) : new Date();
+  return new Date(base.getTime() + 365 * 24 * 60 * 60 * 1000).toISOString();
 }
 
 function calcularPrecoProduto(produto) {
@@ -1506,9 +1810,9 @@ function buildClientesQuery({ search, statusFilters, generoFilters, sortField, s
   const args = [whereClause, orderClause, "limit: 50"].filter(Boolean).join(", ");
 
   return `
-    query ListarClientes {
-      usuarios(${args}) {
-        id
+      query ListarClientes {
+        usuarios(${args}) {
+          id
         nome
         cpf
         email
@@ -1517,8 +1821,61 @@ function buildClientesQuery({ search, statusFilters, generoFilters, sortField, s
         dataNascimento
         status { nome }
       }
+      }
+    `;
+}
+
+function buildPedidosQuery({ search, statusFilters, sortField, sortOrder }) {
+  const whereParts = [];
+
+  const filtrosStatus = statusFilters.filter((status) => status !== "CARRINHO");
+  if (filtrosStatus.length) {
+    const values = filtrosStatus.map((value) => `"${escapeGqlString(value)}"`).join(", ");
+    whereParts.push(`status: { nome: { in: [${values}] } }`);
+  } else {
+    whereParts.push(`status: { nome: { ne: "CARRINHO" } }`);
+  }
+
+  const searchValue = (search || "").trim();
+  if (searchValue) {
+    const escaped = escapeGqlString(searchValue);
+    whereParts.push(`usuario: { nome: { contains: "${escaped}" } }`);
+  }
+
+  const whereClause =
+    whereParts.length === 0
+      ? ""
+      : whereParts.length === 1
+        ? `where: { ${whereParts[0]} }`
+        : `where: { _and: [${whereParts.join(", ")}] }`;
+
+  let orderClause = "";
+  if (sortField && sortOrder) {
+    if (sortField === "cliente") {
+      orderClause = `orderBy: [{ usuario: { nome: ${sortOrder} } }]`;
+    } else {
+      orderClause = `orderBy: [{ ${sortField}: ${sortOrder} }]`;
     }
-  `;
+  }
+
+  const args = [whereClause, orderClause, "limit: 50"].filter(Boolean).join(", ");
+
+  return `
+      query ListarPedidos {
+        pedidos(${args}) {
+          id
+          dataCriacao
+          valorTotal
+          valorFrete
+          status { nome }
+          usuario { nome }
+          itemPedidos_on_pedido { quantidade }
+          pagamentos_on_pedido(orderBy: [{ dataPagamento: DESC }], limit: 1) {
+            cupomPromocional { id valor tipo { nome } }
+          }
+        }
+      }
+    `;
 }
 
 async function readBody(req) {
@@ -2315,8 +2672,8 @@ const server = http.createServer(async (req, res) => {
         const trocaTipos = ["TROCA", "SOBRA"];
 
         const [promocionais, troca] = await Promise.all([
-          fetchCuponsPromocionais(accessToken, promoTipos),
-          fetchCuponsTrocaPorUsuario(accessToken, usuarioId, trocaTipos)
+          fetchCuponsPorCliente(accessToken, usuarioId, promoTipos, "ATIVO"),
+          fetchCuponsPorCliente(accessToken, usuarioId, trocaTipos, "ATIVO")
         ]);
 
         sendJson(res, 200, { promocionais, troca });
@@ -2828,6 +3185,117 @@ const server = http.createServer(async (req, res) => {
       sendJson(res, 200, { produtos });
     } catch (error) {
       sendJson(res, 500, { error: error?.message || "Erro ao carregar produtos." });
+    }
+    return;
+  }
+
+  if (req.method === "GET" && url.pathname === "/api/admin/pedidos") {
+    try {
+      const search = url.searchParams.get("q") || "";
+      const statusRaw = url.searchParams.get("status") || "";
+      const sortFieldRaw = url.searchParams.get("sortField") || "";
+      const sortOrderRaw = url.searchParams.get("sortOrder") || "";
+
+      const allowedStatus = new Set([
+        "APROVADA",
+        "REPROVADA",
+        "EM PROCESSAMENTO",
+        "EM TRANSPORTE",
+        "ENTREGUE",
+        "EM TROCA",
+        "TROCADO"
+      ]);
+      const allowedSortFields = new Set(["dataCriacao", "valorTotal", "valorFrete", "cliente"]);
+      const allowedSortOrders = new Set(["ASC", "DESC"]);
+
+      const statusFilters = statusRaw
+        .split(",")
+        .map((item) => item.trim().toUpperCase())
+        .filter((item) => allowedStatus.has(item));
+
+      const sortField = allowedSortFields.has(sortFieldRaw) ? sortFieldRaw : "";
+      const sortOrder = allowedSortOrders.has(sortOrderRaw.toUpperCase())
+        ? sortOrderRaw.toUpperCase()
+        : "";
+
+      const accessToken = await getAccessToken();
+      const query = buildPedidosQuery({
+        search,
+        statusFilters,
+        sortField,
+        sortOrder
+      });
+
+      const data = await executeGraphql(accessToken, query, {});
+      sendJson(res, 200, { pedidos: data?.pedidos || [] });
+    } catch (error) {
+      sendJson(res, 500, { error: error?.message || "Erro ao listar pedidos." });
+    }
+    return;
+  }
+
+  if (req.method === "GET" && url.pathname === "/api/admin/pedidos/detalhe") {
+    try {
+      const pedidoId = url.searchParams.get("id");
+      if (!pedidoId) {
+        sendJson(res, 400, { error: "Pedido invalido." });
+        return;
+      }
+      const accessToken = await getAccessToken();
+      const pedido = await fetchPedidoDetalhe(accessToken, pedidoId);
+      if (!pedido) {
+        sendJson(res, 404, { error: "Pedido nao encontrado." });
+        return;
+      }
+      if (pedido?.status?.nome === "CARRINHO") {
+        sendJson(res, 400, { error: "Pedido invalido." });
+        return;
+      }
+      sendJson(res, 200, { pedido });
+    } catch (error) {
+      sendJson(res, 500, { error: error?.message || "Erro ao carregar pedido." });
+    }
+    return;
+  }
+
+  if (req.method === "POST" && url.pathname === "/api/admin/pedidos/status") {
+    try {
+      const rawBody = await readBody(req);
+      const body = rawBody ? JSON.parse(rawBody) : {};
+      const pedidoId = body.pedidoId;
+      const statusNome = (body.status || "").toUpperCase();
+
+      if (!pedidoId || (statusNome !== "EM TRANSPORTE" && statusNome !== "ENTREGUE")) {
+        sendJson(res, 400, { error: "Dados invalidos." });
+        return;
+      }
+
+      const accessToken = await getAccessToken();
+      const pedidoAtual = await fetchPedidoStatus(accessToken, pedidoId);
+      if (!pedidoAtual) {
+        sendJson(res, 404, { error: "Pedido nao encontrado." });
+        return;
+      }
+
+      const statusAtual = (pedidoAtual?.status?.nome || "").toUpperCase();
+      if (
+        (statusNome === "EM TRANSPORTE" && statusAtual !== "APROVADA") ||
+        (statusNome === "ENTREGUE" && statusAtual !== "EM TRANSPORTE")
+      ) {
+        sendJson(res, 400, { error: "Transicao de status invalida." });
+        return;
+      }
+
+      const statusId = await getStatusPedidoId(accessToken, statusNome);
+      if (!statusId) {
+        sendJson(res, 400, { error: "StatusPedido nao encontrado." });
+        return;
+      }
+
+      await updatePedidoStatus(accessToken, { id: pedidoId, statusId });
+      sendJson(res, 200, { ok: true });
+    } catch (error) {
+      sendJson(res, 500, { error: error?.message || "Erro ao atualizar status." });
     }
     return;
   }
@@ -3459,6 +3927,356 @@ const server = http.createServer(async (req, res) => {
       sendJson(res, 200, { ok: true });
     } catch (error) {
       sendJson(res, 500, { error: error?.message || "Erro ao cancelar carrinho." });
+    }
+    return;
+  }
+
+  if (req.method === "POST" && url.pathname === "/api/checkout/finalizar") {
+    try {
+      const authHeader = req.headers.authorization || "";
+      const idToken = authHeader.startsWith("Bearer ")
+        ? authHeader.slice("Bearer ".length)
+        : "";
+      if (!idToken) {
+        sendJson(res, 401, { error: "Usuario nao autenticado." });
+        return;
+      }
+
+      const rawBody = await readBody(req);
+      const body = rawBody ? JSON.parse(rawBody) : {};
+      const enderecoId = body.enderecoId;
+      const cupomPromocionalId = body.cupomPromocionalId || null;
+      const cupomTrocaIds = Array.isArray(body.cupomTrocaIds)
+        ? body.cupomTrocaIds.filter(Boolean)
+        : [];
+      const cartaoPrincipalId = body.cartaoPrincipalId || null;
+      const cartaoSecundarioId = body.cartaoSecundarioId || null;
+      const cartaoSecundarioValor = Number(body.cartaoSecundarioValor || 0);
+
+      if (!enderecoId) {
+        sendJson(res, 400, { error: "Endereco invalido." });
+        return;
+      }
+
+      const authId = await verifyIdToken(idToken);
+      const accessToken = await getAccessToken();
+      const usuarioId = await fetchUsuarioIdByAuthId(accessToken, authId);
+      if (!usuarioId) {
+        sendJson(res, 404, { error: "Usuario nao encontrado." });
+        return;
+      }
+
+      let pedidoCarrinho = await fetchCarrinhoPedido(accessToken, usuarioId);
+      if (!pedidoCarrinho) {
+        sendJson(res, 404, { error: "Carrinho nao encontrado." });
+        return;
+      }
+
+      const expirou = await aplicarExpiracaoCarrinho(accessToken, pedidoCarrinho);
+      if (expirou) {
+        pedidoCarrinho = await fetchCarrinhoPedido(accessToken, usuarioId);
+      }
+
+      const detalhes = await fetchCarrinhoDetalhes(accessToken, pedidoCarrinho.id);
+      const { itens } = montarCarrinhoResposta(detalhes);
+      const itensAtivos = itens.filter((item) => Number(item.quantidade || 0) > 0);
+      if (!itensAtivos.length) {
+        sendJson(res, 400, { error: "Carrinho vazio." });
+        return;
+      }
+
+      const endereco = await fetchUsuarioEnderecoPorId(accessToken, usuarioId, enderecoId);
+      if (!endereco) {
+        sendJson(res, 400, { error: "Endereco nao encontrado." });
+        return;
+      }
+
+      const totalProdutos = itensAtivos.reduce((acc, item) => acc + Number(item.precoTotal || 0), 0);
+      const frete = calcularFretePorCep(endereco.cep);
+      const totalBruto = totalProdutos + frete;
+
+      let promoValor = 0;
+      let promoAplicada = 0;
+      let cupomPromocionalAplicado = null;
+      if (cupomPromocionalId) {
+        const cuponsPromo = await fetchCuponsPorClienteIds(accessToken, usuarioId, [cupomPromocionalId]);
+        if (!cuponsPromo.length) {
+          sendJson(res, 400, { error: "Cupom promocional invalido." });
+          return;
+        }
+        const cupom = cuponsPromo[0];
+        const tipo = normalizeTexto(cupom.tipo?.nome);
+        const status = normalizeTexto(cupom.status?.nome);
+        if (status && status !== "ATIVO") {
+          sendJson(res, 400, { error: "Cupom promocional inativo." });
+          return;
+        }
+        if (tipo !== "DESCONTO" && tipo !== "FRETE GRATIS" && tipo !== "FRETE GRÁTIS") {
+          sendJson(res, 400, { error: "Cupom promocional invalido." });
+          return;
+        }
+        if (tipo === "DESCONTO") {
+          promoValor = Number(cupom.valor || 0);
+        } else if (totalProdutos >= Number(cupom.valor || 0)) {
+          promoValor = frete;
+        }
+        promoAplicada = Math.min(promoValor, totalBruto);
+        if (promoAplicada > 0) {
+          cupomPromocionalAplicado = cupom;
+        }
+      }
+
+      const totalAposPromo = Math.max(totalBruto - promoAplicada, 0);
+
+      let cuponsTrocaValidos = [];
+      if (cupomTrocaIds.length) {
+        const cupons = await fetchCuponsPorClienteIds(accessToken, usuarioId, cupomTrocaIds);
+        if (cupons.length !== cupomTrocaIds.length) {
+          sendJson(res, 400, { error: "Cupom de troca invalido." });
+          return;
+        }
+        cuponsTrocaValidos = cupons.filter((cupom) => {
+          const tipo = normalizeTexto(cupom.tipo?.nome);
+          const status = normalizeTexto(cupom.status?.nome);
+          const tipoOk = tipo === "TROCA" || tipo === "SOBRA";
+          const statusOk = !status || status === "ATIVO";
+          return tipoOk && statusOk;
+        });
+        if (cuponsTrocaValidos.length !== cupons.length) {
+          sendJson(res, 400, { error: "Cupom de troca invalido." });
+          return;
+        }
+      }
+
+      const trocaTotal = cuponsTrocaValidos.reduce(
+        (acc, cupom) => acc + Number(cupom.valor || 0),
+        0
+      );
+      const trocaAplicada = Math.min(trocaTotal, totalAposPromo);
+      const trocaSobra = Math.max(trocaTotal - trocaAplicada, 0);
+      const restanteCartao = Math.max(totalAposPromo - trocaAplicada, 0);
+
+      let principalValor = 0;
+      let secundarioValor = 0;
+      let cartaoPrincipal = null;
+      let cartaoSecundario = null;
+
+      if (restanteCartao > 0) {
+        if (!cartaoPrincipalId) {
+          sendJson(res, 400, { error: "Cartao principal obrigatorio." });
+          return;
+        }
+        const cartaoIds = [cartaoPrincipalId];
+        if (cartaoSecundarioId && cartaoSecundarioId !== cartaoPrincipalId) {
+          cartaoIds.push(cartaoSecundarioId);
+        }
+        const cartoesEncontrados = await fetchUsuarioCartoesPorIds(
+          accessToken,
+          usuarioId,
+          cartaoIds
+        );
+        cartaoPrincipal = cartoesEncontrados.find((c) => c.id === cartaoPrincipalId) || null;
+        cartaoSecundario =
+          cartoesEncontrados.find((c) => c.id === cartaoSecundarioId) || null;
+
+        if (!cartaoPrincipal) {
+          sendJson(res, 400, { error: "Cartao principal invalido." });
+          return;
+        }
+
+        const podeSegundo = Boolean(cartaoSecundario && restanteCartao >= 20);
+        if (podeSegundo) {
+          const maxSec = restanteCartao - 10;
+          let desejado = Number.isFinite(cartaoSecundarioValor) ? cartaoSecundarioValor : 0;
+          if (desejado < 10) desejado = 10;
+          if (desejado > maxSec) desejado = maxSec;
+          if (desejado >= 10) {
+            secundarioValor = desejado;
+          } else {
+            cartaoSecundario = null;
+          }
+        } else {
+          cartaoSecundario = null;
+        }
+
+        principalValor = Math.max(restanteCartao - secundarioValor, 0);
+      }
+
+      const statusProcessoId = await getStatusPedidoId(accessToken, "EM PROCESSAMENTO");
+      if (!statusProcessoId) {
+        sendJson(res, 400, { error: "Status EM PROCESSAMENTO nao encontrado." });
+        return;
+      }
+
+      const novoPedidoId = crypto.randomUUID();
+      const dataCriacao = new Date().toISOString();
+      await insertPedido(accessToken, {
+        id: novoPedidoId,
+        enderecoEntregaId: endereco.id,
+        statusId: statusProcessoId,
+        usuarioId,
+        valorFrete: frete,
+        valorTotal: totalBruto,
+        dataCriacao,
+        dataExpiracaoCarrinho: null
+      });
+
+      for (const item of itensAtivos) {
+        await insertItemPedido(accessToken, {
+          pedidoId: novoPedidoId,
+          produtoId: item.produtoId,
+          quantidade: Number(item.quantidade || 0)
+        });
+      }
+
+      for (const item of itensAtivos) {
+        await deleteItemPedido(accessToken, {
+          pedidoId: pedidoCarrinho.id,
+          produtoId: item.produtoId
+        });
+      }
+
+      const carrinhoAtualizado = await fetchCarrinhoDetalhes(accessToken, pedidoCarrinho.id);
+      const { itens: itensRestantes, valorTotal: valorRestante } =
+        montarCarrinhoResposta(carrinhoAtualizado);
+      const temItensAtivos = carrinhoTemItensAtivos(itensRestantes);
+      await updatePedidoCarrinho(accessToken, {
+        id: pedidoCarrinho.id,
+        valorTotal: valorRestante,
+        dataExpiracaoCarrinho: temItensAtivos ? pedidoCarrinho.dataExpiracaoCarrinho : null
+      });
+
+      const pagamentoId = crypto.randomUUID();
+      const valorTotalPago = totalAposPromo;
+      await insertPagamento(accessToken, {
+        id: pagamentoId,
+        pedidoId: novoPedidoId,
+        valorTotalPago,
+        dataPagamento: new Date().toISOString(),
+        cupomPromocionalId: cupomPromocionalAplicado ? cupomPromocionalAplicado.id : null
+      });
+
+      if (principalValor > 0 && cartaoPrincipal) {
+        await insertPagamentoCartao(accessToken, {
+          pagamentoId,
+          cartaoCreditoId: cartaoPrincipal.id,
+          valorParcela: principalValor
+        });
+      }
+
+      if (secundarioValor > 0 && cartaoSecundario) {
+        await insertPagamentoCartao(accessToken, {
+          pagamentoId,
+          cartaoCreditoId: cartaoSecundario.id,
+          valorParcela: secundarioValor
+        });
+      }
+
+      for (const cupom of cuponsTrocaValidos) {
+        await insertPagamentoCupomTroca(accessToken, {
+          pagamentoId,
+          cupomTrocaId: cupom.id
+        });
+      }
+
+      let statusFinal = "APROVADA";
+      if (principalValor > 0 || secundarioValor > 0) {
+        const invalidos = [];
+        if (cartaoPrincipal && principalValor > 0) {
+          if (!validarLuhn(cartaoPrincipal.numero) || cartaoExpirado(cartaoPrincipal.dataValidade)) {
+            invalidos.push(cartaoPrincipal.id);
+          }
+        }
+        if (cartaoSecundario && secundarioValor > 0) {
+          if (!validarLuhn(cartaoSecundario.numero) || cartaoExpirado(cartaoSecundario.dataValidade)) {
+            invalidos.push(cartaoSecundario.id);
+          }
+        }
+        if (invalidos.length) {
+          statusFinal = "REPROVADA";
+        }
+      }
+
+      const statusFinalId = await getStatusPedidoId(accessToken, statusFinal);
+      if (!statusFinalId) {
+        sendJson(res, 400, { error: `Status ${statusFinal} nao encontrado.` });
+        return;
+      }
+      await updatePedidoStatus(accessToken, { id: novoPedidoId, statusId: statusFinalId });
+
+      const produtosInventario = await fetchProdutosInventario(
+        accessToken,
+        itensAtivos.map((item) => item.produtoId)
+      );
+      const inventarioMap = new Map();
+      produtosInventario.forEach((produto) => {
+        if (produto?.id) {
+          inventarioMap.set(produto.id, produto);
+        }
+      });
+
+      for (const item of itensAtivos) {
+        const produto = inventarioMap.get(item.produtoId);
+        if (!produto) {
+          continue;
+        }
+        const quantidade = Number(item.quantidade || 0);
+        const reservadoAtual = Number(produto.estoqueReservado || 0);
+        const estoqueAtual = Number(produto.estoqueFisico || 0);
+        const vendidoAtual = Number(produto.quantidadeVendida || 0);
+        if (statusFinal === "APROVADA") {
+          await updateProdutoInventario(accessToken, {
+            id: produto.id,
+            estoqueFisico: Math.max(0, estoqueAtual - quantidade),
+            estoqueReservado: Math.max(0, reservadoAtual - quantidade),
+            quantidadeVendida: Math.max(0, vendidoAtual + quantidade)
+          });
+        } else if (statusFinal === "REPROVADA") {
+          await updateProdutoReservado(accessToken, {
+            id: produto.id,
+            estoqueReservado: Math.max(0, reservadoAtual - quantidade)
+          });
+        }
+      }
+
+      if (statusFinal === "APROVADA") {
+        const statusUsadoId = await getStatusCupomId(accessToken, "USADO");
+        const statusAtivoId = await getStatusCupomId(accessToken, "ATIVO");
+        const tipoSobraId = await getTipoCupomId(accessToken, "SOBRA");
+
+        if (statusUsadoId) {
+          const usados = [];
+          if (cupomPromocionalAplicado) {
+            usados.push(cupomPromocionalAplicado.id);
+          }
+          cuponsTrocaValidos.forEach((cupom) => usados.push(cupom.id));
+
+          for (const cupomId of usados) {
+            await updateCupomStatus(accessToken, { id: cupomId, statusId: statusUsadoId });
+          }
+        }
+
+        if (trocaSobra > 0 && statusAtivoId && tipoSobraId) {
+          const novoCupomId = crypto.randomUUID();
+          await insertCupom(accessToken, {
+            id: novoCupomId,
+            clienteId: usuarioId,
+            statusId: statusAtivoId,
+            tipoId: tipoSobraId,
+            codigo: gerarCodigoCupom(),
+            valor: trocaSobra,
+            validade: adicionarAno(new Date())
+          });
+        }
+      }
+
+      sendJson(res, 200, {
+        ok: true,
+        pedidoId: novoPedidoId,
+        status: statusFinal
+      });
+    } catch (error) {
+      sendJson(res, 500, { error: error?.message || "Erro ao finalizar compra." });
     }
     return;
   }

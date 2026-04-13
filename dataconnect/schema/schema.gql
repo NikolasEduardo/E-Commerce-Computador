@@ -123,6 +123,7 @@ type StatusItemPedido @table {
 
 type Cupom @table {
   codigo: String! @unique # Ex: "CUPOM-S8X2W3", "CUPOM-YS8XZA"
+  cliente: Usuario!
   tipo: TipoCupom!
   valor: Float!
   validade: Timestamp!

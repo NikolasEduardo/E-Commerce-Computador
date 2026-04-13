@@ -169,6 +169,12 @@ body {
   gap: 6px;
 }
 
+.totals .separator {
+  height: 2px;
+  background: #a6a6a6;
+  margin: 4px 0;
+}
+
 .summary-btn {
   text-align: left;
 }

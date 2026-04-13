@@ -2,6 +2,11 @@ import { signOut } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-aut
 import { auth } from "../../model/firebaseApp.js";
 import { buscarClientes, atualizarStatus } from "../../controller/AdminClientesController.js";
 import {
+  buscarPedidos,
+  carregarPedidoDetalhe,
+  atualizarStatusPedidoAdmin
+} from "../../controller/AdminPedidosController.js";
+import {
   buscarProdutos,
   carregarMetadataProdutos,
   carregarProduto,
@@ -22,8 +27,11 @@ const clientesList = document.getElementById("clientesList");
 const logoutButton = document.getElementById("btn-logout");
 const navProdutos = document.getElementById("nav-produtos");
 const navClientes = document.getElementById("nav-clientes");
+const navPedidos = document.getElementById("nav-pedidos");
 const navEstoque = document.getElementById("nav-estoque");
 const clientesSection = document.getElementById("clientes-section");
+const pedidosSection = document.getElementById("pedidos-section");
+const pedidoDetalheSection = document.getElementById("pedido-detalhe-section");
 const produtosSection = document.getElementById("produtos-section");
 const produtoFormSection = document.getElementById("produto-form-section");
 const estoqueSection = document.getElementById("estoque-section");
@@ -78,11 +86,25 @@ const entradaCustoTipoSelect = document.getElementById("entrada-custo-tipo");
 const entradaFornecedorSelect = document.getElementById("entrada-fornecedor");
 const fornecedoresList = document.getElementById("fornecedoresList");
 const entradasList = document.getElementById("entradasList");
+const pedidosList = document.getElementById("pedidosList");
+const pedidoSearchInput = document.getElementById("pedidoSearchInput");
+const pedidoDetalheTitle = document.getElementById("pedido-detalhe-title");
+const pedidoDetalheMeta = document.getElementById("pedido-detalhe-meta");
+const pedidoItensList = document.getElementById("pedido-itens-list");
+const pedidoPagamento = document.getElementById("pedido-pagamento");
+const pedidoVoltar = document.getElementById("pedido-voltar");
+const pedidoConfirmModal = document.getElementById("pedido-confirm-modal");
+const pedidoConfirmTitle = document.getElementById("pedido-confirm-title");
+const pedidoConfirmText = document.getElementById("pedido-confirm-text");
+const pedidoConfirmCancel = document.getElementById("pedido-confirm-cancel");
+const pedidoConfirmOk = document.getElementById("pedido-confirm-ok");
 
 const statusCheckboxes = Array.from(document.querySelectorAll(".filter-status"));
 const generoCheckboxes = Array.from(document.querySelectorAll(".filter-genero"));
 const sortButtons = Array.from(document.querySelectorAll(".client-sort-button"));
 const prodSortButtons = Array.from(document.querySelectorAll(".prod-sort-button"));
+const pedidoStatusCheckboxes = Array.from(document.querySelectorAll(".pedido-filter-status"));
+const pedidoSortButtons = Array.from(document.querySelectorAll(".pedido-sort-button"));
 
 const clientesState = {
   search: "",
@@ -101,8 +123,16 @@ const produtosState = {
   sortDir: ""
 };
 
+const pedidosState = {
+  search: "",
+  status: new Set(),
+  sortField: "",
+  sortDir: ""
+};
+
 let debounceTimer = null;
 let produtosDebounce = null;
+let pedidosDebounce = null;
 let produtoEditId = null;
 let categoriasSelecionadas = [];
 let imagensSelecionadas = [];
@@ -120,6 +150,7 @@ let estoqueCache = {
   entradas: [],
   produtos: []
 };
+let pedidoConfirmResolver = null;
 
 function formatCpfSearch(value) {
   const digits = value.replace(/\D/g, "").slice(0, 11);
@@ -128,6 +159,20 @@ function formatCpfSearch(value) {
   if (digits.length > 6) formatted = `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6)}`;
   if (digits.length > 9) formatted = `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`;
   return formatted;
+}
+
+function normalizeTexto(valor) {
+  return `${valor || ""}`
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toUpperCase();
+}
+
+function formatMoney(value) {
+  if (!Number.isFinite(value)) {
+    return "R$ 0,00";
+  }
+  return `R$ ${Number(value).toFixed(2).replace(".", ",")}`;
 }
 
 function computeSortOrder(field, dir) {
@@ -144,6 +189,14 @@ function computeProdutoSortOrder(field, dir) {
     return field === "nome" ? "ASC" : "DESC";
   }
   return field === "nome" ? "DESC" : "ASC";
+}
+
+function computePedidoSortOrder(field, dir) {
+  if (!field || !dir) return "";
+  if (dir === "down") {
+    return field === "cliente" ? "ASC" : "DESC";
+  }
+  return field === "cliente" ? "DESC" : "ASC";
 }
 
 function setProdutoFormMessage(text) {
@@ -181,6 +234,17 @@ function updateProdutoSortUI() {
       return;
     }
     icon.innerHTML = produtosState.sortDir === "down" ? "&darr;" : "&uarr;";
+  });
+}
+
+function updatePedidoSortUI() {
+  pedidoSortButtons.forEach((button) => {
+    const icon = button.querySelector(".sort-icon");
+    if (button.dataset.field !== pedidosState.sortField || !pedidosState.sortDir) {
+      icon.innerHTML = "";
+      return;
+    }
+    icon.innerHTML = pedidosState.sortDir === "down" ? "&darr;" : "&uarr;";
   });
 }
 
@@ -252,19 +316,310 @@ function renderClientes(clientes) {
   });
 }
 
+async function carregarPedidos() {
+  const params = {
+    q: pedidosState.search,
+    status: Array.from(pedidosState.status).join(","),
+    sortField: pedidosState.sortField,
+    sortOrder: computePedidoSortOrder(pedidosState.sortField, pedidosState.sortDir)
+  };
+
+  const pedidos = await buscarPedidos(params);
+  renderPedidos(pedidos);
+}
+
+function formatNomeCliente(nomeCompleto) {
+  const partes = `${nomeCompleto || ""}`.trim().split(/\s+/).filter(Boolean);
+  if (!partes.length) {
+    return { primeiro: "SEM NOME", resto: "" };
+  }
+  return { primeiro: partes[0], resto: partes.slice(1).join(" ") };
+}
+
+function obterCupomPromocional(pedido) {
+  return pedido?.pagamentos_on_pedido?.[0]?.cupomPromocional || null;
+}
+
+function calcularDescontoCupom(pedido) {
+  const cupom = obterCupomPromocional(pedido);
+  if (!cupom) {
+    return { desconto: 0, freteGratis: false };
+  }
+  const tipo = normalizeTexto(cupom?.tipo?.nome);
+  if (tipo === "DESCONTO") {
+    return { desconto: Number(cupom.valor || 0), freteGratis: false };
+  }
+  if (tipo === "FRETE GRATIS" || tipo === "FRETE GRÁTIS") {
+    return { desconto: 0, freteGratis: true };
+  }
+  return { desconto: 0, freteGratis: false };
+}
+
+async function abrirPedidoDetalhe(pedidoId) {
+  try {
+    const pedido = await carregarPedidoDetalhe(pedidoId);
+    renderPedidoDetalhe(pedido);
+    setAdminSection("pedido-detalhe");
+  } catch (error) {
+    pedidosList.innerHTML = `<div class="empty-state">${error.message}</div>`;
+  }
+}
+
+function renderPedidos(pedidos) {
+  pedidosList.innerHTML = "";
+  if (!pedidos.length) {
+    const empty = document.createElement("div");
+    empty.className = "empty-state";
+    empty.textContent = "Nenhum pedido encontrado.";
+    pedidosList.appendChild(empty);
+    return;
+  }
+
+  pedidos.forEach((pedido) => {
+    const card = document.createElement("div");
+    card.className = "pedido-card";
+
+    const info = document.createElement("div");
+    info.className = "pedido-info";
+
+    const nome = formatNomeCliente(pedido?.usuario?.nome);
+    const title = document.createElement("div");
+    title.className = "pedido-nome";
+    title.innerHTML = `${nome.primeiro}<small>${nome.resto}</small>`;
+
+    const valores = document.createElement("div");
+    valores.className = "pedido-valores";
+
+    const quantidade = (pedido?.itemPedidos_on_pedido || []).reduce(
+      (acc, item) => acc + Number(item.quantidade || 0),
+      0
+    );
+
+    const cupom = obterCupomPromocional(pedido);
+    const { desconto, freteGratis } = calcularDescontoCupom(pedido);
+    const totalOriginal = Number(pedido.valorTotal || 0);
+    const totalDesconto = Math.max(totalOriginal - desconto, 0);
+
+    if (cupom && desconto > 0 && !freteGratis) {
+      valores.innerHTML += `<span class="pedido-total-original">Total: ${formatMoney(
+        totalOriginal
+      )}</span>`;
+      valores.innerHTML += `<span>Total com desconto: ${formatMoney(totalDesconto)}</span>`;
+    } else {
+      valores.innerHTML += `<span>Total: ${formatMoney(totalOriginal)}</span>`;
+    }
+
+    valores.innerHTML += freteGratis
+      ? "<span>Frete: Grátis</span>"
+      : `<span>Frete: ${formatMoney(Number(pedido.valorFrete || 0))}</span>`;
+    valores.innerHTML += `<span>Quantidade: ${quantidade}x</span>`;
+    valores.innerHTML += `<span>Status: ${pedido?.status?.nome || "-"}</span>`;
+
+    info.appendChild(title);
+    info.appendChild(valores);
+
+    const actions = document.createElement("div");
+    actions.className = "pedido-actions";
+
+    const status = normalizeTexto(pedido?.status?.nome);
+    if (status === "APROVADA") {
+      const btn = document.createElement("button");
+      btn.textContent = "ENTREGAR PRODUTO";
+      btn.addEventListener("click", async () => {
+        const confirmou = await abrirConfirmacaoPedido(
+          "ENTREGAR PRODUTO",
+          "Deseja mover o pedido para EM TRANSPORTE?"
+        );
+        if (!confirmou) return;
+        try {
+          await atualizarStatusPedidoAdmin(pedido.id, "EM TRANSPORTE");
+          await carregarPedidos();
+        } catch (error) {
+          pedidosList.innerHTML = `<div class="empty-state">${error.message}</div>`;
+        }
+      });
+      actions.appendChild(btn);
+    } else if (status === "EM TRANSPORTE") {
+      const btn = document.createElement("button");
+      btn.textContent = "CONFIRMAR PRODUTO ENTREGUE";
+      btn.addEventListener("click", async () => {
+        const confirmou = await abrirConfirmacaoPedido(
+          "CONFIRMAR ENTREGA",
+          "Deseja mover o pedido para ENTREGUE?"
+        );
+        if (!confirmou) return;
+        try {
+          await atualizarStatusPedidoAdmin(pedido.id, "ENTREGUE");
+          await carregarPedidos();
+        } catch (error) {
+          pedidosList.innerHTML = `<div class="empty-state">${error.message}</div>`;
+        }
+      });
+      actions.appendChild(btn);
+    } else if (status === "EM TROCA") {
+      const btn = document.createElement("button");
+      btn.textContent = "VERIFICAR SOLICITACAO DE TROCA";
+      actions.appendChild(btn);
+    } else if (status === "TROCADO") {
+      const btn = document.createElement("button");
+      btn.textContent = "CONSULTAR TROCA AVALIADA";
+      actions.appendChild(btn);
+    }
+
+    const detalhesBtn = document.createElement("button");
+    detalhesBtn.textContent = "DETALHES";
+    detalhesBtn.addEventListener("click", () => abrirPedidoDetalhe(pedido.id));
+    actions.appendChild(detalhesBtn);
+
+    card.appendChild(info);
+    card.appendChild(actions);
+    pedidosList.appendChild(card);
+  });
+}
+
+function formatData(dataIso) {
+  if (!dataIso) return "-";
+  const date = new Date(dataIso);
+  if (Number.isNaN(date.getTime())) return dataIso;
+  return date.toLocaleString("pt-BR");
+}
+
+function maskCartao(numero) {
+  const digits = `${numero || ""}`.replace(/\D/g, "");
+  const last4 = digits.slice(-4);
+  return `**** **** **** ${last4}`;
+}
+
+function renderPedidoDetalhe(pedido) {
+  if (!pedido) {
+    return;
+  }
+  const status = pedido?.status?.nome || "-";
+  const cliente = pedido?.usuario?.nome || "SEM NOME";
+  pedidoDetalheTitle.textContent = `${cliente} - ${status}`;
+
+  const cupomPromo = pedido?.pagamentos_on_pedido?.[0]?.cupomPromocional || null;
+  const cupomTipo = normalizeTexto(cupomPromo?.tipo?.nome);
+  const freteGratis = cupomTipo === "FRETE GRATIS" || cupomTipo === "FRETE GRÁTIS";
+
+  pedidoDetalheMeta.innerHTML = `
+    <div>Data da compra: ${formatData(pedido.dataCriacao)}</div>
+    <div>Valor total: ${formatMoney(Number(pedido.valorTotal || 0))}</div>
+    <div>${freteGratis ? "Frete: Grátis" : `Frete: ${formatMoney(Number(pedido.valorFrete || 0))}`}</div>
+  `;
+
+  pedidoItensList.innerHTML = "";
+  (pedido?.itemPedidos_on_pedido || []).forEach((item) => {
+    const card = document.createElement("div");
+    card.className = "pedido-item";
+    const imgWrap = document.createElement("div");
+    imgWrap.className = "pedido-item-image";
+    const imgUrl = item?.produto?.imagemProdutos_on_produto?.[0]?.url;
+    if (imgUrl) {
+      const img = document.createElement("img");
+      img.src = imgUrl;
+      img.alt = item?.produto?.nome || "Produto";
+      imgWrap.appendChild(img);
+    } else {
+      imgWrap.textContent = "IMG";
+    }
+
+    const info = document.createElement("div");
+    info.innerHTML = `
+      <strong>${item?.produto?.nome || "SEM NOME"}</strong>
+      <span>Modelo: ${item?.produto?.modelo || "-"}</span>
+      <span>Quantidade: ${item.quantidade}x</span>
+    `;
+    card.appendChild(imgWrap);
+    card.appendChild(info);
+    pedidoItensList.appendChild(card);
+  });
+
+  const pagamento = pedido?.pagamentos_on_pedido?.[0] || null;
+  const cartoes = pagamento?.pagamentoCartaos_on_pagamento || [];
+  const cuponsTroca = pagamento?.pagamentoCupomTrocas_on_pagamento || [];
+
+  const lines = [];
+  if (pagamento) {
+    lines.push(`<div>Data pagamento: ${formatData(pagamento.dataPagamento)}</div>`);
+    lines.push(`<div>Total pago: ${formatMoney(Number(pagamento.valorTotalPago || 0))}</div>`);
+  }
+
+  if (cupomPromo) {
+    if (cupomTipo === "DESCONTO") {
+      lines.push(
+        `<div>Cupom promocional: ${cupomPromo.codigo} (${formatMoney(
+          Number(cupomPromo.valor || 0)
+        )})</div>`
+      );
+    } else if (freteGratis) {
+      lines.push(`<div>Cupom promocional: Frete Gratis</div>`);
+    }
+  }
+
+  if (cuponsTroca.length) {
+    const lista = cuponsTroca
+      .map(
+        (item) =>
+          `<li>${item.cupomTroca?.codigo} - ${formatMoney(Number(item.cupomTroca?.valor || 0))}</li>`
+      )
+      .join("");
+    lines.push(`<div>Cupons troca/sobra:</div><ul>${lista}</ul>`);
+  }
+
+  if (cartoes.length) {
+    const lista = cartoes
+      .map((item) => {
+        const nome = `${item.cartaoCredito?.nomeImpresso || ""}`.trim().split(/\s+/)[0] || "-";
+        const validade = item.cartaoCredito?.dataValidade || "-";
+        return `<li>${maskCartao(item.cartaoCredito?.numero)} - ${nome} - ${validade}</li>`;
+      })
+      .join("");
+    lines.push(`<div>Cartoes utilizados:</div><ul>${lista}</ul>`);
+  }
+
+  if (!lines.length) {
+    pedidoPagamento.innerHTML = "<div>Nenhum pagamento encontrado.</div>";
+  } else {
+    pedidoPagamento.innerHTML = lines.join("");
+  }
+}
+
+function abrirConfirmacaoPedido(titulo, texto) {
+  pedidoConfirmTitle.textContent = titulo;
+  pedidoConfirmText.textContent = texto;
+  pedidoConfirmModal.classList.remove("hidden");
+
+  return new Promise((resolve) => {
+    pedidoConfirmResolver = resolve;
+  });
+}
+
+function fecharConfirmacaoPedido(result) {
+  pedidoConfirmModal.classList.add("hidden");
+  if (pedidoConfirmResolver) {
+    pedidoConfirmResolver(result);
+    pedidoConfirmResolver = null;
+  }
+}
 function setAdminSection(section) {
   const isProdutos = section === "produtos";
   const isClientes = section === "clientes";
+  const isPedidos = section === "pedidos";
+  const isPedidoDetalhe = section === "pedido-detalhe";
   const isProdutoForm = section === "produto-form";
   const isEstoque = section === "estoque";
 
   produtosSection.classList.toggle("hidden", !isProdutos);
   clientesSection.classList.toggle("hidden", !isClientes);
+  pedidosSection.classList.toggle("hidden", !isPedidos);
+  pedidoDetalheSection.classList.toggle("hidden", !isPedidoDetalhe);
   produtoFormSection.classList.toggle("hidden", !isProdutoForm);
   estoqueSection.classList.toggle("hidden", !isEstoque);
 
   navProdutos.classList.toggle("is-active", isProdutos || isProdutoForm);
   navClientes.classList.toggle("is-active", isClientes);
+  navPedidos.classList.toggle("is-active", isPedidos || isPedidoDetalhe);
   navEstoque.classList.toggle("is-active", isEstoque);
 }
 
@@ -748,6 +1103,15 @@ function scheduleSearch() {
   }, 300);
 }
 
+function schedulePedidosSearch() {
+  clearTimeout(pedidosDebounce);
+  pedidosDebounce = setTimeout(() => {
+    carregarPedidos().catch((error) => {
+      pedidosList.innerHTML = `<div class="empty-state">${error.message}</div>`;
+    });
+  }, 300);
+}
+
 searchInput.addEventListener("input", (event) => {
   const raw = event.target.value;
   const hasLetters = /[a-zA-Z]/.test(raw);
@@ -836,6 +1200,39 @@ prodSortButtons.forEach((button) => {
 
     updateProdutoSortUI();
     scheduleProdutosSearch();
+  });
+});
+
+pedidoSearchInput.addEventListener("input", (event) => {
+  pedidosState.search = event.target.value.trim();
+  schedulePedidosSearch();
+});
+
+pedidoStatusCheckboxes.forEach((checkbox) => {
+  checkbox.addEventListener("change", () => {
+    if (checkbox.checked) {
+      pedidosState.status.add(checkbox.value);
+    } else {
+      pedidosState.status.delete(checkbox.value);
+    }
+    schedulePedidosSearch();
+  });
+});
+
+pedidoSortButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    const field = button.dataset.field;
+    if (pedidosState.sortField !== field) {
+      pedidosState.sortField = field;
+      pedidosState.sortDir = "down";
+    } else if (pedidosState.sortDir === "down") {
+      pedidosState.sortDir = "up";
+    } else {
+      pedidosState.sortField = "";
+      pedidosState.sortDir = "";
+    }
+    updatePedidoSortUI();
+    schedulePedidosSearch();
   });
 });
 
@@ -1019,6 +1416,15 @@ navClientes.addEventListener("click", () => {
   scheduleSearch();
 });
 
+navPedidos.addEventListener("click", async () => {
+  setAdminSection("pedidos");
+  try {
+    await carregarPedidos();
+  } catch (error) {
+    pedidosList.innerHTML = `<div class="empty-state">${error.message}</div>`;
+  }
+});
+
 navEstoque.addEventListener("click", async () => {
   setAdminSection("estoque");
   fecharFornecedorForm();
@@ -1044,6 +1450,23 @@ btnCancelFornecedor.addEventListener("click", () => {
 
 btnCancelEntrada.addEventListener("click", () => {
   fecharEntradaForm();
+});
+
+pedidoVoltar.addEventListener("click", async () => {
+  setAdminSection("pedidos");
+  try {
+    await carregarPedidos();
+  } catch (error) {
+    pedidosList.innerHTML = `<div class="empty-state">${error.message}</div>`;
+  }
+});
+
+pedidoConfirmCancel.addEventListener("click", () => {
+  fecharConfirmacaoPedido(false);
+});
+
+pedidoConfirmOk.addEventListener("click", () => {
+  fecharConfirmacaoPedido(true);
 });
 
 btnSaveFornecedor.addEventListener("click", async () => {
@@ -1125,6 +1548,7 @@ logoutButton.addEventListener("click", async () => {
 
 updateSortUI();
 updateProdutoSortUI();
+updatePedidoSortUI();
 carregarClientes().catch((error) => {
   clientesList.innerHTML = `<div class="empty-state">${error.message}</div>`;
 });

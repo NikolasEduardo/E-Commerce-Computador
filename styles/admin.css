@@ -239,6 +239,126 @@ body {
   gap: 12px;
 }
 
+.pedidos-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.pedido-card {
+  background: #bdbdbd;
+  padding: 14px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 12px;
+  align-items: center;
+}
+
+.pedido-info {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pedido-nome {
+  font-size: 1rem;
+  font-weight: bold;
+}
+
+.pedido-nome small {
+  display: block;
+  font-weight: normal;
+  font-size: 0.85rem;
+}
+
+.pedido-valores {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.pedido-total-original {
+  text-decoration: line-through;
+  color: #555;
+}
+
+.pedido-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pedido-actions button {
+  background: #a9a9a9;
+  border: none;
+  padding: 8px 14px;
+  cursor: pointer;
+}
+
+.pedido-detalhe-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: #bdbdbd;
+  padding: 10px;
+}
+
+.pedido-detalhe-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.pedido-itens-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: #bdbdbd;
+  padding: 10px;
+}
+
+.pedido-item {
+  display: grid;
+  grid-template-columns: 70px 1fr;
+  gap: 10px;
+  align-items: center;
+  background: #c9c9c9;
+  padding: 8px;
+}
+
+.pedido-item-image {
+  width: 60px;
+  height: 60px;
+  background: #a9a9a9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.pedido-item-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.pedido-pagamento {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: #bdbdbd;
+  padding: 10px;
+}
+
+.pedido-pagamento ul {
+  margin: 0;
+  padding-left: 16px;
+}
+
+.pedido-pagamento li {
+  margin-bottom: 4px;
+}
+
 .produto-card {
   background: #bdbdbd;
   padding: 14px;
@@ -451,6 +571,14 @@ body {
   }
 
   .produto-card {
+    grid-template-columns: 1fr;
+  }
+
+  .pedido-card {
+    grid-template-columns: 1fr;
+  }
+
+  .pedido-detalhe-grid {
     grid-template-columns: 1fr;
   }
 

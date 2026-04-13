@@ -7,6 +7,7 @@ import {
 } from "../../controller/PerfilController.js";
 import { carregarCarrinho } from "../../controller/CarrinhoController.js";
 import { carregarCupons } from "../../controller/CupomController.js";
+import { concluirCompra } from "../../controller/CheckoutController.js";
 import { initCartNotice, refreshCartNotice, showCartPopup } from "./cart-notice.js";
 
 const perfilButton = document.getElementById("perfil-btn");
@@ -26,6 +27,7 @@ const cupomPromoSelect = document.getElementById("cupom-promo");
 const cupomPromoMsg = document.getElementById("cupom-promo-msg");
 const cupomTrocaList = document.getElementById("cupom-troca-list");
 const totalsBox = document.getElementById("checkout-totals");
+const btnComprar = document.getElementById("btn-comprar");
 
 const modal = document.getElementById("endereco-modal");
 const btnEnderecoCancelar = document.getElementById("btn-endereco-cancelar");
@@ -304,6 +306,25 @@ function calcularTotais() {
   const frete = endereco ? calcularFrete(endereco.cep) : 0;
   const totalBruto = totalProdutos + frete;
 
+  let promoValor = 0;
+  let promoMsg = "";
+  const promo = obterCupomPromoSelecionado();
+  if (promo) {
+    const tipo = normalizeTexto(promo.tipo?.nome || "");
+    if (tipo === "DESCONTO") {
+      promoValor = Number(promo.valor || 0);
+    } else if (tipo === "FRETE GRATIS") {
+      if (totalProdutos >= Number(promo.valor || 0)) {
+        promoValor = frete;
+      } else {
+        promoMsg = "Cupom nao aplicavel (valor minimo nao atingido).";
+      }
+    }
+  }
+
+  const promoAplicada = Math.min(promoValor, totalBruto);
+  const restanteAposPromo = Math.max(totalBruto - promoAplicada, 0);
+
   const trocaTotal = cuponsTroca.reduce((acc, cupom) => {
     if (selectedTroca.has(cupom.id)) {
       return acc + Number(cupom.valor || 0);
@@ -311,27 +332,9 @@ function calcularTotais() {
     return acc;
   }, 0);
 
-  const trocaAplicada = Math.min(trocaTotal, totalBruto);
-  const trocaSobra = Math.max(trocaTotal - totalBruto, 0);
-  const restanteAposTroca = Math.max(totalBruto - trocaAplicada, 0);
-
-  let promoDesconto = 0;
-  let promoMsg = "";
-  const promo = obterCupomPromoSelecionado();
-  if (promo) {
-    const tipo = normalizeTexto(promo.tipo?.nome || "");
-    if (tipo === "DESCONTO") {
-      promoDesconto = Math.min(Number(promo.valor || 0), restanteAposTroca);
-    } else if (tipo === "FRETE GRATIS") {
-      if (totalProdutos >= Number(promo.valor || 0)) {
-        promoDesconto = Math.min(frete, restanteAposTroca);
-      } else {
-        promoMsg = "Cupom nao aplicavel (valor minimo nao atingido).";
-      }
-    }
-  }
-
-  const restanteAposPromo = Math.max(restanteAposTroca - promoDesconto, 0);
+  const trocaAplicada = Math.min(trocaTotal, restanteAposPromo);
+  const trocaSobra = Math.max(trocaTotal - trocaAplicada, 0);
+  const restanteAposTroca = Math.max(restanteAposPromo - trocaAplicada, 0);
 
   return {
     totalProdutos,
@@ -340,9 +343,11 @@ function calcularTotais() {
     trocaTotal,
     trocaAplicada,
     trocaSobra,
-    promoDesconto,
+    promoValor,
+    promoAplicada,
     promoMsg,
-    restanteAposPromo
+    restanteAposPromo,
+    restanteAposTroca
   };
 }
 
@@ -368,7 +373,7 @@ function atualizarCuponsTrocaDisponiveis(totalBruto) {
 function atualizarResumo() {
   const totais = calcularTotais();
   cupomPromoMsg.textContent = totais.promoMsg || "";
-  atualizarCuponsTrocaDisponiveis(totais.totalBruto);
+  atualizarCuponsTrocaDisponiveis(totais.restanteAposPromo);
   const pagamentos = atualizarCartoes(totais);
   renderTotais(totais, pagamentos);
 }
@@ -383,14 +388,14 @@ function atualizarCartoes(totais) {
   }
 
   cartaoEmpty.classList.add("hidden");
-  if (totais.restanteAposPromo <= 0) {
+  if (totais.restanteAposTroca <= 0) {
     cartaoExtraToggle.checked = false;
     cartaoExtraRow.classList.add("hidden");
     cartaoMsg.textContent = "Compra coberta pelos cupons.";
     return { principal: 0, adicional: 0 };
   }
 
-  const restante = totais.restanteAposPromo;
+  const restante = totais.restanteAposTroca;
   const podeUsarExtra = cartoes.length >= 2 && restante >= 20;
   cartaoExtraToggle.disabled = !podeUsarExtra;
   if (!podeUsarExtra) {
@@ -427,23 +432,32 @@ function renderTotais(totais, pagamentos) {
   const lines = [
     `Total produtos: ${formatCurrency(totais.totalProdutos)}`,
     `Frete: ${formatCurrency(totais.frete)}`,
-    `Cupom troca: -${formatCurrency(totais.trocaAplicada)}`
+    "SEPARADOR",
+    `Total a ser pago: ${formatCurrency(totais.totalBruto)}`,
+    `Cupom promocional: -${formatCurrency(totais.promoValor)}`
   ];
 
   if (totais.trocaSobra > 0) {
     lines.push(`Sobra cupons troca: ${formatCurrency(totais.trocaSobra)}`);
   }
 
-  lines.push(`Cupom promocional: -${formatCurrency(totais.promoDesconto)}`);
+  lines.push(`Cupom troca: -${formatCurrency(totais.trocaAplicada)}`);
 
   if (pagamentos.adicional > 0) {
-    lines.push(`Cartao adicional: ${formatCurrency(pagamentos.adicional)}`);
+    lines.push(`Cartao secundario: ${formatCurrency(pagamentos.adicional)}`);
     lines.push(`Cartao principal: ${formatCurrency(pagamentos.principal)}`);
   } else {
     lines.push(`Cartao principal: ${formatCurrency(pagamentos.principal)}`);
   }
 
-  totalsBox.innerHTML = lines.map((line) => `<div>${line}</div>`).join("");
+  totalsBox.innerHTML = lines
+    .map((line) => {
+      if (line === "SEPARADOR") {
+        return `<div class="separator"></div>`;
+      }
+      return `<div>${line}</div>`;
+    })
+    .join("");
 }
 
 function openEnderecoModal() {
@@ -454,6 +468,25 @@ function openEnderecoModal() {
 
 function closeEnderecoModal() {
   modal.classList.add("hidden");
+}
+
+function construirPayloadCompra() {
+  const enderecoId = enderecoSelect.value || null;
+  const cupomPromocionalId = cupomPromoSelect.value || null;
+  const cupomTrocaIds = Array.from(selectedTroca || []);
+  const usarExtra = cartaoExtraToggle.checked && !cartaoExtraRow.classList.contains("hidden");
+  const cartaoPrincipalId = cartoes.length ? cartaoPrincipalSelect.value : null;
+  const cartaoSecundarioId = usarExtra ? cartaoExtraSelect.value : null;
+  const cartaoSecundarioValor = usarExtra ? Number(cartaoExtraValor.value || 0) : null;
+
+  return {
+    enderecoId,
+    cupomPromocionalId,
+    cupomTrocaIds,
+    cartaoPrincipalId,
+    cartaoSecundarioId,
+    cartaoSecundarioValor
+  };
 }
 
 async function salvarNovoEndereco() {
@@ -635,6 +668,17 @@ btnEnderecoCancelar.addEventListener("click", () => {
 
 btnEnderecoSalvar.addEventListener("click", () => {
   salvarNovoEndereco();
+});
+
+btnComprar.addEventListener("click", async () => {
+  try {
+    const payload = construirPayloadCompra();
+    await concluirCompra(payload);
+    await refreshCartNotice();
+    window.location.href = "./home.html";
+  } catch (error) {
+    showWarning(error?.message || "Erro ao finalizar compra.");
+  }
 });
 
 endCep.addEventListener("input", () => {

@@ -17,12 +17,79 @@
       <aside class="admin-nav">
         <button id="nav-produtos" class="nav-item">PRODUTOS</button>
         <button id="nav-clientes" class="nav-item is-active">CLIENTES</button>
-        <button class="nav-item">PEDIDOS</button>
+        <button id="nav-pedidos" class="nav-item">PEDIDOS</button>
         <button id="nav-estoque" class="nav-item">ESTOQUE</button>
         <button class="nav-item">GRAFICO</button>
       </aside>
 
       <main class="admin-content">
+        <section id="pedidos-section" class="admin-section hidden">
+          <section class="panel">
+            <div class="panel-header">
+              <div class="tab">PESQUISA</div>
+              <div class="tab">FILTRAR POR</div>
+              <div class="tab">CLASSIFICAR POR</div>
+            </div>
+
+            <div class="panel-controls">
+              <div class="search-box">
+                <input type="text" id="pedidoSearchInput" placeholder="BUSCAR POR CLIENTE">
+              </div>
+
+              <div class="filters">
+                <div class="filter-group">
+                  <span class="filter-title">STATUS</span>
+                  <label><input type="checkbox" value="APROVADA" class="pedido-filter-status"> APROVADA</label>
+                  <label><input type="checkbox" value="REPROVADA" class="pedido-filter-status"> REPROVADA</label>
+                  <label><input type="checkbox" value="EM TRANSPORTE" class="pedido-filter-status"> EM TRANSPORTE</label>
+                  <label><input type="checkbox" value="ENTREGUE" class="pedido-filter-status"> ENTREGUE</label>
+                  <label><input type="checkbox" value="EM TROCA" class="pedido-filter-status"> EM TROCA</label>
+                  <label><input type="checkbox" value="TROCADO" class="pedido-filter-status"> TROCADO</label>
+                </div>
+              </div>
+
+              <div class="sorts">
+                <button class="sort-button pedido-sort-button" data-field="dataCriacao">
+                  DATA CRIACAO <span class="sort-icon"></span>
+                </button>
+                <button class="sort-button pedido-sort-button" data-field="valorTotal">
+                  VALOR TOTAL <span class="sort-icon"></span>
+                </button>
+                <button class="sort-button pedido-sort-button" data-field="valorFrete">
+                  VALOR FRETE <span class="sort-icon"></span>
+                </button>
+                <button class="sort-button pedido-sort-button" data-field="cliente">
+                  CLIENTE <span class="sort-icon"></span>
+                </button>
+              </div>
+            </div>
+          </section>
+
+          <section id="pedidosList" class="pedidos-list"></section>
+        </section>
+
+        <section id="pedido-detalhe-section" class="admin-section hidden">
+          <div class="panel">
+            <div class="panel-title" id="pedido-detalhe-title">DETALHES DO PEDIDO</div>
+            <div id="pedido-detalhe-meta" class="pedido-detalhe-meta"></div>
+
+            <div class="pedido-detalhe-grid">
+              <div>
+                <div class="panel-title">ITENS DO PEDIDO</div>
+                <div id="pedido-itens-list" class="pedido-itens-list"></div>
+              </div>
+              <div>
+                <div class="panel-title">PAGAMENTO</div>
+                <div id="pedido-pagamento" class="pedido-pagamento"></div>
+              </div>
+            </div>
+
+            <div class="actions">
+              <button id="pedido-voltar" type="button">VOLTAR</button>
+            </div>
+          </div>
+        </section>
+
         <section id="produtos-section" class="admin-section hidden">
           <section class="panel">
             <div class="panel-header">
@@ -285,6 +352,17 @@
           <section id="clientesList" class="clientes-list"></section>
         </section>
       </main>
+    </div>
+  </div>
+
+  <div id="pedido-confirm-modal" class="modal hidden">
+    <div class="modal-content">
+      <h3 id="pedido-confirm-title">CONFIRMAR ACAO</h3>
+      <p id="pedido-confirm-text"></p>
+      <div class="modal-actions">
+        <button id="pedido-confirm-cancel" type="button">CANCELAR</button>
+        <button id="pedido-confirm-ok" type="button">CONFIRMAR</button>
+      </div>
     </div>
   </div>
 
