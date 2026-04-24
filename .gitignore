@@ -64,6 +64,14 @@ node_modules/
 
 # dotenv environment variables file
 .env
+*.env
+server/.env
 
 # dataconnect generated files
 .dataconnect
+
+# Service accounts and local secrets
+server/serviceAccount.json
+
+# Local Firebase project binding (optional to keep tracked for shared team projects)
+# .firebaserc

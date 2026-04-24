@@ -209,3 +209,50 @@ export async function definirCartaoPreferencial(idToken, cartaoId) {
   }
   return data;
 }
+
+export async function obterPedidos(idToken) {
+  const response = await fetch(`${baseUrl}/api/usuario/pedidos`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${idToken}`
+    }
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const message = data?.error || data?.message || "Erro ao carregar pedidos.";
+    throw new Error(message);
+  }
+  return data;
+}
+
+export async function obterPedidoDetalhe(idToken, pedidoId) {
+  const response = await fetch(`${baseUrl}/api/usuario/pedidos/detalhe?id=${encodeURIComponent(pedidoId)}`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${idToken}`
+    }
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const message = data?.error || data?.message || "Erro ao carregar detalhes do pedido.";
+    throw new Error(message);
+  }
+  return data;
+}
+
+export async function readicionarPedidoCarrinho(idToken, pedidoId) {
+  const response = await fetch(`${baseUrl}/api/usuario/pedidos/readicionar-carrinho`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${idToken}`
+    },
+    body: JSON.stringify({ id: pedidoId })
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const message = data?.error || data?.message || "Erro ao readicionar pedido ao carrinho.";
+    throw new Error(message);
+  }
+  return data;
+}

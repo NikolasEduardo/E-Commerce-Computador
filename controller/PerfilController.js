@@ -13,7 +13,10 @@ import {
   obterCartoes,
   criarCartao,
   inativarCartao,
-  definirCartaoPreferencial
+  definirCartaoPreferencial,
+  obterPedidos,
+  obterPedidoDetalhe,
+  readicionarPedidoCarrinho
 } from "../model/usuario/PerfilRepository.js";
 
 export function carregarPerfil(callback) {
@@ -158,4 +161,39 @@ export async function definirCartaoPreferencialUsuario(cartaoId) {
   }
   const idToken = await user.getIdToken(true);
   return definirCartaoPreferencial(idToken, cartaoId);
+}
+
+export function carregarPedidosUsuario(callback) {
+  onAuthStateChanged(auth, async (user) => {
+    if (!user) {
+      callback(null, "Usuario nao autenticado.");
+      return;
+    }
+
+    try {
+      const idToken = await user.getIdToken(true);
+      const pedidos = await obterPedidos(idToken);
+      callback(pedidos, null);
+    } catch (error) {
+      callback(null, error?.message || "Erro ao carregar pedidos.");
+    }
+  });
+}
+
+export async function carregarPedidoDetalheUsuario(pedidoId) {
+  const user = auth.currentUser;
+  if (!user) {
+    throw new Error("Usuario nao autenticado.");
+  }
+  const idToken = await user.getIdToken(true);
+  return obterPedidoDetalhe(idToken, pedidoId);
+}
+
+export async function readicionarPedidoAoCarrinhoUsuario(pedidoId) {
+  const user = auth.currentUser;
+  if (!user) {
+    throw new Error("Usuario nao autenticado.");
+  }
+  const idToken = await user.getIdToken(true);
+  return readicionarPedidoCarrinho(idToken, pedidoId);
 }

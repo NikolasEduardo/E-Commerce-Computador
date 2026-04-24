@@ -36,21 +36,18 @@
         <div class="checkout-panel">
           <h3>CARTOES DE CREDITO</h3>
           <div id="cartao-empty" class="hint hidden">Nenhum cartao cadastrado.</div>
-          <div class="field-row stack">
+          <div class="field-row">
             <label for="cartao-principal" class="field-label">Cartao principal</label>
+            <button id="btn-cartao-add" class="btn small" type="button">NOVO</button>
+          </div>
+          <div class="field-row stack">
             <select id="cartao-principal"></select>
           </div>
-          <label class="field-toggle">
-            <input type="checkbox" id="cartao-extra-toggle">
-            Usar segundo cartao
-          </label>
-          <div id="cartao-extra-row" class="field-row stack hidden">
-            <label for="cartao-extra" class="field-label">Cartao adicional</label>
-            <div class="field-row triple">
-              <select id="cartao-extra"></select>
-              <input id="cartao-extra-valor" type="number" min="10" step="0.01" placeholder="Valor">
-            </div>
+          <div class="field-row">
+            <label class="field-label">Cartoes adicionais</label>
+            <button id="btn-cartao-extra-add" class="btn small" type="button">ADICIONAR</button>
           </div>
+          <div id="cartoes-extras-list" class="card-extra-list"></div>
           <div id="cartao-msg" class="hint"></div>
         </div>
 
@@ -95,6 +92,24 @@
         <button id="btn-endereco-salvar" class="btn small">CADASTRAR</button>
       </div>
       <div id="endereco-modal-msg" class="hint"></div>
+    </div>
+  </div>
+
+  <div id="cartao-modal" class="modal hidden">
+    <div class="modal-content">
+      <h3>NOVO CARTAO</h3>
+      <div class="modal-grid">
+        <select id="modal-cartao-bandeira"></select>
+        <input id="modal-cartao-numero" type="text" inputmode="numeric" placeholder="Numero">
+        <input id="modal-cartao-nome" type="text" placeholder="Nome impresso">
+        <input id="modal-cartao-cvv" type="text" inputmode="numeric" placeholder="CVV">
+        <input id="modal-cartao-validade" type="month" placeholder="Validade">
+      </div>
+      <div class="modal-actions">
+        <button id="btn-cartao-cancelar" class="btn small" type="button">CANCELAR</button>
+        <button id="btn-cartao-salvar" class="btn small" type="button">CADASTRAR</button>
+      </div>
+      <div id="cartao-modal-msg" class="hint"></div>
     </div>
   </div>
 

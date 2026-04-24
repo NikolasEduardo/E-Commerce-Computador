@@ -46,7 +46,9 @@ const btnCancelProduto = document.getElementById("btn-cancel-produto");
 const btnSaveProduto = document.getElementById("btn-save-produto");
 const produtoNomeInput = document.getElementById("produto-nome");
 const produtoModeloInput = document.getElementById("produto-modelo");
-const produtoGarantiaInput = document.getElementById("produto-garantia");
+const produtoGarantiaTipoSelect = document.getElementById("produto-garantia-tipo");
+const produtoGarantiaAnosInput = document.getElementById("produto-garantia-anos");
+const produtoGarantiaMesesInput = document.getElementById("produto-garantia-meses");
 const produtoMarcaSelect = document.getElementById("produto-marca-select");
 const produtoMarcaNovaInput = document.getElementById("produto-marca-nova");
 const produtoGrupoSelect = document.getElementById("produto-grupo-select");
@@ -173,6 +175,84 @@ function formatMoney(value) {
     return "R$ 0,00";
   }
   return `R$ ${Number(value).toFixed(2).replace(".", ",")}`;
+}
+
+function updateGarantiaFields() {
+  if (!produtoGarantiaTipoSelect) {
+    return;
+  }
+  const tipo = produtoGarantiaTipoSelect.value;
+  const mostraAnos = ["ANOS", "ANOS_MESES"].includes(tipo);
+  const mostraMeses = ["MESES", "ANOS_MESES"].includes(tipo);
+
+  produtoGarantiaAnosInput.disabled = !mostraAnos;
+  produtoGarantiaMesesInput.disabled = !mostraMeses;
+
+  produtoGarantiaAnosInput.parentElement?.classList.toggle("hidden", !mostraAnos && !mostraMeses);
+  produtoGarantiaAnosInput.classList.toggle("hidden", !mostraAnos);
+  produtoGarantiaMesesInput.classList.toggle("hidden", !mostraMeses);
+}
+
+function montarGarantiaTexto() {
+  const tipo = produtoGarantiaTipoSelect.value;
+  const anos = Number(produtoGarantiaAnosInput.value);
+  const meses = Number(produtoGarantiaMesesInput.value);
+
+  if (tipo === "MESES") {
+    return `${meses} MESES`;
+  }
+  if (tipo === "ANOS_MESES") {
+    const textoAno = anos === 1 ? "ANO" : "ANOS";
+    return `${anos} ${textoAno} E ${meses} MESES`;
+  }
+  if (tipo === "ANOS") {
+    const textoAno = anos === 1 ? "ANO" : "ANOS";
+    return `${anos} ${textoAno}`;
+  }
+  return "";
+}
+
+function aplicarGarantiaNoForm(texto) {
+  const valor = `${texto || ""}`.trim().toUpperCase();
+  if (!valor) {
+    produtoGarantiaTipoSelect.value = "";
+    produtoGarantiaAnosInput.value = "";
+    produtoGarantiaMesesInput.value = "";
+    updateGarantiaFields();
+    return;
+  }
+
+  let match = valor.match(/^(\d+)\s+MESES$/);
+  if (match) {
+    produtoGarantiaTipoSelect.value = "MESES";
+    produtoGarantiaMesesInput.value = match[1];
+    produtoGarantiaAnosInput.value = "";
+    updateGarantiaFields();
+    return;
+  }
+
+  match = valor.match(/^(\d+)\s+ANO(S)?$/);
+  if (match) {
+    produtoGarantiaTipoSelect.value = "ANOS";
+    produtoGarantiaAnosInput.value = match[1];
+    produtoGarantiaMesesInput.value = "";
+    updateGarantiaFields();
+    return;
+  }
+
+  match = valor.match(/^(\d+)\s+ANO(S)?\s+E\s+(\d+)\s+MESES$/);
+  if (match) {
+    produtoGarantiaTipoSelect.value = "ANOS_MESES";
+    produtoGarantiaAnosInput.value = match[1];
+    produtoGarantiaMesesInput.value = match[3];
+    updateGarantiaFields();
+    return;
+  }
+
+  produtoGarantiaTipoSelect.value = "";
+  produtoGarantiaAnosInput.value = "";
+  produtoGarantiaMesesInput.value = "";
+  updateGarantiaFields();
 }
 
 function computeSortOrder(field, dir) {
@@ -508,6 +588,10 @@ function renderPedidoDetalhe(pedido) {
     <div>${freteGratis ? "Frete: Grátis" : `Frete: ${formatMoney(Number(pedido.valorFrete || 0))}`}</div>
   `;
 
+  if (pedido.justificativaReprovacao) {
+    pedidoDetalheMeta.innerHTML += `<div>Justificativa de reprovacao: ${pedido.justificativaReprovacao}</div>`;
+  }
+
   pedidoItensList.innerHTML = "";
   (pedido?.itemPedidos_on_pedido || []).forEach((item) => {
     const card = document.createElement("div");
@@ -524,11 +608,14 @@ function renderPedidoDetalhe(pedido) {
       imgWrap.textContent = "IMG";
     }
 
+    const precoAtual = Number(item?.precoAtual);
+    const precoTexto = Number.isFinite(precoAtual) ? formatMoney(precoAtual) : "-";
     const info = document.createElement("div");
     info.innerHTML = `
       <strong>${item?.produto?.nome || "SEM NOME"}</strong>
       <span>Modelo: ${item?.produto?.modelo || "-"}</span>
       <span>Quantidade: ${item.quantidade}x</span>
+      <span>Preco na compra: ${precoTexto}</span>
     `;
     card.appendChild(imgWrap);
     card.appendChild(info);
@@ -839,7 +926,9 @@ function limparProdutoForm() {
   setProdutoFormMessage("");
   produtoNomeInput.value = "";
   produtoModeloInput.value = "";
-  produtoGarantiaInput.value = "";
+  produtoGarantiaTipoSelect.value = "";
+  produtoGarantiaAnosInput.value = "";
+  produtoGarantiaMesesInput.value = "";
   produtoMarcaSelect.value = "";
   produtoMarcaNovaInput.value = "";
   produtoGrupoSelect.value = "";
@@ -852,6 +941,7 @@ function limparProdutoForm() {
   renderCategoriasSelecionadas();
   renderImagensPreview();
   produtoImagensInput.value = "";
+  updateGarantiaFields();
 }
 
 async function abrirEdicaoProduto(produtoId) {
@@ -867,7 +957,7 @@ async function abrirEdicaoProduto(produtoId) {
     setProdutoFormMessage("");
     produtoNomeInput.value = produto.nome || "";
     produtoModeloInput.value = produto.modelo || "";
-    produtoGarantiaInput.value = produto.garantia || "";
+    aplicarGarantiaNoForm(produto.garantia || "");
     produtoMarcaSelect.value = produto?.marca?.id || "";
     produtoMarcaNovaInput.value = "";
     produtoGrupoSelect.value = produto?.grupoPrecificacao?.id || "";
@@ -899,8 +989,29 @@ function validarProdutoForm() {
   if (!produtoNomeInput.value.trim() || !produtoModeloInput.value.trim()) {
     return "Informe nome e modelo.";
   }
-  if (!produtoGarantiaInput.value.trim()) {
-    return "Informe a garantia.";
+  const garantiaTipo = produtoGarantiaTipoSelect.value;
+  const anos = Number(produtoGarantiaAnosInput.value);
+  const meses = Number(produtoGarantiaMesesInput.value);
+  if (!garantiaTipo) {
+    return "Selecione o tipo de garantia.";
+  }
+  if (garantiaTipo === "MESES") {
+    if (!Number.isFinite(meses) || meses < 2 || meses > 11) {
+      return "Informe a garantia em meses (entre 2 e 11).";
+    }
+  }
+  if (garantiaTipo === "ANOS") {
+    if (!Number.isFinite(anos) || anos < 1) {
+      return "Informe a garantia em anos (minimo 1).";
+    }
+  }
+  if (garantiaTipo === "ANOS_MESES") {
+    if (!Number.isFinite(anos) || anos < 1) {
+      return "Informe os anos da garantia (minimo 1).";
+    }
+    if (!Number.isFinite(meses) || meses < 2 || meses > 11) {
+      return "Informe os meses da garantia (entre 2 e 11).";
+    }
   }
   if (!produtoDescricaoInput.value.trim() || !produtoEspecificacoesInput.value.trim()) {
     return "Informe descricao e especificacoes.";
@@ -1203,6 +1314,10 @@ prodSortButtons.forEach((button) => {
   });
 });
 
+produtoGarantiaTipoSelect.addEventListener("change", () => {
+  updateGarantiaFields();
+});
+
 pedidoSearchInput.addEventListener("input", (event) => {
   pedidosState.search = event.target.value.trim();
   schedulePedidosSearch();
@@ -1346,7 +1461,7 @@ btnSaveProduto.addEventListener("click", async () => {
   const produtoPayload = {
     nome: produtoNomeInput.value.trim(),
     modelo: produtoModeloInput.value.trim(),
-    garantia: produtoGarantiaInput.value.trim(),
+    garantia: montarGarantiaTexto(),
     descricaoTecnica: produtoDescricaoInput.value.trim(),
     especificacoesTecnicas: produtoEspecificacoesInput.value.trim(),
     grupoPrecificacaoId: produtoGrupoSelect.value
@@ -1549,6 +1664,7 @@ logoutButton.addEventListener("click", async () => {
 updateSortUI();
 updateProdutoSortUI();
 updatePedidoSortUI();
+updateGarantiaFields();
 carregarClientes().catch((error) => {
   clientesList.innerHTML = `<div class="empty-state">${error.message}</div>`;
 });

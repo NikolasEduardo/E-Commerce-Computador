@@ -8,14 +8,18 @@ import {
   atualizarEnderecoUsuario,
   excluirEnderecoUsuario,
   definirEnderecoResidencial,
+  carregarPedidosUsuario,
+  carregarPedidoDetalheUsuario,
+  readicionarPedidoAoCarrinhoUsuario,
   carregarCartoes,
   adicionarCartao,
   inativarCartaoUsuario,
   definirCartaoPreferencialUsuario
 } from "../../controller/PerfilController.js";
+import { carregarCupons } from "../../controller/CupomController.js";
 import { signOut } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
 import { auth } from "../../model/firebaseApp.js";
-import { initCartNotice } from "./cart-notice.js";
+import { initCartNotice, refreshCartNotice } from "./cart-notice.js";
 
 const messageBox = document.getElementById("perfil-message");
 const editButton = document.getElementById("btn-edit");
@@ -25,11 +29,23 @@ const carrinhoButton = document.getElementById("btn-carrinho");
 const navDetalhes = document.getElementById("nav-detalhes");
 const navEnderecos = document.getElementById("nav-enderecos");
 const navCartoes = document.getElementById("nav-cartoes");
+const navPedidos = document.getElementById("nav-pedidos");
 const sectionDetalhes = document.getElementById("section-detalhes");
 const sectionEnderecos = document.getElementById("section-enderecos");
 const sectionCartoes = document.getElementById("section-cartoes");
+const sectionPedidos = document.getElementById("section-pedidos");
 const enderecosList = document.getElementById("enderecos-list");
 const cartoesList = document.getElementById("cartoes-list");
+const cuponsAtivosList = document.getElementById("cupons-ativos-list");
+const cuponsInativosList = document.getElementById("cupons-inativos-list");
+const pedidosList = document.getElementById("pedidos-list");
+const pedidosListPanel = document.getElementById("pedidos-list-panel");
+const pedidoDetalhePanel = document.getElementById("pedido-detalhe-panel");
+const pedidoDetalheTitle = document.getElementById("pedido-detalhe-title");
+const pedidoDetalheMeta = document.getElementById("pedido-detalhe-meta");
+const pedidoItensList = document.getElementById("pedido-itens-list");
+const pedidoPagamento = document.getElementById("pedido-pagamento");
+const btnVoltarPedido = document.getElementById("btn-voltar-pedido");
 const btnAddEndereco = document.getElementById("btn-add-endereco");
 const enderecoFormPanel = document.getElementById("endereco-form-panel");
 const enderecoFormTitle = document.getElementById("endereco-form-title");
@@ -242,20 +258,26 @@ function setNavActive(target) {
   const isDetalhes = target === "detalhes";
   const isEnderecos = target === "enderecos";
   const isCartoes = target === "cartoes";
+  const isPedidos = target === "pedidos";
 
   navDetalhes.classList.toggle("is-active", isDetalhes);
   navEnderecos.classList.toggle("is-active", isEnderecos);
   navCartoes.classList.toggle("is-active", isCartoes);
+  navPedidos.classList.toggle("is-active", isPedidos);
 
   sectionDetalhes.classList.toggle("hidden", !isDetalhes);
   sectionEnderecos.classList.toggle("hidden", !isEnderecos);
   sectionCartoes.classList.toggle("hidden", !isCartoes);
+  sectionPedidos.classList.toggle("hidden", !isPedidos);
 
   if (!isEnderecos) {
     fecharEnderecoForm();
   }
   if (!isCartoes) {
     fecharCartaoForm();
+  }
+  if (!isPedidos) {
+    mostrarListaPedidos();
   }
 }
 
@@ -559,6 +581,387 @@ function mascararNumeroCartao(numero) {
   return `**** **** **** ${last4}`;
 }
 
+function normalizeText(value) {
+  return `${value || ""}`
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toUpperCase();
+}
+
+function formatCurrency(value) {
+  const number = Number(value || 0);
+  return `R$ ${number.toFixed(2).replace(".", ",")}`;
+}
+
+function getCupomStatusExibicao(cupom) {
+  const status = normalizeText(cupom?.status?.nome);
+  const validade = cupom?.validade ? new Date(cupom.validade) : null;
+  const expirado = !validade || Number.isNaN(validade.getTime()) || validade.getTime() < Date.now();
+
+  if (status === "USADO") {
+    return "USADO";
+  }
+  if (expirado) {
+    return "EXPIRADO";
+  }
+  return "ATIVO";
+}
+
+function formatTempoRestante(validade) {
+  const date = validade ? new Date(validade) : null;
+  if (!date || Number.isNaN(date.getTime())) {
+    return "Expiracao invalida";
+  }
+
+  const diff = date.getTime() - Date.now();
+  if (diff <= 0) {
+    return "Expirado";
+  }
+
+  const minuto = 60 * 1000;
+  const hora = 60 * minuto;
+  const dia = 24 * hora;
+
+  const dias = Math.floor(diff / dia);
+  const horas = Math.floor((diff % dia) / hora);
+  const minutos = Math.floor((diff % hora) / minuto);
+
+  if (dias > 0) {
+    return horas > 0
+      ? `${dias} dia(s) e ${horas} hora(s)`
+      : `${dias} dia(s)`;
+  }
+
+  if (horas > 0) {
+    return minutos > 0
+      ? `${horas} hora(s) e ${minutos} minuto(s)`
+      : `${horas} hora(s)`;
+  }
+
+  return `${Math.max(minutos, 1)} minuto(s)`;
+}
+
+function getCupomTipoTitulo(cupom) {
+  const tipo = normalizeText(cupom?.tipo?.nome);
+  if (tipo === "FRETE GRATIS") {
+    return "FRETE GRÁTIS";
+  }
+  if (tipo === "TROCA" || tipo === "SOBRA") {
+    return "TROCA/SOBRA";
+  }
+  return cupom?.tipo?.nome || "CUPOM";
+}
+
+function getCupomDescricaoValor(cupom) {
+  const tipo = normalizeText(cupom?.tipo?.nome);
+  if (tipo === "FRETE GRATIS") {
+    return `Valor minimo para frete gratis: ${formatCurrency(cupom?.valor)}`;
+  }
+  return `Valor: ${formatCurrency(cupom?.valor)}`;
+}
+
+function renderCuponsLista(listEl, cupons, inactive = false) {
+  listEl.innerHTML = "";
+
+  if (!cupons.length) {
+    const empty = document.createElement("div");
+    empty.className = "cupom-card";
+    empty.textContent = inactive
+      ? "Nenhum cupom expirado ou usado."
+      : "Nenhum cupom ativo.";
+    listEl.appendChild(empty);
+    return;
+  }
+
+  cupons.forEach((cupom) => {
+    const card = document.createElement("div");
+    card.className = `cupom-card${inactive ? " is-inativo" : ""}`;
+
+    const title = document.createElement("div");
+    title.className = "cupom-title";
+    title.innerHTML = `<strong>${cupom.codigo || "CUPOM"} - ${getCupomTipoTitulo(cupom)}</strong>`;
+
+    const valor = document.createElement("span");
+    valor.textContent = getCupomDescricaoValor(cupom);
+
+    const status = document.createElement("span");
+    if (inactive) {
+      status.textContent = `Status: ${getCupomStatusExibicao(cupom)}`;
+    } else {
+      status.textContent = `Expira em: ${formatTempoRestante(cupom.validade)}`;
+    }
+
+    card.appendChild(title);
+    card.appendChild(valor);
+    card.appendChild(status);
+    listEl.appendChild(card);
+  });
+}
+
+function renderCupons(cupons) {
+  const ordenados = [...(cupons || [])].sort((a, b) => {
+    const aTime = a?.validade ? new Date(a.validade).getTime() : Number.MAX_SAFE_INTEGER;
+    const bTime = b?.validade ? new Date(b.validade).getTime() : Number.MAX_SAFE_INTEGER;
+    return aTime - bTime;
+  });
+
+  const ativos = [];
+  const inativos = [];
+
+  ordenados.forEach((cupom) => {
+    if (getCupomStatusExibicao(cupom) === "ATIVO") {
+      ativos.push(cupom);
+    } else {
+      inativos.push(cupom);
+    }
+  });
+
+  renderCuponsLista(cuponsAtivosList, ativos, false);
+  renderCuponsLista(cuponsInativosList, inativos, true);
+}
+
+function formatPedidoDataHora(value) {
+  if (!value) {
+    return "-";
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+  const data = date.toLocaleDateString("pt-BR");
+  const hora = date.toLocaleTimeString("pt-BR", {
+    hour: "2-digit",
+    minute: "2-digit"
+  });
+  return `${data} ${hora}`;
+}
+
+function formatPedidoDataCompleta(value) {
+  if (!value) {
+    return "-";
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+  return date.toLocaleString("pt-BR");
+}
+
+function getPedidoCupomPromocional(pedido) {
+  return pedido?.pagamentos_on_pedido?.[0]?.cupomPromocional || null;
+}
+
+function pedidoTemFreteGratis(pedido) {
+  const tipo = normalizeText(getPedidoCupomPromocional(pedido)?.tipo?.nome);
+  return tipo === "FRETE GRATIS";
+}
+
+function contarItensPedido(pedido) {
+  return (pedido?.itemPedidos_on_pedido || []).reduce(
+    (acc, item) => acc + Number(item?.quantidade || 0),
+    0
+  );
+}
+
+function pedidoPodeReadicionarCarrinho(pedido) {
+  return normalizeText(pedido?.status?.nome) === "REPROVADA";
+}
+
+function mostrarListaPedidos() {
+  pedidosListPanel.classList.remove("hidden");
+  pedidoDetalhePanel.classList.add("hidden");
+}
+
+function mostrarDetalhePedido() {
+  pedidosListPanel.classList.add("hidden");
+  pedidoDetalhePanel.classList.remove("hidden");
+}
+
+function renderPedidos(pedidos) {
+  pedidosList.innerHTML = "";
+
+  if (!pedidos.length) {
+    const empty = document.createElement("div");
+    empty.className = "pedido-card";
+    empty.textContent = "Nenhum pedido encontrado.";
+    pedidosList.appendChild(empty);
+    return;
+  }
+
+  pedidos.forEach((pedido) => {
+    const card = document.createElement("div");
+    card.className = "pedido-card";
+
+    const info = document.createElement("div");
+    info.className = "pedido-info";
+
+    const titulo = document.createElement("strong");
+    titulo.textContent = `${formatPedidoDataHora(pedido.dataCriacao)} - ${pedido?.status?.nome || "-"}`;
+    info.appendChild(titulo);
+
+    const total = document.createElement("span");
+    total.textContent = `Total: ${formatCurrency(pedido.valorTotal)}`;
+    info.appendChild(total);
+
+    const frete = document.createElement("span");
+    frete.textContent = pedidoTemFreteGratis(pedido)
+      ? "Frete: Grátis"
+      : `Frete: ${formatCurrency(pedido.valorFrete)}`;
+    info.appendChild(frete);
+
+    const itens = document.createElement("span");
+    itens.textContent = `Quantidade de itens: ${contarItensPedido(pedido)}`;
+    info.appendChild(itens);
+
+    const actions = document.createElement("div");
+    actions.className = "pedido-actions";
+
+    const btnDetalhes = document.createElement("button");
+    btnDetalhes.className = "btn small";
+    btnDetalhes.textContent = "VER DETALHES";
+    btnDetalhes.addEventListener("click", async () => {
+      try {
+        const data = await carregarPedidoDetalheUsuario(pedido.id);
+        renderPedidoDetalhe(data?.pedido || null);
+        mostrarDetalhePedido();
+      } catch (error) {
+        setMessage(error?.message || "Erro ao carregar pedido.");
+      }
+    });
+    actions.appendChild(btnDetalhes);
+
+    if (pedidoPodeReadicionarCarrinho(pedido)) {
+      const btnReadicionar = document.createElement("button");
+      btnReadicionar.className = "btn small";
+      btnReadicionar.textContent = "RECOLOCAR NO CARRINHO";
+      btnReadicionar.addEventListener("click", async () => {
+        btnReadicionar.disabled = true;
+        btnReadicionar.textContent = "RECOLOCANDO...";
+        try {
+          const resultado = await readicionarPedidoAoCarrinhoUsuario(pedido.id);
+          setMessage(resultado?.message || "Itens readicionados ao carrinho.");
+          window.dispatchEvent(new CustomEvent("cart-updated"));
+          await refreshCartNotice();
+        } catch (error) {
+          setMessage(error?.message || "Erro ao readicionar itens ao carrinho.");
+        } finally {
+          btnReadicionar.disabled = false;
+          btnReadicionar.textContent = "RECOLOCAR NO CARRINHO";
+        }
+      });
+      actions.appendChild(btnReadicionar);
+    }
+
+    card.appendChild(info);
+    card.appendChild(actions);
+    pedidosList.appendChild(card);
+  });
+}
+
+function renderPedidoDetalhe(pedido) {
+  if (!pedido) {
+    pedidoDetalheTitle.textContent = "DETALHES DO PEDIDO";
+    pedidoDetalheMeta.innerHTML = "<div>Pedido nao encontrado.</div>";
+    pedidoItensList.innerHTML = "";
+    pedidoPagamento.innerHTML = "";
+    return;
+  }
+
+  pedidoDetalheTitle.textContent = `${formatPedidoDataHora(pedido.dataCriacao)} - ${pedido?.status?.nome || "-"}`;
+
+  const freteGratis = pedidoTemFreteGratis(pedido);
+  pedidoDetalheMeta.innerHTML = `
+    <div>Data da compra: ${formatPedidoDataCompleta(pedido.dataCriacao)}</div>
+    <div>Valor total: ${formatCurrency(pedido.valorTotal)}</div>
+    <div>${freteGratis ? "Frete: Grátis" : `Frete: ${formatCurrency(pedido.valorFrete)}`}</div>
+    <div>Quantidade de itens: ${contarItensPedido(pedido)}</div>
+    ${pedido?.justificativaReprovacao ? `<div>Justificativa de reprovacao: ${pedido.justificativaReprovacao}</div>` : ""}
+  `;
+
+  pedidoItensList.innerHTML = "";
+  (pedido?.itemPedidos_on_pedido || []).forEach((item) => {
+    const card = document.createElement("div");
+    card.className = "pedido-item";
+
+    const image = document.createElement("div");
+    image.className = "pedido-item-image";
+    const imageUrl = item?.produto?.imagemProdutos_on_produto?.[0]?.url;
+    if (imageUrl) {
+      const img = document.createElement("img");
+      img.src = imageUrl;
+      img.alt = item?.produto?.nome || "Produto";
+      image.appendChild(img);
+    } else {
+      image.textContent = "IMG";
+    }
+
+    const info = document.createElement("div");
+    info.className = "pedido-item-info";
+    info.innerHTML = `
+      <strong>${item?.produto?.nome || "SEM NOME"}</strong>
+      <span>Modelo: ${item?.produto?.modelo || "-"}</span>
+      <span>Quantidade: ${Number(item?.quantidade || 0)}x</span>
+      <span>Preco na compra: ${formatCurrency(item?.precoAtual || 0)}</span>
+    `;
+
+    card.appendChild(image);
+    card.appendChild(info);
+    pedidoItensList.appendChild(card);
+  });
+
+  const pagamento = pedido?.pagamentos_on_pedido?.[0] || null;
+  const lines = [];
+
+  if (pagamento) {
+    lines.push(`<div>Data do pagamento: ${formatPedidoDataCompleta(pagamento.dataPagamento)}</div>`);
+    lines.push(`<div>Total pago: ${formatCurrency(pagamento.valorTotalPago)}</div>`);
+  }
+
+  const cupomPromo = getPedidoCupomPromocional(pedido);
+  const cupomTipo = normalizeText(cupomPromo?.tipo?.nome);
+  if (cupomPromo) {
+    if (cupomTipo === "DESCONTO") {
+      lines.push(`<div>Cupom promocional: ${cupomPromo.codigo} (${formatCurrency(cupomPromo.valor)})</div>`);
+    } else if (cupomTipo === "FRETE GRATIS") {
+      lines.push(`<div>Cupom promocional: ${cupomPromo.codigo} - Frete Grátis</div>`);
+    }
+  }
+
+  const cuponsTroca = pagamento?.pagamentoCupomTrocas_on_pagamento || [];
+  if (cuponsTroca.length) {
+    const lista = cuponsTroca
+      .map((item) => `<li>${item?.cupomTroca?.codigo || "-"} - ${formatCurrency(item?.cupomTroca?.valor || 0)}</li>`)
+      .join("");
+    lines.push(`<div>Cupons troca/sobra:</div><ul>${lista}</ul>`);
+  }
+
+  const cartoes = pagamento?.pagamentoCartaos_on_pagamento || [];
+  if (cartoes.length) {
+    const lista = cartoes
+      .map((item) => {
+        const nome = `${item?.cartaoCredito?.nomeImpresso || ""}`.trim().split(/\s+/)[0] || "-";
+        return `<li>${mascararNumeroCartao(item?.cartaoCredito?.numero || "")} - ${nome} - ${formatValidade(item?.cartaoCredito?.dataValidade || "")}</li>`;
+      })
+      .join("");
+    lines.push(`<div>Cartoes utilizados:</div><ul>${lista}</ul>`);
+  }
+
+  pedidoPagamento.innerHTML = lines.length
+    ? lines.join("")
+    : "<div>Nenhuma forma de pagamento encontrada.</div>";
+}
+
+function carregarPedidosLista() {
+  carregarPedidosUsuario((dados, error) => {
+    if (error) {
+      setMessage(error);
+      return;
+    }
+    renderPedidos(dados?.pedidos || []);
+    mostrarListaPedidos();
+  });
+}
+
 function renderCartoes(cartoes) {
   cartoesList.innerHTML = "";
 
@@ -649,6 +1052,16 @@ function carregarCartoesLista() {
     }
     const lista = dados?.cartoes || [];
     renderCartoes(lista);
+  });
+}
+
+function carregarCuponsLista() {
+  carregarCupons((dados, error) => {
+    if (error) {
+      setMessage(error);
+      return;
+    }
+    renderCupons(dados?.todos || []);
   });
 }
 
@@ -839,7 +1252,19 @@ navEnderecos.addEventListener("click", () => {
 navCartoes.addEventListener("click", () => {
   setNavActive("cartoes");
   fecharCartaoForm();
-  metadataPromise.then(() => carregarCartoesLista());
+  metadataPromise.then(() => {
+    carregarCartoesLista();
+    carregarCuponsLista();
+  });
+});
+
+navPedidos.addEventListener("click", () => {
+  setNavActive("pedidos");
+  carregarPedidosLista();
+});
+
+btnVoltarPedido.addEventListener("click", () => {
+  mostrarListaPedidos();
 });
 
 btnAddEndereco.addEventListener("click", () => {
@@ -932,7 +1357,8 @@ btnSaveCartao.addEventListener("click", async () => {
   try {
     await adicionarCartao(payload);
     fecharCartaoForm();
-    await carregarCartoesLista();
+    carregarCartoesLista();
+    carregarCuponsLista();
   } catch (err) {
     setMessage(err?.message || "Erro ao cadastrar cartao.");
   } finally {
@@ -944,4 +1370,8 @@ btnSaveCartao.addEventListener("click", async () => {
 setEditable(false);
 const metadataPromise = carregarMetadata();
 metadataPromise.then(() => carregarDados());
+if (window.location.hash === "#pedidos") {
+  setNavActive("pedidos");
+  carregarPedidosLista();
+}
 initCartNotice();

@@ -23,7 +23,7 @@
         <button id="nav-detalhes" class="nav-item is-active">DETALHES PERFIL</button>
         <button id="nav-enderecos" class="nav-item">ENDERECOS</button>
         <button id="nav-cartoes" class="nav-item">CARTOES E CUPONS</button>
-        <button class="nav-item">PEDIDOS</button>
+        <button id="nav-pedidos" class="nav-item">PEDIDOS</button>
       </nav>
 
       <main class="perfil-content">
@@ -287,6 +287,36 @@
               <button id="btn-add-cartao" class="btn" type="button">ADICIONAR CARTAO</button>
             </div>
             <div id="cartoes-list" class="cartoes-list"></div>
+            <div class="panel-title">CUPONS ATIVOS</div>
+            <div id="cupons-ativos-list" class="cupons-list"></div>
+            <div class="panel-title">CUPONS EXPIRADOS OU USADOS</div>
+            <div id="cupons-inativos-list" class="cupons-list"></div>
+          </div>
+        </section>
+
+        <section id="section-pedidos" class="section hidden">
+          <div id="pedidos-list-panel" class="panel">
+            <div class="panel-title">PEDIDOS REALIZADOS</div>
+            <div id="pedidos-list" class="pedidos-list"></div>
+          </div>
+
+          <div id="pedido-detalhe-panel" class="panel hidden">
+            <div class="panel-header">
+              <div id="pedido-detalhe-title" class="panel-title">DETALHES DO PEDIDO</div>
+              <button id="btn-voltar-pedido" class="btn" type="button">VOLTAR</button>
+            </div>
+            <div id="pedido-detalhe-meta" class="pedido-detalhe-meta"></div>
+
+            <div class="pedido-detalhe-grid">
+              <div>
+                <div class="panel-title">ITENS DO PEDIDO</div>
+                <div id="pedido-itens-list" class="pedido-itens-list"></div>
+              </div>
+              <div>
+                <div class="panel-title">FORMAS DE PAGAMENTO</div>
+                <div id="pedido-pagamento" class="pedido-pagamento"></div>
+              </div>
+            </div>
           </div>
         </section>
       </main>

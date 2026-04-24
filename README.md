@@ -1,85 +1,110 @@
 # Projeto LES
-## 📌 Sobre o Projeto
 
-Este projeto está sendo desenvolvido como parte da disciplina **Laboratório de Engenharia de Software (LES)** na **Faculdade de Tecnologia Mogi das Cruzes (Fatec MC)**.
+## Sobre o projeto
 
-O objetivo é criar um sistema web de e-commerce, permitindo que clientes naveguem por produtos, realizem compras e acompanhem seu histórico de pedidos, enquanto administradores podem gerenciar produtos e informações do sistema.
+Este projeto esta sendo desenvolvido para a disciplina de Laboratorio de Engenharia de Software (LES) da Fatec Mogi das Cruzes.
 
-O sistema terá dois tipos principais de usuários:
+O objetivo e construir um sistema web de e-commerce com duas areas principais:
 
 - Cliente
-
-  - Cadastro e login
-
-  - Visualização de produtos
-
-  - Realização de pedidos
-
-  - Consulta de histórico
-
 - Administrador
 
-  - Gerenciamento de produtos
+O sistema segue arquitetura MVC, separando interface, regras de negocio e acesso aos dados.
 
-  - Controle de informações do sistema
+## Tecnologias utilizadas
 
-  - Acesso a funcionalidades administrativas
-
-O projeto segue uma arquitetura baseada em MVC, separando responsabilidades entre interface, lógica de aplicação e acesso aos dados.
-
-## 🧱 Tecnologias Utilizadas
 ### Front-end
 
-O front-end será responsável pela interface visual do sistema e pela interação com o usuário.
-
-Tecnologias utilizadas:
-
-HTML5 — estrutura das páginas
-
-CSS3 — estilização e layout da interface
-
-JavaScript — interatividade e comunicação com o back-end
+- HTML5
+- CSS3
+- JavaScript
 
 ### Back-end
 
-O back-end será responsável pela lógica de negócio do sistema e pela comunicação com o banco de dados.
+- Node.js
+- Firebase Authentication
+- Firebase Data Connect
+- GraphQL
+- Cloudinary
 
-Tecnologias utilizadas:
+### Banco de dados
 
-Firebase Data Connect
+- PostgreSQL gerenciado pelo Firebase Data Connect
 
-GraphQL — definição de tipos e comunicação com o banco
+## Modelagem de dados
 
-### Banco de Dados
+Algumas entidades principais do sistema:
 
-O banco de dados armazenará as informações do sistema, como clientes, produtos, pedidos e endereços.
+- Usuario
+- Endereco
+- Produto
+- Pedido
+- ItemPedido
+- CartaoCredito
+- Cupom
 
-Tecnologia utilizada:
+## Arquitetura
 
-PostgreSQL (gerenciado pelo Firebase Data Connect)
+O projeto utiliza o padrao MVC:
 
-## 🧩 Modelagem de Dados
+- Model: representacao e manipulacao dos dados
+- View: interface do usuario
+- Controller: regras de negocio e comunicacao entre View e Model
 
-A modelagem de dados será definida utilizando GraphQL, com entidades principais como:
+# Setup local
 
-Cliente
+## Arquivos de exemplo incluidos no repositorio:
 
-Endereço
+- `server/.env.example`
+- `server/serviceAccount.example.json`
 
-Produto
+## Como configurar:
 
-Pedido
+1. Crie `server/.env` usando `server/.env.example` como base.
+2. Crie `server/serviceAccount.json` usando `server/serviceAccount.example.json` como base.
+3. Preencha as credenciais do Firebase Web, Firebase Data Connect, Cloudinary e a conta de servico.
 
-Itens do Pedido
+### O que cada arquivo faz
 
-## 🏗️ Arquitetura
+#### `server/.env`
 
-O projeto seguirá o padrão MVC (Model-View-Controller):
+Guarda as variaveis de ambiente do projeto, por exemplo:
 
-Model → Representação e manipulação dos dados
+- `FIREBASE_PROJECT_ID`
+- `FIREBASE_API_KEY`
+- `DATACONNECT_LOCATION`
+- `DATACONNECT_SERVICE_ID`
+- `GOOGLE_APPLICATION_CREDENTIALS`
+- `CLOUDINARY_CLOUD_NAME`
+- `CLOUDINARY_API_KEY`
+- `CLOUDINARY_API_SECRET`
+- `CLOUDINARY_UPLOAD_PRESET`
 
-View → Interface do usuário (HTML/CSS/JS)
+#### `server/serviceAccount.json`
 
-Controller → Regras de negócio e comunicação entre View e Model
+E a credencial privada da conta de servico do Firebase/Google Cloud. Ela e usada somente pelo servidor para gerar o token OAuth que acessa o Firebase Data Connect.
 
-Essa separação facilita manutenção, organização do código e escalabilidade do sistema.
+Esse arquivo nao deve ir para o front-end nem para um repositorio publico.
+
+## Observacoes
+
+- `FIREBASE_API_KEY` nao substitui o `serviceAccount.json`. Eles tem funcoes diferentes.
+- `.firebaserc` normalmente nao e segredo, mas pode ser removido do versionamento se cada pessoa for usar um projeto Firebase proprio.
+- Se um arquivo sensivel ja foi enviado ao Git alguma vez, colocar no `.gitignore` impede novos envios, mas nao limpa o historico antigo.
+
+## Como rodar o projeto
+
+Execute no terminal:
+
+```bash
+npm start
+```
+
+Isso inicia:
+
+- o back-end em `http://localhost:3000`
+- o front-end em `http://localhost:5500/view/index.html`
+
+Para encerrar ambos, pressione `CTRL+C`.
+
+Se a porta `5500` ja estiver em uso, o inicializador tenta automaticamente a proxima porta disponivel e mostra o link correto no terminal.

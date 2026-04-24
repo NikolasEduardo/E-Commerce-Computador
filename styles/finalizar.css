@@ -128,6 +128,10 @@ body {
   grid-template-columns: 1fr 110px;
 }
 
+.field-row.double {
+  grid-template-columns: 1fr 110px;
+}
+
 .field-row select,
 .field-row input {
   width: 100%;
@@ -151,6 +155,27 @@ body {
   display: flex;
   flex-direction: column;
   gap: 6px;
+}
+
+.card-extra-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.card-extra-row {
+  background: #d0d0d0;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.card-extra-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
 }
 
 .coupon-item {

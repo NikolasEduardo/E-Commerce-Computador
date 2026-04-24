@@ -1,4 +1,9 @@
 {
+  "scripts": {
+    "start": "node scripts/dev.js",
+    "dev": "node scripts/dev.js",
+    "backend": "node server/index.js"
+  },
   "dependencies": {
     "cloudinary": "^2.9.0"
   }

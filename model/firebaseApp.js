@@ -1,32 +1,63 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
 import { getAuth } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
+import {
+  initGlobalLoadingOverlay,
+  loadingOverlayConfig
+} from "./loadingOverlay.js";
 
-// TODO: Replace the placeholder values with your Firebase project configuration.
-const firebaseConfig = {
-  apiKey: "AIzaSyCBpyWP-Y39VEpWU-Ny0C8fVvTCF0JD1ow",
-  authDomain: "ecommercepcpecas.firebaseapp.com",
-  projectId: "ecommercepcpecas",
-  storageBucket: "ecommercepcpecas.firebasestorage.app",
-  messagingSenderId: "1049535150588",
-  appId: "1:1049535150588:web:abd5f095931427a55c9a79",
-  measurementId: "G-36QE38R6MZ"
+const backendHost =
+  typeof window !== "undefined" && window.location && window.location.hostname
+    ? window.location.hostname
+    : "localhost";
+const backendProtocol =
+  typeof window !== "undefined" && window.location && window.location.protocol
+    ? window.location.protocol
+    : "http:";
+
+const backendConfig = {
+  baseUrl: `${backendProtocol}//${backendHost}:3000`
 };
 
+initGlobalLoadingOverlay();
+
+async function loadPublicConfig() {
+  const response = await fetch(`${backendConfig.baseUrl}/api/public-config`);
+  const payload = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new Error(payload?.error || "Nao foi possivel carregar a configuracao publica.");
+  }
+
+  const firebase = payload?.firebase || {};
+  if (!firebase.apiKey || !firebase.projectId) {
+    throw new Error(
+      "Configuracao publica do Firebase incompleta. Verifique o arquivo server/.env."
+    );
+  }
+
+  return {
+    firebase,
+    dataconnect: payload?.dataconnect || {
+      projectId: firebase.projectId,
+      location: "",
+      serviceId: "",
+      emulator: {
+        enabled: false,
+        host: "localhost:50001"
+      }
+    }
+  };
+}
+
+const { firebase: firebaseConfig, dataconnect: dataconnectConfig } = await loadPublicConfig();
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 
-const dataconnectConfig = {
-  projectId: firebaseConfig.projectId,
-  location: "southamerica-east1",
-  serviceId: "ecommercepcpecas-service",
-  emulator: {
-    enabled: false,
-    host: "localhost:50001"
-  }
+export {
+  app,
+  auth,
+  firebaseConfig,
+  dataconnectConfig,
+  backendConfig,
+  loadingOverlayConfig
 };
-
-const backendConfig = {
-  baseUrl: "http://localhost:3000"
-};
-
-export { app, auth, firebaseConfig, dataconnectConfig, backendConfig };

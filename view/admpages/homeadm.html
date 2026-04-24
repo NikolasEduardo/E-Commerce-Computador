@@ -166,7 +166,16 @@
             <div class="field-row">
               <div class="field">
                 <label for="produto-garantia">GARANTIA</label>
-                <input type="text" id="produto-garantia" placeholder="GARANTIA">
+                <select id="produto-garantia-tipo">
+                  <option value="">SELECIONE</option>
+                  <option value="MESES">X MESES</option>
+                  <option value="ANOS">X ANO(S)</option>
+                  <option value="ANOS_MESES">X ANO(S) E X MESES</option>
+                </select>
+                <div class="garantia-inputs">
+                  <input type="number" id="produto-garantia-anos" placeholder="ANOS" min="1" step="1">
+                  <input type="number" id="produto-garantia-meses" placeholder="MESES" min="2" max="11" step="1">
+                </div>
               </div>
               <div class="field">
                 <label for="produto-marca-select">MARCA</label>

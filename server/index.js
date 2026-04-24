@@ -4,31 +4,120 @@ const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
 
+loadEnvFile(path.join(__dirname, ".env"));
+
 const PORT = process.env.PORT || 3000;
 
-const projectId = process.env.FIREBASE_PROJECT_ID || "ecommercepcpecas";
-const location = process.env.DATACONNECT_LOCATION || "southamerica-east1";
-const serviceId = process.env.DATACONNECT_SERVICE_ID || "ecommercepcpecas-service";
-const apiKey = process.env.FIREBASE_API_KEY || "AIzaSyCBpyWP-Y39VEpWU-Ny0C8fVvTCF0JD1ow";
+const projectId = process.env.FIREBASE_PROJECT_ID || "";
+const location = process.env.DATACONNECT_LOCATION || "";
+const serviceId = process.env.DATACONNECT_SERVICE_ID || "";
+const apiKey = process.env.FIREBASE_API_KEY || "";
+const authDomain = process.env.FIREBASE_AUTH_DOMAIN || buildFirebaseAuthDomain(projectId);
+const storageBucket = process.env.FIREBASE_STORAGE_BUCKET || buildFirebaseStorageBucket(projectId);
+const messagingSenderId = process.env.FIREBASE_MESSAGING_SENDER_ID || "";
+const appId = process.env.FIREBASE_APP_ID || "";
+const measurementId = process.env.FIREBASE_MEASUREMENT_ID || "";
 
 const serviceAccountPath =
-  process.env.GOOGLE_APPLICATION_CREDENTIALS ||
+  normalizeEnvPath(process.env.GOOGLE_APPLICATION_CREDENTIALS) ||
   path.join(__dirname, "serviceAccount.json");
 
-const cloudinaryCloudName = process.env.CLOUDINARY_CLOUD_NAME || "daung4k2j";
-const cloudinaryApiKey = process.env.CLOUDINARY_API_KEY || "351512946589443";
-const cloudinaryApiSecret = process.env.CLOUDINARY_API_SECRET || "FZTiBux6g3BEWqjd3gJBK5-eGKw";
-const cloudinaryUploadPreset = process.env.CLOUDINARY_UPLOAD_PRESET || "ml_default";
+const cloudinaryCloudName = process.env.CLOUDINARY_CLOUD_NAME || "";
+const cloudinaryApiKey = process.env.CLOUDINARY_API_KEY || "";
+const cloudinaryApiSecret = process.env.CLOUDINARY_API_SECRET || "";
+const cloudinaryUploadPreset = process.env.CLOUDINARY_UPLOAD_PRESET || "";
 
 const cpfRegex = /^\d{3}\.\d{3}\.\d{3}-\d{2}$/;
 const cepRegex = /^\d{5}-\d{3}$/;
 const TIPO_ENDERECO_PRINCIPAL = "Principal";
 const TIPO_ENDERECO_SECUNDARIO = "Secundario";
 const CARRINHO_STATUS_ID = "657ec9e6e2e743268c7afe6aeb0db479";
-const CARRINHO_EXPIRACAO_MIN = 2; //30 min
-const CARRINHO_AVISO_MIN = 1; //5 min
-const CARRINHO_ESTENDER_MIN = 2; //10 min
+const CARRINHO_EXPIRACAO_MIN = 30; //30 min
+const CARRINHO_AVISO_MIN = 5; //5 min
+const CARRINHO_ESTENDER_MIN = 10; //10 min
 const CARRINHO_MAX_QTD = 99;
+
+function loadEnvFile(filePath) {
+  if (!fs.existsSync(filePath)) {
+    return;
+  }
+
+  const raw = fs.readFileSync(filePath, "utf8");
+  for (const line of raw.split(/\r?\n/)) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) {
+      continue;
+    }
+
+    const separatorIndex = trimmed.indexOf("=");
+    if (separatorIndex === -1) {
+      continue;
+    }
+
+    const key = trimmed.slice(0, separatorIndex).trim();
+    let value = trimmed.slice(separatorIndex + 1).trim();
+
+    if (!key || Object.prototype.hasOwnProperty.call(process.env, key)) {
+      continue;
+    }
+
+    if (
+      (value.startsWith('"') && value.endsWith('"')) ||
+      (value.startsWith("'") && value.endsWith("'"))
+    ) {
+      value = value.slice(1, -1);
+    }
+
+    process.env[key] = value;
+  }
+}
+
+function normalizeEnvPath(value) {
+  if (!value) {
+    return "";
+  }
+
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
+}
+
+function buildFirebaseAuthDomain(currentProjectId) {
+  return currentProjectId ? `${currentProjectId}.firebaseapp.com` : "";
+}
+
+function buildFirebaseStorageBucket(currentProjectId) {
+  return currentProjectId ? `${currentProjectId}.firebasestorage.app` : "";
+}
+
+function buildFirebasePublicConfig() {
+  const firebase = {
+    apiKey,
+    authDomain,
+    projectId,
+    storageBucket,
+    messagingSenderId,
+    appId,
+    measurementId
+  };
+
+  return {
+    firebase: Object.fromEntries(
+      Object.entries(firebase).filter(([, value]) => typeof value === "string" && value)
+    ),
+    dataconnect: {
+      projectId,
+      location,
+      serviceId,
+      emulator: {
+        enabled: false,
+        host: "localhost:50001"
+      }
+    }
+  };
+}
 
 function escapeGqlString(value) {
   return value.replace(/\\/g, "\\\\").replace(/"/g, "\\\"");
@@ -289,7 +378,18 @@ async function getTipoCupomId(accessToken, nome) {
 }
 
 async function updatePedidoStatus(accessToken, data) {
-  const mutation = `
+  const hasJustificativa = Object.prototype.hasOwnProperty.call(
+    data,
+    "justificativaReprovacao"
+  );
+
+  const mutation = hasJustificativa
+    ? `
+    mutation AtualizarStatusPedido($id: UUID!, $statusId: UUID!, $justificativaReprovacao: String) {
+      pedido_update(id: $id, data: { statusId: $statusId, justificativaReprovacao: $justificativaReprovacao })
+    }
+  `
+    : `
     mutation AtualizarStatusPedido($id: UUID!, $statusId: UUID!) {
       pedido_update(id: $id, data: { statusId: $statusId })
     }
@@ -764,6 +864,24 @@ async function fetchUsuarioEnderecoPorId(accessToken, usuarioId, enderecoId) {
   return usuario?.enderecos_on_usuario?.[0] || null;
 }
 
+async function enderecoJaFoiUsadoEmPedido(accessToken, usuarioId, enderecoId) {
+  const query = `
+      query EnderecoUsadoEmPedido($usuarioId: UUID!, $enderecoId: UUID!) {
+        pedidos(
+          where: {
+            usuarioId: { eq: $usuarioId }
+            enderecoEntregaId: { eq: $enderecoId }
+          }
+          limit: 1
+        ) {
+          id
+        }
+      }
+    `;
+  const data = await executeGraphql(accessToken, query, { usuarioId, enderecoId });
+  return (data?.pedidos || []).length > 0;
+}
+
 async function fetchUsuarioCartoesPorIds(accessToken, usuarioId, cartaoIds) {
   const query = `
       query UsuarioCartoesPorIds($usuarioId: UUID!, $ids: [UUID!]) {
@@ -847,8 +965,11 @@ async function fetchCuponsPorCliente(accessToken, usuarioId, tipos, statusNome) 
       return;
     }
     const statusOk = !cupom.status?.nome || normalize(cupom.status?.nome) === "ATIVO";
+    const validade = cupom?.validade ? new Date(cupom.validade) : null;
+    const naoExpirado =
+      validade && !Number.isNaN(validade.getTime()) && validade.getTime() > Date.now();
     const tipoOk = tiposNormalizados.has(normalize(cupom.tipo?.nome));
-    if (statusOk && tipoOk) {
+    if (statusOk && tipoOk && naoExpirado) {
       unique.set(cupom.id, cupom);
     }
   });
@@ -869,6 +990,26 @@ async function fetchCuponsPorClienteIds(accessToken, usuarioId, cupomIds) {
       }
     `;
   const data = await executeGraphql(accessToken, query, { usuarioId, ids: cupomIds });
+  return data?.cupoms || [];
+}
+
+async function fetchTodosCuponsPorCliente(accessToken, usuarioId) {
+  const query = `
+      query TodosCuponsCliente($usuarioId: UUID!) {
+        cupoms(
+          where: { clienteId: { eq: $usuarioId } }
+          orderBy: [{ validade: ASC }]
+        ) {
+          id
+          codigo
+          valor
+          validade
+          tipo { nome }
+          status { nome }
+        }
+      }
+    `;
+  const data = await executeGraphql(accessToken, query, { usuarioId });
   return data?.cupoms || [];
 }
 
@@ -909,10 +1050,12 @@ async function fetchPedidoDetalhe(accessToken, pedidoId) {
           dataCriacao
           valorTotal
           valorFrete
+          justificativaReprovacao
           status { nome }
-          usuario { nome }
+          usuario { id nome }
           itemPedidos_on_pedido {
             quantidade
+            precoAtual
             produto {
               id
               nome
@@ -951,6 +1094,35 @@ async function fetchPedidoStatus(accessToken, pedidoId) {
     `;
   const data = await executeGraphql(accessToken, query, { id: pedidoId });
   return data?.pedido || null;
+}
+
+async function fetchPedidosPorUsuario(accessToken, usuarioId) {
+  const query = `
+      query PedidosPorUsuario($usuarioId: UUID!) {
+        pedidos(
+          where: {
+            usuarioId: { eq: $usuarioId }
+            status: { nome: { ne: "CARRINHO" } }
+          }
+          orderBy: [{ dataCriacao: DESC }]
+        ) {
+          id
+          dataCriacao
+          valorTotal
+          valorFrete
+          justificativaReprovacao
+          status { nome }
+          itemPedidos_on_pedido {
+            quantidade
+          }
+          pagamentos_on_pedido(orderBy: [{ dataPagamento: DESC }], limit: 1) {
+            cupomPromocional { codigo valor tipo { nome } }
+          }
+        }
+      }
+    `;
+  const data = await executeGraphql(accessToken, query, { usuarioId });
+  return data?.pedidos || [];
 }
 
 async function fetchFornecedores(accessToken) {
@@ -1093,6 +1265,7 @@ async function fetchProdutosInventario(accessToken, ids) {
           estoqueFisico
           estoqueReservado
           quantidadeVendida
+          status
         }
       }
     `;
@@ -1207,6 +1380,136 @@ function cartaoExpirado(dataValidade) {
   return Date.now() > expiraEm.getTime();
 }
 
+function obterFinalCartao(numero) {
+  const digits = `${numero || ""}`.replace(/\D/g, "");
+  return digits.slice(-4).padStart(4, "0");
+}
+
+function normalizarCheckoutCartoesInput(body) {
+  const cartoes = Array.isArray(body?.cartoes)
+    ? body.cartoes
+        .map((item) => ({
+          cartaoId: item?.cartaoId || item?.id || null,
+          valor: Number(item?.valor || 0)
+        }))
+        .filter((item) => item.cartaoId)
+    : [];
+
+  if (cartoes.length) {
+    return cartoes;
+  }
+
+  const cartaoPrincipalId = body?.cartaoPrincipalId || null;
+  const cartaoSecundarioId = body?.cartaoSecundarioId || null;
+  const cartaoSecundarioValor = Number(body?.cartaoSecundarioValor || 0);
+  const fallback = [];
+
+  if (cartaoPrincipalId) {
+    fallback.push({ cartaoId: cartaoPrincipalId, valor: Number.NaN });
+  }
+  if (cartaoSecundarioId && cartaoSecundarioId !== cartaoPrincipalId) {
+    fallback.push({ cartaoId: cartaoSecundarioId, valor: cartaoSecundarioValor });
+  }
+
+  return fallback;
+}
+
+function distribuirPagamentoCartoes(restanteCartao, cartoesInput, cartoesEncontrados) {
+  if (restanteCartao <= 0) {
+    return { cartoesPagamento: [] };
+  }
+
+  if (!cartoesInput.length || !cartoesInput[0]?.cartaoId) {
+    return { erro: "Cartao principal obrigatorio.", cartoesPagamento: [] };
+  }
+
+  const cartaoMap = new Map();
+  (cartoesEncontrados || []).forEach((cartao) => {
+    if (cartao?.id) {
+      cartaoMap.set(cartao.id, cartao);
+    }
+  });
+
+  const principalInput = cartoesInput[0];
+  const cartaoPrincipal = cartaoMap.get(principalInput.cartaoId) || null;
+  if (!cartaoPrincipal) {
+    return { erro: "Cartao principal invalido.", cartoesPagamento: [] };
+  }
+
+  const maxExtras = restanteCartao >= 20 ? Math.max(Math.floor(restanteCartao / 10) - 1, 0) : 0;
+  const usados = new Set([principalInput.cartaoId]);
+  const extrasNormalizados = [];
+
+  for (const item of cartoesInput.slice(1)) {
+    if (!item?.cartaoId || usados.has(item.cartaoId)) {
+      continue;
+    }
+
+    const cartao = cartaoMap.get(item.cartaoId);
+    if (!cartao) {
+      continue;
+    }
+
+    usados.add(item.cartaoId);
+    extrasNormalizados.push({
+      cartao,
+      valor: Number(item.valor || 0)
+    });
+
+    if (extrasNormalizados.length >= maxExtras) {
+      break;
+    }
+  }
+
+  const extrasPagamento = [];
+  let restanteDistribuir = Number(restanteCartao || 0);
+
+  for (let index = 0; index < extrasNormalizados.length; index += 1) {
+    const item = extrasNormalizados[index];
+    const slotsDepois = extrasNormalizados.length - index - 1;
+    const maxValor = restanteDistribuir - 10 * (slotsDepois + 1);
+
+    if (maxValor < 10) {
+      break;
+    }
+
+    let valor = Number.isFinite(item.valor) ? item.valor : 0;
+    if (valor < 10) {
+      valor = 10;
+    }
+    if (valor > maxValor) {
+      valor = maxValor;
+    }
+
+    valor = Number(valor.toFixed(2));
+    extrasPagamento.push({
+      cartao: item.cartao,
+      valor,
+      principal: false
+    });
+    restanteDistribuir = Number((restanteDistribuir - valor).toFixed(2));
+  }
+
+  const principalValor = Number(Math.max(restanteDistribuir, 0).toFixed(2));
+  const cartoesPagamento = [];
+
+  if (principalValor > 0) {
+    cartoesPagamento.push({
+      cartao: cartaoPrincipal,
+      valor: principalValor,
+      principal: true
+    });
+  }
+
+  extrasPagamento.forEach((item) => {
+    if (item.valor > 0) {
+      cartoesPagamento.push(item);
+    }
+  });
+
+  return { cartoesPagamento };
+}
+
 function gerarCodigoCupom() {
   const numero = Math.floor(10000 + Math.random() * 90000);
   return `CUPOM-${numero}`;
@@ -1234,6 +1537,25 @@ async function fetchUsuarioIdByAuthId(accessToken, authId) {
   `;
   const data = await executeGraphql(accessToken, query, { authId });
   return data?.usuarios?.[0]?.id || null;
+}
+
+async function fetchUsuarioRanking(accessToken, usuarioId) {
+  const query = `
+    query UsuarioRanking($id: UUID!) {
+      usuario(id: $id) { ranking }
+    }
+  `;
+  const data = await executeGraphql(accessToken, query, { id: usuarioId });
+  return Number(data?.usuario?.ranking || 0);
+}
+
+async function updateUsuarioRanking(accessToken, data) {
+  const mutation = `
+    mutation AtualizarUsuarioRanking($id: UUID!, $ranking: Int!) {
+      usuario_update(id: $id, data: { ranking: $ranking })
+    }
+  `;
+  await executeGraphql(accessToken, mutation, data);
 }
 
 async function fetchCarrinhoPedido(accessToken, usuarioId) {
@@ -1283,11 +1605,29 @@ async function fetchItemPedido(accessToken, pedidoId, produtoId) {
 
 async function insertItemPedido(accessToken, data) {
   const mutation = `
-    mutation InserirItemPedido($pedidoId: UUID!, $produtoId: UUID!, $quantidade: Int!) {
-      itemPedido_insert(data: { pedidoId: $pedidoId, produtoId: $produtoId, quantidade: $quantidade })
+    mutation InserirItemPedido(
+      $pedidoId: UUID!,
+      $produtoId: UUID!,
+      $quantidade: Int!,
+      $precoAtual: Float
+    ) {
+      itemPedido_insert(data: {
+        pedidoId: $pedidoId,
+        produtoId: $produtoId,
+        quantidade: $quantidade,
+        precoAtual: $precoAtual
+      })
     }
   `;
-  await executeGraphql(accessToken, mutation, data);
+  const payload = {
+    pedidoId: data.pedidoId,
+    produtoId: data.produtoId,
+    quantidade: data.quantidade
+  };
+  if (Object.prototype.hasOwnProperty.call(data, "precoAtual")) {
+    payload.precoAtual = data.precoAtual;
+  }
+  await executeGraphql(accessToken, mutation, payload);
 }
 
 async function updateItemPedidoQuantidade(accessToken, data) {
@@ -1410,6 +1750,193 @@ function montarCarrinhoResposta(pedido) {
 
 function carrinhoTemItensAtivos(itens) {
   return (itens || []).some((item) => Number(item?.quantidade || 0) > 0);
+}
+
+async function readicionarPedidoReprovadoNoCarrinho(accessToken, usuarioId, pedidoId) {
+  const pedido = await fetchPedidoDetalhe(accessToken, pedidoId);
+  if (!pedido || pedido?.usuario?.id !== usuarioId) {
+    throw new Error("Pedido nao encontrado.");
+  }
+
+  const statusPedido = normalizeTexto(pedido?.status?.nome);
+  if (statusPedido !== "REPROVADA") {
+    throw new Error("Apenas pedidos reprovados podem ser readicionados ao carrinho.");
+  }
+
+  let carrinho = await fetchCarrinhoPedido(accessToken, usuarioId);
+  if (!carrinho) {
+    throw new Error("Carrinho nao encontrado.");
+  }
+
+  const expirou = await aplicarExpiracaoCarrinho(accessToken, carrinho);
+  if (expirou) {
+    carrinho = await fetchCarrinhoPedido(accessToken, usuarioId);
+    if (!carrinho) {
+      throw new Error("Carrinho nao encontrado.");
+    }
+  }
+
+  const itensPedido = (pedido?.itemPedidos_on_pedido || []).filter(
+    (item) => Number(item?.quantidade || 0) > 0 && item?.produto?.id
+  );
+  if (!itensPedido.length) {
+    throw new Error("Esse pedido nao possui itens para readicionar.");
+  }
+
+  const produtosInventario = await fetchProdutosInventario(
+    accessToken,
+    itensPedido.map((item) => item.produto.id)
+  );
+  const produtosMap = new Map();
+  produtosInventario.forEach((produto) => {
+    if (produto?.id) {
+      produtosMap.set(produto.id, produto);
+    }
+  });
+
+  const resultado = {
+    adicionados: [],
+    parciais: [],
+    indisponiveis: [],
+    jaExistiam: []
+  };
+
+  let houveAlteracao = false;
+
+  for (const itemPedido of itensPedido) {
+    const produtoId = itemPedido.produto.id;
+    const produto = produtosMap.get(produtoId);
+    const nomeProduto = itemPedido?.produto?.nome || "Produto";
+    const quantidadePedido = Math.max(0, Number(itemPedido?.quantidade || 0));
+
+    if (!produto || (produto.status && produto.status !== "ATIVO")) {
+      resultado.indisponiveis.push({
+        produtoId,
+        nome: nomeProduto,
+        solicitado: quantidadePedido,
+        adicionado: 0,
+        motivo: "Produto indisponivel."
+      });
+      continue;
+    }
+
+    const itemCarrinho = await fetchItemPedido(accessToken, carrinho.id, produtoId);
+    const quantidadeAtual = Number(itemCarrinho?.quantidade || 0);
+    const quantidadeDesejada = Math.min(
+      Math.max(quantidadeAtual, quantidadePedido),
+      CARRINHO_MAX_QTD
+    );
+    const maxPermitido = Math.max(
+      0,
+      Number(produto.estoqueFisico || 0) - Number(produto.estoqueReservado || 0) + quantidadeAtual
+    );
+    const quantidadeFinal = Math.min(quantidadeDesejada, maxPermitido);
+    const delta = Math.max(0, quantidadeFinal - quantidadeAtual);
+
+    if (!itemCarrinho && quantidadeFinal > 0) {
+      await insertItemPedido(accessToken, {
+        pedidoId: carrinho.id,
+        produtoId,
+        quantidade: quantidadeFinal
+      });
+    } else if (itemCarrinho && delta !== 0) {
+      await updateItemPedidoQuantidade(accessToken, {
+        pedidoId: carrinho.id,
+        produtoId,
+        quantidade: quantidadeFinal
+      });
+    }
+
+    if (delta !== 0) {
+      const reservadoAtual = Number(produto.estoqueReservado || 0);
+      const novoReservado = Math.max(0, reservadoAtual + delta);
+      await updateProdutoReservado(accessToken, {
+        id: produtoId,
+        estoqueReservado: novoReservado
+      });
+      houveAlteracao = true;
+    }
+
+    if (delta <= 0 && quantidadeAtual >= quantidadePedido) {
+      resultado.jaExistiam.push({
+        produtoId,
+        nome: nomeProduto,
+        solicitado: quantidadePedido,
+        adicionado: 0
+      });
+      continue;
+    }
+
+    if (delta <= 0) {
+      resultado.indisponiveis.push({
+        produtoId,
+        nome: nomeProduto,
+        solicitado: quantidadePedido,
+        adicionado: 0,
+        motivo: "Sem estoque disponivel no momento."
+      });
+      continue;
+    }
+
+    if (quantidadeFinal < quantidadePedido) {
+      resultado.parciais.push({
+        produtoId,
+        nome: nomeProduto,
+        solicitado: quantidadePedido,
+        adicionado: delta
+      });
+      continue;
+    }
+
+    resultado.adicionados.push({
+      produtoId,
+      nome: nomeProduto,
+      solicitado: quantidadePedido,
+      adicionado: delta
+    });
+  }
+
+  const detalhesCarrinho = await fetchCarrinhoDetalhes(accessToken, carrinho.id);
+  const { itens, valorTotal } = montarCarrinhoResposta(detalhesCarrinho);
+  const temItensAtivos = carrinhoTemItensAtivos(itens);
+  const dataExpiracaoCarrinho = temItensAtivos
+    ? houveAlteracao
+      ? calcularNovaExpiracao(CARRINHO_EXPIRACAO_MIN)
+      : carrinho.dataExpiracaoCarrinho
+    : null;
+
+  await updatePedidoCarrinho(accessToken, {
+    id: carrinho.id,
+    valorTotal,
+    dataExpiracaoCarrinho
+  });
+
+  const partesMensagem = [];
+  if (resultado.adicionados.length) {
+    partesMensagem.push(`${resultado.adicionados.length} item(ns) retornaram ao carrinho.`);
+  }
+  if (resultado.parciais.length) {
+    partesMensagem.push(`${resultado.parciais.length} item(ns) voltaram parcialmente por causa do estoque.`);
+  }
+  if (resultado.indisponiveis.length) {
+    partesMensagem.push(`${resultado.indisponiveis.length} item(ns) nao puderam voltar ao carrinho.`);
+  }
+  if (resultado.jaExistiam.length) {
+    partesMensagem.push(`${resultado.jaExistiam.length} item(ns) ja estavam no carrinho com a quantidade recuperada.`);
+  }
+  if (!partesMensagem.length) {
+    partesMensagem.push("Nenhum item do pedido conseguiu voltar ao carrinho.");
+  }
+
+  return {
+    ok: true,
+    dataExpiracaoCarrinho,
+    adicionados: resultado.adicionados,
+    parciais: resultado.parciais,
+    indisponiveis: resultado.indisponiveis,
+    jaExistiam: resultado.jaExistiam,
+    message: partesMensagem.join(" ")
+  };
 }
 
 async function aplicarExpiracaoCarrinho(accessToken, pedido) {
@@ -1899,6 +2426,11 @@ const server = http.createServer(async (req, res) => {
       "Access-Control-Allow-Methods": "GET, POST, OPTIONS"
     });
     res.end();
+    return;
+  }
+
+  if (req.method === "GET" && url.pathname === "/api/public-config") {
+    sendJson(res, 200, buildFirebasePublicConfig());
     return;
   }
 
@@ -2428,6 +2960,18 @@ const server = http.createServer(async (req, res) => {
         return;
       }
 
+      const enderecoEmUso = await enderecoJaFoiUsadoEmPedido(
+        accessToken,
+        usuario.id,
+        enderecoId
+      );
+      if (enderecoEmUso) {
+        sendJson(res, 400, {
+          error: "Nao e permitido excluir um endereco que ja foi utilizado em um pedido."
+        });
+        return;
+      }
+
       await deleteEndereco(accessToken, { id: enderecoId });
       sendJson(res, 200, { ok: true });
     } catch (error) {
@@ -2671,20 +3215,136 @@ const server = http.createServer(async (req, res) => {
         const promoTipos = ["DESCONTO", "FRETE GRATIS", "FRETE GRÁTIS"];
         const trocaTipos = ["TROCA", "SOBRA"];
 
-        const [promocionais, troca] = await Promise.all([
+        const [promocionais, troca, todos] = await Promise.all([
           fetchCuponsPorCliente(accessToken, usuarioId, promoTipos, "ATIVO"),
-          fetchCuponsPorCliente(accessToken, usuarioId, trocaTipos, "ATIVO")
+          fetchCuponsPorCliente(accessToken, usuarioId, trocaTipos, "ATIVO"),
+          fetchTodosCuponsPorCliente(accessToken, usuarioId)
         ]);
 
-        sendJson(res, 200, { promocionais, troca });
+        sendJson(res, 200, { promocionais, troca, todos });
       } catch (error) {
         sendJson(res, 500, { error: error?.message || "Erro ao buscar cupons." });
       }
       return;
     }
 
-    if (req.method === "GET" && url.pathname === "/api/cloudinary/config") {
+    if (req.method === "GET" && url.pathname === "/api/usuario/pedidos") {
       try {
+        const authHeader = req.headers.authorization || "";
+        const idToken = authHeader.startsWith("Bearer ")
+          ? authHeader.slice("Bearer ".length)
+          : "";
+
+        if (!idToken) {
+          sendJson(res, 400, { error: "idToken ausente." });
+          return;
+        }
+
+        const authId = await verifyIdToken(idToken);
+        const accessToken = await getAccessToken();
+        const usuarioId = await fetchUsuarioIdByAuthId(accessToken, authId);
+        if (!usuarioId) {
+          sendJson(res, 404, { error: "Usuario nao encontrado." });
+          return;
+        }
+
+        const pedidos = await fetchPedidosPorUsuario(accessToken, usuarioId);
+        sendJson(res, 200, { pedidos });
+      } catch (error) {
+        sendJson(res, 500, { error: error?.message || "Erro ao buscar pedidos." });
+      }
+      return;
+    }
+
+    if (req.method === "GET" && url.pathname === "/api/usuario/pedidos/detalhe") {
+      try {
+        const authHeader = req.headers.authorization || "";
+        const idToken = authHeader.startsWith("Bearer ")
+          ? authHeader.slice("Bearer ".length)
+          : "";
+        const pedidoId = url.searchParams.get("id");
+
+        if (!idToken) {
+          sendJson(res, 400, { error: "idToken ausente." });
+          return;
+        }
+
+        if (!pedidoId) {
+          sendJson(res, 400, { error: "Pedido invalido." });
+          return;
+        }
+
+        const authId = await verifyIdToken(idToken);
+        const accessToken = await getAccessToken();
+        const usuarioId = await fetchUsuarioIdByAuthId(accessToken, authId);
+        if (!usuarioId) {
+          sendJson(res, 404, { error: "Usuario nao encontrado." });
+          return;
+        }
+
+        const pedido = await fetchPedidoDetalhe(accessToken, pedidoId);
+        if (!pedido || pedido?.status?.nome === "CARRINHO" || pedido?.usuario?.id !== usuarioId) {
+          sendJson(res, 404, { error: "Pedido nao encontrado." });
+          return;
+        }
+
+        sendJson(res, 200, { pedido });
+      } catch (error) {
+        sendJson(res, 500, { error: error?.message || "Erro ao carregar pedido." });
+      }
+      return;
+    }
+
+    if (req.method === "POST" && url.pathname === "/api/usuario/pedidos/readicionar-carrinho") {
+      try {
+        const authHeader = req.headers.authorization || "";
+        const idToken = authHeader.startsWith("Bearer ")
+          ? authHeader.slice("Bearer ".length)
+          : "";
+        if (!idToken) {
+          sendJson(res, 400, { error: "idToken ausente." });
+          return;
+        }
+
+        const rawBody = await readBody(req);
+        const body = rawBody ? JSON.parse(rawBody) : {};
+        const pedidoId = body.id || body.pedidoId;
+
+        if (!pedidoId) {
+          sendJson(res, 400, { error: "Pedido invalido." });
+          return;
+        }
+
+        const authId = await verifyIdToken(idToken);
+        const accessToken = await getAccessToken();
+        const usuarioId = await fetchUsuarioIdByAuthId(accessToken, authId);
+        if (!usuarioId) {
+          sendJson(res, 404, { error: "Usuario nao encontrado." });
+          return;
+        }
+
+        const resultado = await readicionarPedidoReprovadoNoCarrinho(
+          accessToken,
+          usuarioId,
+          pedidoId
+        );
+        sendJson(res, 200, resultado);
+      } catch (error) {
+        const message = error?.message || "Erro ao readicionar pedido ao carrinho.";
+        const statusCode =
+          message === "Pedido nao encontrado." ||
+          message === "Apenas pedidos reprovados podem ser readicionados ao carrinho." ||
+          message === "Carrinho nao encontrado." ||
+          message === "Esse pedido nao possui itens para readicionar."
+            ? 400
+            : 500;
+        sendJson(res, statusCode, { error: message });
+      }
+      return;
+    }
+
+  if (req.method === "GET" && url.pathname === "/api/cloudinary/config") {
+    try {
         const authHeader = req.headers.authorization || "";
       const idToken = authHeader.startsWith("Bearer ")
         ? authHeader.slice("Bearer ".length)
@@ -3949,9 +4609,7 @@ const server = http.createServer(async (req, res) => {
       const cupomTrocaIds = Array.isArray(body.cupomTrocaIds)
         ? body.cupomTrocaIds.filter(Boolean)
         : [];
-      const cartaoPrincipalId = body.cartaoPrincipalId || null;
-      const cartaoSecundarioId = body.cartaoSecundarioId || null;
-      const cartaoSecundarioValor = Number(body.cartaoSecundarioValor || 0);
+      const cartoesInput = normalizarCheckoutCartoesInput(body);
 
       if (!enderecoId) {
         sendJson(res, 400, { error: "Endereco invalido." });
@@ -4056,50 +4714,29 @@ const server = http.createServer(async (req, res) => {
       const trocaSobra = Math.max(trocaTotal - trocaAplicada, 0);
       const restanteCartao = Math.max(totalAposPromo - trocaAplicada, 0);
 
-      let principalValor = 0;
-      let secundarioValor = 0;
-      let cartaoPrincipal = null;
-      let cartaoSecundario = null;
+      let cartoesPagamento = [];
 
       if (restanteCartao > 0) {
-        if (!cartaoPrincipalId) {
+        const cartaoIds = [...new Set(cartoesInput.map((item) => item.cartaoId).filter(Boolean))];
+        if (!cartaoIds.length) {
           sendJson(res, 400, { error: "Cartao principal obrigatorio." });
           return;
-        }
-        const cartaoIds = [cartaoPrincipalId];
-        if (cartaoSecundarioId && cartaoSecundarioId !== cartaoPrincipalId) {
-          cartaoIds.push(cartaoSecundarioId);
         }
         const cartoesEncontrados = await fetchUsuarioCartoesPorIds(
           accessToken,
           usuarioId,
           cartaoIds
         );
-        cartaoPrincipal = cartoesEncontrados.find((c) => c.id === cartaoPrincipalId) || null;
-        cartaoSecundario =
-          cartoesEncontrados.find((c) => c.id === cartaoSecundarioId) || null;
-
-        if (!cartaoPrincipal) {
-          sendJson(res, 400, { error: "Cartao principal invalido." });
+        const distribuicao = distribuirPagamentoCartoes(
+          restanteCartao,
+          cartoesInput,
+          cartoesEncontrados
+        );
+        if (distribuicao.erro) {
+          sendJson(res, 400, { error: distribuicao.erro });
           return;
         }
-
-        const podeSegundo = Boolean(cartaoSecundario && restanteCartao >= 20);
-        if (podeSegundo) {
-          const maxSec = restanteCartao - 10;
-          let desejado = Number.isFinite(cartaoSecundarioValor) ? cartaoSecundarioValor : 0;
-          if (desejado < 10) desejado = 10;
-          if (desejado > maxSec) desejado = maxSec;
-          if (desejado >= 10) {
-            secundarioValor = desejado;
-          } else {
-            cartaoSecundario = null;
-          }
-        } else {
-          cartaoSecundario = null;
-        }
-
-        principalValor = Math.max(restanteCartao - secundarioValor, 0);
+        cartoesPagamento = distribuicao.cartoesPagamento;
       }
 
       const statusProcessoId = await getStatusPedidoId(accessToken, "EM PROCESSAMENTO");
@@ -4125,7 +4762,8 @@ const server = http.createServer(async (req, res) => {
         await insertItemPedido(accessToken, {
           pedidoId: novoPedidoId,
           produtoId: item.produtoId,
-          quantidade: Number(item.quantidade || 0)
+          quantidade: Number(item.quantidade || 0),
+          precoAtual: Number(item.precoUnitario || 0)
         });
       }
 
@@ -4156,19 +4794,14 @@ const server = http.createServer(async (req, res) => {
         cupomPromocionalId: cupomPromocionalAplicado ? cupomPromocionalAplicado.id : null
       });
 
-      if (principalValor > 0 && cartaoPrincipal) {
+      for (const pagamentoCartao of cartoesPagamento) {
+        if (!pagamentoCartao?.cartao?.id || Number(pagamentoCartao.valor || 0) <= 0) {
+          continue;
+        }
         await insertPagamentoCartao(accessToken, {
           pagamentoId,
-          cartaoCreditoId: cartaoPrincipal.id,
-          valorParcela: principalValor
-        });
-      }
-
-      if (secundarioValor > 0 && cartaoSecundario) {
-        await insertPagamentoCartao(accessToken, {
-          pagamentoId,
-          cartaoCreditoId: cartaoSecundario.id,
-          valorParcela: secundarioValor
+          cartaoCreditoId: pagamentoCartao.cartao.id,
+          valorParcela: Number(pagamentoCartao.valor || 0)
         });
       }
 
@@ -4180,20 +4813,26 @@ const server = http.createServer(async (req, res) => {
       }
 
       let statusFinal = "APROVADA";
-      if (principalValor > 0 || secundarioValor > 0) {
-        const invalidos = [];
-        if (cartaoPrincipal && principalValor > 0) {
-          if (!validarLuhn(cartaoPrincipal.numero) || cartaoExpirado(cartaoPrincipal.dataValidade)) {
-            invalidos.push(cartaoPrincipal.id);
+      let justificativaReprovacao = null;
+      if (cartoesPagamento.length) {
+        for (const pagamentoCartao of cartoesPagamento) {
+          const cartao = pagamentoCartao.cartao;
+          if (!validarLuhn(cartao.numero)) {
+            statusFinal = "REPROVADA";
+            justificativaReprovacao =
+              "Seu cart\u00E3o com final " +
+              obterFinalCartao(cartao.numero) +
+              " n\u00E3o \u00E9 v\u00E1lido";
+            break;
           }
-        }
-        if (cartaoSecundario && secundarioValor > 0) {
-          if (!validarLuhn(cartaoSecundario.numero) || cartaoExpirado(cartaoSecundario.dataValidade)) {
-            invalidos.push(cartaoSecundario.id);
+          if (cartaoExpirado(cartao.dataValidade)) {
+            statusFinal = "REPROVADA";
+            justificativaReprovacao =
+              "Seu cart\u00E3o com final " +
+              obterFinalCartao(cartao.numero) +
+              " est\u00E1 vencido";
+            break;
           }
-        }
-        if (invalidos.length) {
-          statusFinal = "REPROVADA";
         }
       }
 
@@ -4202,7 +4841,11 @@ const server = http.createServer(async (req, res) => {
         sendJson(res, 400, { error: `Status ${statusFinal} nao encontrado.` });
         return;
       }
-      await updatePedidoStatus(accessToken, { id: novoPedidoId, statusId: statusFinalId });
+      const statusPayload =
+        statusFinal === "REPROVADA"
+          ? { id: novoPedidoId, statusId: statusFinalId, justificativaReprovacao }
+          : { id: novoPedidoId, statusId: statusFinalId };
+      await updatePedidoStatus(accessToken, statusPayload);
 
       const produtosInventario = await fetchProdutosInventario(
         accessToken,
@@ -4240,6 +4883,19 @@ const server = http.createServer(async (req, res) => {
       }
 
       if (statusFinal === "APROVADA") {
+        const gastoCartao = cartoesPagamento.reduce(
+          (acc, item) => acc + Number(item?.valor || 0),
+          0
+        );
+        const incrementoRanking = Math.floor(gastoCartao / 100);
+        if (incrementoRanking > 0) {
+          const rankingAtual = await fetchUsuarioRanking(accessToken, usuarioId);
+          await updateUsuarioRanking(accessToken, {
+            id: usuarioId,
+            ranking: Math.max(0, rankingAtual + incrementoRanking)
+          });
+        }
+
         const statusUsadoId = await getStatusCupomId(accessToken, "USADO");
         const statusAtivoId = await getStatusCupomId(accessToken, "ATIVO");
         const tipoSobraId = await getTipoCupomId(accessToken, "SOBRA");
