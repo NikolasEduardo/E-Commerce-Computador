@@ -103,11 +103,35 @@ npm start
 Isso inicia:
 
 - o back-end em `http://localhost:3000`
-- o front-end em `http://localhost:5500/view/index.html`
+- o front-end em `http://localhost:3000/view/index.html`
 
 Para encerrar ambos, pressione `CTRL+C`.
 
-Se a porta `5500` ja estiver em uso, o inicializador tenta automaticamente a proxima porta disponivel e mostra o link correto no terminal.
+O front-end tambem e servido pelo Node. Isso facilita testes externos, porque basta expor uma unica porta.
+
+### Compartilhar temporariamente com ngrok
+
+Para liberar acesso temporario para outras pessoas:
+
+1. Inicie o projeto:
+
+```bash
+npm start
+```
+
+2. Em outro terminal, exponha a porta `3000`:
+
+```bash
+ngrok http 3000
+```
+
+3. Envie para seus amigos o link HTTPS mostrado pelo ngrok, abrindo em:
+
+```bash
+https://seu-link-ngrok/view/index.html
+```
+
+Esse modo e util para demonstracao e testes rapidos. Nao e recomendado como hospedagem definitiva, porque seu computador fica servindo a aplicacao, o link depende do processo local estar ligado e suas APIs ficam acessiveis publicamente enquanto o tunel estiver aberto.
 
 ## Testes automatizados com Cypress
 

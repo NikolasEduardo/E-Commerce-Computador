@@ -7,6 +7,20 @@ const crypto = require("crypto");
 loadEnvFile(path.join(__dirname, ".env"));
 
 const PORT = process.env.PORT || 3000;
+const PUBLIC_ROOT = path.resolve(__dirname, "..");
+const STATIC_MIME_TYPES = {
+  ".html": "text/html; charset=utf-8",
+  ".js": "text/javascript; charset=utf-8",
+  ".css": "text/css; charset=utf-8",
+  ".json": "application/json; charset=utf-8",
+  ".png": "image/png",
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+  ".gif": "image/gif",
+  ".svg": "image/svg+xml",
+  ".ico": "image/x-icon",
+  ".webp": "image/webp"
+};
 
 const projectId = process.env.FIREBASE_PROJECT_ID || "";
 const location = process.env.DATACONNECT_LOCATION || "";
@@ -121,6 +135,69 @@ function buildFirebasePublicConfig() {
 
 function escapeGqlString(value) {
   return value.replace(/\\/g, "\\\\").replace(/"/g, "\\\"");
+}
+
+function sendStaticFile(res, filePath) {
+  fs.readFile(filePath, (error, content) => {
+    if (error) {
+      sendJson(res, error.code === "ENOENT" ? 404 : 500, {
+        error: error.code === "ENOENT" ? "Arquivo nao encontrado." : "Erro ao ler arquivo."
+      });
+      return;
+    }
+
+    const ext = path.extname(filePath).toLowerCase();
+    res.writeHead(200, {
+      "Content-Type": STATIC_MIME_TYPES[ext] || "application/octet-stream",
+      "X-Content-Type-Options": "nosniff"
+    });
+    res.end(content);
+  });
+}
+
+function resolveStaticPath(urlPathname) {
+  const pathname = decodeURIComponent(urlPathname || "/");
+  const normalizedPath = pathname === "/" ? "/view/index.html" : pathname;
+  const absolutePath = path.normalize(path.join(PUBLIC_ROOT, normalizedPath));
+
+  if (!absolutePath.startsWith(PUBLIC_ROOT)) {
+    return null;
+  }
+
+  return absolutePath;
+}
+
+function serveStatic(req, res, url) {
+  if (req.method !== "GET" && req.method !== "HEAD") {
+    sendJson(res, 404, { error: "Rota nao encontrada." });
+    return;
+  }
+
+  if (url.pathname === "/") {
+    res.writeHead(302, { Location: "/view/index.html" });
+    res.end();
+    return;
+  }
+
+  const filePath = resolveStaticPath(url.pathname);
+  if (!filePath) {
+    sendJson(res, 403, { error: "Acesso negado." });
+    return;
+  }
+
+  fs.stat(filePath, (error, stats) => {
+    if (error) {
+      sendJson(res, 404, { error: "Arquivo nao encontrado." });
+      return;
+    }
+
+    if (stats.isDirectory()) {
+      sendStaticFile(res, path.join(filePath, "index.html"));
+      return;
+    }
+
+    sendStaticFile(res, filePath);
+  });
 }
 
 function ensureCloudinaryConfig() {
@@ -5187,9 +5264,9 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  sendJson(res, 404, { error: "Rota nao encontrada." });
+  serveStatic(req, res, url);
 });
 
 server.listen(PORT, () => {
-  console.log(`API pronta em http://localhost:${PORT}`);
+  console.log(`API e front-end prontos em http://localhost:${PORT}/view/index.html`);
 });

@@ -1,6 +1,6 @@
 {
   "scripts": {
-    "start": "node scripts/dev.js",
+    "start": "node server/index.js",
     "dev": "node scripts/dev.js",
     "backend": "node server/index.js",
     "cy:open": "cypress open",

@@ -13,9 +13,20 @@ const backendProtocol =
   typeof window !== "undefined" && window.location && window.location.protocol
     ? window.location.protocol
     : "http:";
+const backendPort =
+  typeof window !== "undefined" && window.location && window.location.port
+    ? window.location.port
+    : "";
+const backendOrigin =
+  typeof window !== "undefined" && window.location && window.location.origin
+    ? window.location.origin
+    : `${backendProtocol}//${backendHost}:3000`;
 
 const backendConfig = {
-  baseUrl: `${backendProtocol}//${backendHost}:3000`
+  baseUrl:
+    !backendPort || backendPort === "3000"
+      ? backendOrigin
+      : `${backendProtocol}//${backendHost}:3000`
 };
 
 initGlobalLoadingOverlay();
