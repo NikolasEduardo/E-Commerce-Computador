@@ -1,5 +1,9 @@
-import { signOut } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
+import {
+  onAuthStateChanged,
+  signOut
+} from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
 import { auth } from "../../model/firebaseApp.js";
+import { verificarAcessoAdministrador } from "../../controller/AdminSessionController.js";
 import { buscarClientes, atualizarStatus } from "../../controller/AdminClientesController.js";
 import {
   buscarPedidos,
@@ -25,6 +29,10 @@ import { uploadImagemCloudinary } from "../../controller/CloudinaryController.js
 const searchInput = document.getElementById("searchInput");
 const clientesList = document.getElementById("clientesList");
 const logoutButton = document.getElementById("btn-logout");
+const accessOverlay = document.getElementById("admin-access-overlay");
+const accessTitle = document.getElementById("admin-access-title");
+const accessMessage = document.getElementById("admin-access-message");
+const accessAction = document.getElementById("admin-access-action");
 const navProdutos = document.getElementById("nav-produtos");
 const navClientes = document.getElementById("nav-clientes");
 const navPedidos = document.getElementById("nav-pedidos");
@@ -153,6 +161,87 @@ let estoqueCache = {
   produtos: []
 };
 let pedidoConfirmResolver = null;
+let adminAccessLiberado = false;
+
+function showAccessOverlay(title, message, actionLabel = "", actionHandler = null) {
+  document.body.classList.add("admin-locked");
+  accessOverlay?.classList.remove("hidden");
+  if (accessTitle) {
+    accessTitle.textContent = title;
+  }
+  if (accessMessage) {
+    accessMessage.textContent = message;
+  }
+
+  if (accessAction) {
+    if (actionLabel && actionHandler) {
+      accessAction.textContent = actionLabel;
+      accessAction.onclick = actionHandler;
+      accessAction.classList.remove("hidden");
+    } else {
+      accessAction.textContent = "";
+      accessAction.onclick = null;
+      accessAction.classList.add("hidden");
+    }
+  }
+}
+
+function hideAccessOverlay() {
+  document.body.classList.remove("admin-locked");
+  accessOverlay?.classList.add("hidden");
+  if (accessAction) {
+    accessAction.onclick = null;
+  }
+}
+
+async function inicializarAcessoAdmin() {
+  showAccessOverlay(
+    "VERIFICANDO ACESSO",
+    "Aguarde enquanto verificamos a autenticacao e as permissoes administrativas."
+  );
+
+  try {
+    const acesso = await verificarAcessoAdministrador();
+
+    if (!acesso.autenticado) {
+      showAccessOverlay(
+        "ACESSO BLOQUEADO",
+        "Voce precisa estar autenticado e com permissoes administrativas para acessar esta pagina.",
+        "IR PARA LOGIN",
+        () => {
+          window.location.href = "../index.html";
+        }
+      );
+      return false;
+    }
+
+    if (!acesso.autorizado) {
+      showAccessOverlay(
+        "ACESSO NEGADO",
+        "Voce nao deveria acessar esta pagina.",
+        "IR PARA O INICIO",
+        () => {
+          window.location.href = "../pages/home.html";
+        }
+      );
+      return false;
+    }
+
+    hideAccessOverlay();
+    adminAccessLiberado = true;
+    return true;
+  } catch (error) {
+    showAccessOverlay(
+      "ACESSO BLOQUEADO",
+      error?.message || "Nao foi possivel validar o acesso administrativo.",
+      "IR PARA LOGIN",
+      () => {
+        window.location.href = "../index.html";
+      }
+    );
+    return false;
+  }
+}
 
 function formatCpfSearch(value) {
   const digits = value.replace(/\D/g, "").slice(0, 11);
@@ -1661,15 +1750,36 @@ logoutButton.addEventListener("click", async () => {
   }
 });
 
+onAuthStateChanged(auth, (user) => {
+  if (adminAccessLiberado && !user) {
+    adminAccessLiberado = false;
+    showAccessOverlay(
+      "ACESSO BLOQUEADO",
+      "Voce precisa estar autenticado e com permissoes administrativas para acessar esta pagina.",
+      "IR PARA LOGIN",
+      () => {
+        window.location.href = "../index.html";
+      }
+    );
+  }
+});
+
 updateSortUI();
 updateProdutoSortUI();
 updatePedidoSortUI();
 updateGarantiaFields();
-carregarClientes().catch((error) => {
-  clientesList.innerHTML = `<div class="empty-state">${error.message}</div>`;
-});
 
-carregarProdutosMetadataAdmin().catch((error) => {
-  produtosList.innerHTML = `<div class="empty-state">${error.message}</div>`;
-  setProdutoFormMessage(error?.message || "Erro ao carregar metadata.");
+inicializarAcessoAdmin().then((liberado) => {
+  if (!liberado) {
+    return;
+  }
+
+  carregarClientes().catch((error) => {
+    clientesList.innerHTML = `<div class="empty-state">${error.message}</div>`;
+  });
+
+  carregarProdutosMetadataAdmin().catch((error) => {
+    produtosList.innerHTML = `<div class="empty-state">${error.message}</div>`;
+    setProdutoFormMessage(error?.message || "Erro ao carregar metadata.");
+  });
 });

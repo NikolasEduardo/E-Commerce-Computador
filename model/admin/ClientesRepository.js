@@ -1,10 +1,8 @@
-import { backendConfig } from "../firebaseApp.js";
-
-const baseUrl = backendConfig.baseUrl;
+import { adminRequest } from "./AdminRequest.js";
 
 export async function listarClientes(params) {
   const query = new URLSearchParams(params);
-  const response = await fetch(`${baseUrl}/api/admin/clientes?${query.toString()}`, {
+  const response = await adminRequest(`/api/admin/clientes?${query.toString()}`, {
     method: "GET"
   });
   const payload = await response.json().catch(() => ({}));
@@ -16,7 +14,7 @@ export async function listarClientes(params) {
 }
 
 export async function atualizarStatusCliente(usuarioId, status) {
-  const response = await fetch(`${baseUrl}/api/admin/clientes/status`, {
+  const response = await adminRequest("/api/admin/clientes/status", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ usuarioId, status })

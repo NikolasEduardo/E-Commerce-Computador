@@ -354,6 +354,64 @@ async function queryUsuarioStatus(authId, accessToken) {
   return usuario?.status?.nome || null;
 }
 
+function createHttpError(statusCode, message) {
+  const error = new Error(message);
+  error.statusCode = statusCode;
+  return error;
+}
+
+function getBearerTokenFromRequest(req) {
+  const authHeader = req.headers.authorization || "";
+  if (!authHeader.startsWith("Bearer ")) {
+    return "";
+  }
+
+  return authHeader.slice("Bearer ".length).trim();
+}
+
+async function requireAuthenticatedContext(req) {
+  const idToken = getBearerTokenFromRequest(req);
+  if (!idToken) {
+    throw createHttpError(
+      401,
+      "Voce precisa estar autenticado e com permissoes administrativas para acessar este recurso."
+    );
+  }
+
+  let authId = "";
+  try {
+    authId = await verifyIdToken(idToken);
+  } catch {
+    throw createHttpError(
+      401,
+      "Voce precisa estar autenticado e com permissoes administrativas para acessar este recurso."
+    );
+  }
+
+  const accessToken = await getAccessToken();
+  const status = await queryUsuarioStatus(authId, accessToken);
+
+  return {
+    idToken,
+    authId,
+    accessToken,
+    status
+  };
+}
+
+async function requireAdminContext(req) {
+  const context = await requireAuthenticatedContext(req);
+
+  if (context.status !== "ADMIN") {
+    throw createHttpError(
+      403,
+      "Voce nao tem permissoes administrativas para acessar este recurso."
+    );
+  }
+
+  return context;
+}
+
 async function fetchCadastroMetadata(accessToken) {
   const query = `
     query CadastroMetadata {
@@ -2509,6 +2567,21 @@ const server = http.createServer(async (req, res) => {
   if (req.method === "GET" && url.pathname === "/api/public-config") {
     sendJson(res, 200, buildFirebasePublicConfig());
     return;
+  }
+
+  if (
+    url.pathname.startsWith("/api/admin/") ||
+    url.pathname === "/api/cloudinary/config" ||
+    url.pathname === "/api/cloudinary/signature"
+  ) {
+    try {
+      await requireAdminContext(req);
+    } catch (error) {
+      sendJson(res, error?.statusCode || 500, {
+        error: error?.message || "Erro ao validar acesso administrativo."
+      });
+      return;
+    }
   }
 
   if (req.method === "GET" && url.pathname === "/api/cadastro/metadata") {

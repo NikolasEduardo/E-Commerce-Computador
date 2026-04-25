@@ -1,6 +1,4 @@
-import { backendConfig } from "../firebaseApp.js";
-
-const baseUrl = backendConfig.baseUrl;
+import { adminRequest } from "./AdminRequest.js";
 
 async function handleResponse(response, defaultMessage) {
   const payload = await response.json().catch(() => ({}));
@@ -12,7 +10,7 @@ async function handleResponse(response, defaultMessage) {
 }
 
 export async function listarFornecedores() {
-  const response = await fetch(`${baseUrl}/api/admin/estoque/fornecedores`, {
+  const response = await adminRequest("/api/admin/estoque/fornecedores", {
     method: "GET"
   });
   const data = await handleResponse(response, "Erro ao carregar fornecedores.");
@@ -20,7 +18,7 @@ export async function listarFornecedores() {
 }
 
 export async function criarFornecedor(payload) {
-  const response = await fetch(`${baseUrl}/api/admin/estoque/fornecedores`, {
+  const response = await adminRequest("/api/admin/estoque/fornecedores", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload)
@@ -29,7 +27,7 @@ export async function criarFornecedor(payload) {
 }
 
 export async function listarEntradasEstoque() {
-  const response = await fetch(`${baseUrl}/api/admin/estoque/entradas`, {
+  const response = await adminRequest("/api/admin/estoque/entradas", {
     method: "GET"
   });
   const data = await handleResponse(response, "Erro ao carregar entradas.");
@@ -37,7 +35,7 @@ export async function listarEntradasEstoque() {
 }
 
 export async function criarEntradaEstoque(payload) {
-  const response = await fetch(`${baseUrl}/api/admin/estoque/entradas`, {
+  const response = await adminRequest("/api/admin/estoque/entradas", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload)
@@ -46,7 +44,7 @@ export async function criarEntradaEstoque(payload) {
 }
 
 export async function listarProdutosEstoque() {
-  const response = await fetch(`${baseUrl}/api/admin/estoque/produtos`, {
+  const response = await adminRequest("/api/admin/estoque/produtos", {
     method: "GET"
   });
   const data = await handleResponse(response, "Erro ao carregar produtos.");

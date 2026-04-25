@@ -1,10 +1,8 @@
-import { backendConfig } from "../firebaseApp.js";
-
-const baseUrl = backendConfig.baseUrl;
+import { adminRequest } from "./AdminRequest.js";
 
 export async function listarProdutos(params) {
   const query = new URLSearchParams(params);
-  const response = await fetch(`${baseUrl}/api/admin/produtos?${query.toString()}`, {
+  const response = await adminRequest(`/api/admin/produtos?${query.toString()}`, {
     method: "GET"
   });
   const payload = await response.json().catch(() => ({}));
@@ -16,7 +14,7 @@ export async function listarProdutos(params) {
 }
 
 export async function obterMetadataProdutos() {
-  const response = await fetch(`${baseUrl}/api/admin/produtos/metadata`, {
+  const response = await adminRequest("/api/admin/produtos/metadata", {
     method: "GET"
   });
   const payload = await response.json().catch(() => ({}));
@@ -28,7 +26,7 @@ export async function obterMetadataProdutos() {
 }
 
 export async function obterProduto(id) {
-  const response = await fetch(`${baseUrl}/api/admin/produto?id=${encodeURIComponent(id)}`, {
+  const response = await adminRequest(`/api/admin/produto?id=${encodeURIComponent(id)}`, {
     method: "GET"
   });
   const payload = await response.json().catch(() => ({}));
@@ -40,7 +38,7 @@ export async function obterProduto(id) {
 }
 
 export async function criarProduto(payload) {
-  const response = await fetch(`${baseUrl}/api/admin/produtos/criar`, {
+  const response = await adminRequest("/api/admin/produtos/criar", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload)
@@ -54,7 +52,7 @@ export async function criarProduto(payload) {
 }
 
 export async function editarProduto(payload) {
-  const response = await fetch(`${baseUrl}/api/admin/produtos/editar`, {
+  const response = await adminRequest("/api/admin/produtos/editar", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload)
@@ -68,7 +66,7 @@ export async function editarProduto(payload) {
 }
 
 export async function atualizarStatusProduto(payload) {
-  const response = await fetch(`${baseUrl}/api/admin/produtos/status`, {
+  const response = await adminRequest("/api/admin/produtos/status", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload)
