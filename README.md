@@ -108,3 +108,118 @@ Isso inicia:
 Para encerrar ambos, pressione `CTRL+C`.
 
 Se a porta `5500` ja estiver em uso, o inicializador tenta automaticamente a proxima porta disponivel e mostra o link correto no terminal.
+
+## Testes automatizados com Cypress
+
+O projeto possui um teste E2E para simular uma compra com escolhas aleatorias na tela:
+
+- escolhe um ou mais produtos na home
+- envia para o carrinho
+- abre a finalizacao de compra
+- escolhe endereco, cartoes, cupom promocional e cupons de troca/sobra
+- conclui a compra
+- valida se o pedido aparece na lista de pedidos do cliente
+
+Antes de rodar pela primeira vez, instale o Cypress:
+
+```bash
+npm install --save-dev cypress
+```
+
+Depois, crie `cypress.env.json` usando `cypress.env.example.json` como base:
+
+```json
+{
+  "USER_EMAIL": "cliente.teste@email.com",
+  "USER_PASSWORD": "senha-do-cliente-ativo",
+  "MAX_RANDOM_PRODUCTS": 3,
+  "MAX_EXTRA_CARDS": 3
+}
+```
+
+Para executar:
+
+1. Em um terminal, rode `npm start`.
+2. Em outro terminal, rode `npm run cy:open` ou `npm run cy:run`.
+
+Observacao importante: esse teste usa o banco real configurado no `.env`. Ele pode criar pedidos, consumir cupons, alterar estoque reservado/fisico e atualizar ranking do cliente.
+
+## Exportar e importar dados de catalogo
+
+O projeto possui scripts para compartilhar dados iniciais entre bancos Firebase Data Connect sem exportar dados de usuarios.
+
+O export inclui:
+
+- tipos e status do sistema
+- bandeiras de cartao
+- grupos de precificacao
+- marcas
+- categorias
+- produtos
+- imagens dos produtos
+- fornecedores
+- entradas de estoque
+
+O export nao inclui:
+
+- usuarios
+- enderecos
+- telefones
+- cartoes de credito
+- pedidos
+- pagamentos
+- cupons de clientes
+- trocas
+- logs de auditoria
+
+Por seguranca, `estoqueReservado` e `quantidadeVendida` saem zerados no arquivo exportado, porque esses campos podem refletir carrinhos e compras de usuarios.
+
+### Exportar catalogo
+
+Com o `.env` apontando para o banco de origem, execute:
+
+```bash
+npm run seed:export
+```
+
+Isso cria:
+
+```bash
+seed/catalogo.json
+```
+
+Tambem e possivel escolher outro caminho:
+
+```bash
+npm run seed:export -- seed/meu-catalogo.json
+```
+
+### Importar catalogo
+
+No projeto de destino, configure `server/.env` com as credenciais do Firebase Data Connect e do Cloudinary da pessoa que vai receber os dados.
+
+Depois execute:
+
+```bash
+npm run seed:import
+```
+
+Por padrao, ele le:
+
+```bash
+seed/catalogo.json
+```
+
+Tambem e possivel escolher outro arquivo:
+
+```bash
+npm run seed:import -- seed/meu-catalogo.json
+```
+
+Durante a importacao, as imagens dos produtos sao reenviadas para o Cloudinary configurado no `.env` de destino. O diretorio usado no Cloudinary pode ser ajustado por:
+
+```bash
+CLOUDINARY_SEED_FOLDER=ecommerce-seed
+```
+
+O import tenta reaproveitar registros existentes por nome ou `codigoProduto`, atualizando produtos ja existentes e evitando duplicar entradas de estoque identicas.

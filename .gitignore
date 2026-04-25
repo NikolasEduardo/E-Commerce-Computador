@@ -53,6 +53,12 @@ node_modules/
 # Optional eslint cache
 .eslintcache
 
+# Cypress local files
+cypress.env.json
+cypress/screenshots/
+cypress/videos/
+cypress/downloads/
+
 # Optional REPL history
 .node_repl_history
 

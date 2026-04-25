@@ -1,0 +1,694 @@
+{
+  "version": 1,
+  "exportedAt": "2026-04-25T02:20:49.961Z",
+  "source": {
+    "type": "firebase-dataconnect-catalog"
+  },
+  "data": {
+    "statusUsuarios": [
+      {
+        "nome": "ADMIN"
+      },
+      {
+        "nome": "ATIVO"
+      },
+      {
+        "nome": "INATIVO"
+      }
+    ],
+    "tipoResidencias": [
+      {
+        "nome": "Apartamento"
+      },
+      {
+        "nome": "Barraco"
+      },
+      {
+        "nome": "Casa de vila"
+      },
+      {
+        "nome": "Casa Geminada"
+      },
+      {
+        "nome": "Casa Térrea"
+      },
+      {
+        "nome": "Chácara"
+      },
+      {
+        "nome": "Cobertura"
+      },
+      {
+        "nome": "Condomínio"
+      },
+      {
+        "nome": "Fazenda"
+      },
+      {
+        "nome": "Kitnet"
+      },
+      {
+        "nome": "Loft"
+      },
+      {
+        "nome": "Quarto em república"
+      },
+      {
+        "nome": "Sítio"
+      },
+      {
+        "nome": "Sobrado"
+      }
+    ],
+    "tipoLogradouros": [
+      {
+        "nome": "Alameda",
+        "sigla": "Al."
+      },
+      {
+        "nome": "Avenida",
+        "sigla": "Av."
+      },
+      {
+        "nome": "Boulevard",
+        "sigla": "Blvd."
+      },
+      {
+        "nome": "Distrito",
+        "sigla": "Dt."
+      },
+      {
+        "nome": "Estrada",
+        "sigla": "Est."
+      },
+      {
+        "nome": "Largo",
+        "sigla": "Lg."
+      },
+      {
+        "nome": "Passagem",
+        "sigla": "Ps."
+      },
+      {
+        "nome": "Praça",
+        "sigla": "Pç."
+      },
+      {
+        "nome": "Quadra",
+        "sigla": "Qd."
+      },
+      {
+        "nome": "Rodovia",
+        "sigla": "Rod."
+      },
+      {
+        "nome": "Rua",
+        "sigla": "R."
+      },
+      {
+        "nome": "Servidão",
+        "sigla": "Sv."
+      },
+      {
+        "nome": "Setor",
+        "sigla": "St."
+      },
+      {
+        "nome": "Travessa",
+        "sigla": "Tv."
+      },
+      {
+        "nome": "Via",
+        "sigla": "V."
+      },
+      {
+        "nome": "Vila",
+        "sigla": "Vl."
+      }
+    ],
+    "tipoTelefones": [
+      {
+        "nome": "Celular"
+      },
+      {
+        "nome": "Fixo"
+      }
+    ],
+    "statusPedidos": [
+      {
+        "nome": "APROVADA"
+      },
+      {
+        "nome": "CARRINHO"
+      },
+      {
+        "nome": "EM PROCESSAMENTO"
+      },
+      {
+        "nome": "EM TRANSPORTE"
+      },
+      {
+        "nome": "EM TROCA"
+      },
+      {
+        "nome": "ENTREGUE"
+      },
+      {
+        "nome": "REPROVADA"
+      },
+      {
+        "nome": "TROCADO"
+      }
+    ],
+    "statusItemPedidos": [
+      {
+        "nome": "EM TROCA"
+      },
+      {
+        "nome": "FORA DO CARRINHO"
+      },
+      {
+        "nome": "INATIVO"
+      },
+      {
+        "nome": "NO CARRINHO"
+      },
+      {
+        "nome": "SEM ESTOQUE"
+      },
+      {
+        "nome": "TROCADO"
+      }
+    ],
+    "tipoCupoms": [
+      {
+        "nome": "DESCONTO"
+      },
+      {
+        "nome": "FRETE GRÁTIS"
+      },
+      {
+        "nome": "SOBRA"
+      },
+      {
+        "nome": "TROCA"
+      }
+    ],
+    "statusCupoms": [
+      {
+        "nome": "ATIVO"
+      },
+      {
+        "nome": "EXPIRADO"
+      },
+      {
+        "nome": "USADO"
+      }
+    ],
+    "bandeiraCartaos": [
+      {
+        "nome": "American Express"
+      },
+      {
+        "nome": "Diners Club"
+      },
+      {
+        "nome": "Discover"
+      },
+      {
+        "nome": "Elo"
+      },
+      {
+        "nome": "Hipercard"
+      },
+      {
+        "nome": "JCB"
+      },
+      {
+        "nome": "Mastercard"
+      },
+      {
+        "nome": "UnionPay"
+      },
+      {
+        "nome": "Visa"
+      }
+    ],
+    "grupoPrecificacaos": [
+      {
+        "nome": "Padrão",
+        "margemLucro": 1.1
+      }
+    ],
+    "marcas": [
+      {
+        "nome": "AMD"
+      },
+      {
+        "nome": "CORSAIR"
+      },
+      {
+        "nome": "KINGSTON"
+      },
+      {
+        "nome": "MSI"
+      }
+    ],
+    "categorias": [
+      {
+        "nome": "16GB",
+        "vendaMinimaInativacao": null
+      },
+      {
+        "nome": "2 PENTES",
+        "vendaMinimaInativacao": null
+      },
+      {
+        "nome": "480GB",
+        "vendaMinimaInativacao": null
+      },
+      {
+        "nome": "650W",
+        "vendaMinimaInativacao": null
+      },
+      {
+        "nome": "6 NÚCLEOS CPU",
+        "vendaMinimaInativacao": null
+      },
+      {
+        "nome": "7 NÚCLEOS GPU",
+        "vendaMinimaInativacao": null
+      },
+      {
+        "nome": "80 PLUS BRONZE",
+        "vendaMinimaInativacao": null
+      },
+      {
+        "nome": "8GB",
+        "vendaMinimaInativacao": null
+      },
+      {
+        "nome": "ARMAZENAMENTO",
+        "vendaMinimaInativacao": null
+      },
+      {
+        "nome": "ATX",
+        "vendaMinimaInativacao": null
+      },
+      {
+        "nome": "BIVOLT",
+        "vendaMinimaInativacao": null
+      },
+      {
+        "nome": "DDR4",
+        "vendaMinimaInativacao": null
+      },
+      {
+        "nome": "DISPLAY PORT",
+        "vendaMinimaInativacao": null
+      },
+      {
+        "nome": "DVI-D",
+        "vendaMinimaInativacao": null
+      },
+      {
+        "nome": "HDMI",
+        "vendaMinimaInativacao": null
+      },
+      {
+        "nome": "mATX",
+        "vendaMinimaInativacao": null
+      },
+      {
+        "nome": "MEMÓRIA RAM",
+        "vendaMinimaInativacao": null
+      },
+      {
+        "nome": "PCIe 3.0",
+        "vendaMinimaInativacao": null
+      },
+      {
+        "nome": "PLACA DE VÍDEO",
+        "vendaMinimaInativacao": null
+      },
+      {
+        "nome": "PLACA-MÃE",
+        "vendaMinimaInativacao": null
+      },
+      {
+        "nome": "PROCESSADOR",
+        "vendaMinimaInativacao": null
+      },
+      {
+        "nome": "SATA III",
+        "vendaMinimaInativacao": null
+      },
+      {
+        "nome": "SSD",
+        "vendaMinimaInativacao": null
+      }
+    ],
+    "fornecedores": [
+      {
+        "nome": "Filipe Tecnologies",
+        "emailContato": "filipetec@gmail.com",
+        "telefoneContato": "11 98765-6548"
+      },
+      {
+        "nome": "Mats Hardwares Rogue",
+        "emailContato": "matsrogue@hotmail.com",
+        "telefoneContato": "11 96842-7589"
+      },
+      {
+        "nome": "Tec Luis Felips",
+        "emailContato": "teclusfps@gmail.com",
+        "telefoneContato": "11 4685-4756"
+      }
+    ],
+    "produtos": [
+      {
+        "codigoProduto": "PROD-24430",
+        "codigoBarras": "101111101101110",
+        "nome": "AMD Ryzen 5 5600GT",
+        "modelo": "Processador AMD Ryzen 5 5600GT, 3.6 GHz, (4.6GHz Max Turbo), Cache 4MB, 6 Núcleos, 12 Threads, AM4 - 100-100001488BOX",
+        "descricaoTecnica": "Desempenho para jogos\nBaseado na arquitetura Zen 3 da AMD, que oferece um aumento de desempenho significativo em relação às gerações anteriores. Ele é capaz de rodar os jogos mais recentes em configurações máximas, mesmo em resoluções altas.\n\n \n\nEficiência energética\nUm processador eficiente, com TDP padrão de 65W. Isso significa que ele pode ser usado em sistemas de refrigeração compactos sem comprometer o desempenho.\n\n \n\nRecursos para criação de conteúdo\nO Ryzen 5 5600GT também é uma boa opção para quem trabalha com criação de conteúdo. Ele oferece desempenho suficiente para editar vídeos, renderizar imagens e trabalhar com softwares de design gráfico.",
+        "especificacoesTecnicas": "Características:\n\n- Marca: AMD\n\n- Modelo: 100-100001488BOX\n\n \n\nEspecificações:\n\n \n\n- Linha: Processadores de desktop AMD Ryzen 5 série 5000 G com gráficos Radeon\n\n- Nº de núcleos de CPU: 6\n\n- Nº de threads: 12\n\n- Relógio de Max Boost: Até 4.6GHz\n\n- Relógio básico: 3,6 GHz\n\n- Cache L1 total: 384 KB\n\n- Cache L2 total: 3MB\n\n- Cachê L3 total: 16MB\n\n- TDP / TDP Padrão: 65W\n\n- TDP configurável AMD (cTDP): 45-65W\n\n- Tecnologia de processador para núcleos de CPU: FinFET de 7nm TSMC\n\n- Desbloqueado: Sim\n\n- Pacote: AM4\n\n- Solução térmica: AMD Wraith Furtivo\n\n- Solução Térmica (MPK): AMD Wraith Furtivo\n\n- Tempo máximo: 95°C\n\n \n\nSuporte de SO:\n\n- Edição Windows 11 - 64-Bit\n\n- Edição Windows 10 - 64-Bit\n\n- RHEL x86 64 bits\n\n- Ubuntu x86 64 bits\n\n*O suporte ao sistema operacional (SO) poderá variar de acordo com o fabricante.\n\n \n\nConectividade:\n\n- Versão PCI Express: PCIe 3.0\n\n- Tipo de memória: DDR4\n\n- canais de memória: 2\n\n- Velocidade máxima da memória: Até 3200MT/s\n\nVelocidade máxima de memória:\n\n- 2x1R: DDR4-3200\n\n- 2x2R: DDR4-3200\n\n- 4x1R: DDR4-2933\n\n- 4x2R: DDR4-2667\n\n \n\nCapacidades gráficas:\n\n- Modelo gráfico: Gráficos Radeon\n\n- Nº de núcleos de GPU: 7\n\n- Frequência gráfica: 1900MHz\n\n \n\nConteúdo da Embalagem:\n\n- Processador\n\n- Cooler\n\n\nGarantia:\n1 ano de garantia (3 meses de garantia legal + 9 meses de garantia contratual junto ao fabricante)\n\nPeso:\n440 gramas (bruto com embalagem)",
+        "garantia": "1 ANO",
+        "status": "ATIVO",
+        "motivoInativacao": null,
+        "categoriaInativacao": null,
+        "justificativaAtivacao": null,
+        "categoriaAtivacao": null,
+        "estoqueFisico": 24,
+        "estoqueReservado": 0,
+        "quantidadeVendida": 0,
+        "marca": "AMD",
+        "grupoPrecificacao": {
+          "nome": "Padrão",
+          "margemLucro": 1.1
+        },
+        "categorias": [
+          "PROCESSADOR",
+          "6 NÚCLEOS CPU",
+          "7 NÚCLEOS GPU",
+          "DDR4"
+        ],
+        "imagens": [
+          {
+            "url": "https://res.cloudinary.com/daung4k2j/image/upload/v1775012372/produtos/processador-amd-ryzen-5-5600gt-3-6-ghz-4-6ghz-max-turbo-cache-4mb-6-nucleos-12-threads-am4-100-100001488box_1708024586_gg_tzrckk.webp",
+            "capa": true
+          },
+          {
+            "url": "https://res.cloudinary.com/daung4k2j/image/upload/v1775012371/produtos/processador-amd-ryzen-5-5600gt-3-6-ghz-4-6ghz-max-turbo-cache-4mb-6-nucleos-12-threads-am4-100-100001488box_1708024585_gg_bampsq.webp",
+            "capa": false
+          },
+          {
+            "url": "https://res.cloudinary.com/daung4k2j/image/upload/v1775012373/produtos/processador-amd-ryzen-5-5600gt-3-6-ghz-4-6ghz-max-turbo-cache-4mb-6-nucleos-12-threads-am4-100-100001488box_1708024587_gg_tfmyex.webp",
+            "capa": false
+          },
+          {
+            "url": "https://res.cloudinary.com/daung4k2j/image/upload/v1777003862/produtos/processador_amd_ryzen_5_5600gt_3_6_ghz_4_6ghz_max_turbo_cache_4mb_6_nucleos_12_threads_oem_c_cooler_297_1_a2d1c1eb45f374c71d4dd84d03dd1229_elrljn.jpg",
+            "capa": false
+          }
+        ],
+        "entradasEstoque": [
+          {
+            "dataEntrada": "2026-04-01",
+            "quantidade": 20,
+            "valorCusto": 1099.99,
+            "fornecedor": {
+              "nome": "Mats Hardwares Rogue",
+              "emailContato": "matsrogue@hotmail.com",
+              "telefoneContato": "11 96842-7589"
+            }
+          },
+          {
+            "dataEntrada": "2026-04-01",
+            "quantidade": 5,
+            "valorCusto": 990,
+            "fornecedor": {
+              "nome": "Filipe Tecnologies",
+              "emailContato": "filipetec@gmail.com",
+              "telefoneContato": "11 98765-6548"
+            }
+          }
+        ]
+      },
+      {
+        "codigoProduto": "PROD-92626",
+        "codigoBarras": "10110100111010010",
+        "nome": "Fonte MSI MAG A650BN",
+        "modelo": "Fonte MSI MAG A650BN, 650W, 80 Plus Bronze, PFC Ativo, Com Cabo, Preto - 306-7ZP2B22-CE0",
+        "descricaoTecnica": "Potência Estável para Suas Jogatinas\nA fonte MSI MAG A650BN é a escolha perfeita para gamers que buscam desempenho e confiabilidade. Com 650W de potência real e certificação 80 PLUS Bronze, ela garante energia estável e eficiente para alimentar seus componentes de alta performance. O PFC Ativo melhora a qualidade da energia, enquanto o design de circuito DC para DC proporciona maior estabilidade. Desfrute de uma experiência de jogo suave e sem interrupções com a MSI MAG A650BN.\n\n \n\nCertificação 80 Plus Bronze\nA eficiência de sua fonte de alimentação influencia diretamente o desempenho de seu sistema e seu consumo de energia. A certificação 80 PLUS BRONZE promete menor consumo de energia e maior eficiência.\n\n \n\nVentilador de Baixo Ruído 120mm\nO mancal da ventoinha reduz o ruído gerado, mantendo uma excelente dissipação de calor.\n\n \n\nProjeto de Circuito DC para DC\nO projeto de circuito DC-DC adotado reduz a instabilidade da tensão de saída e aumenta a estabilidade do fornecimento de energia.\n\n \n\nProteção Abrangente de Circuito\nSuporta mecanismos de proteção OCP, OVP, SCP, OPP, OTP e fornece proteção abrangente.",
+        "especificacoesTecnicas": "Características:\n\n- Marca: MSI\n\n- Modelo: 306-7ZP2B22-CE0\n\n- Cor: Preto\n\n \n\nEspecificações:\n\n \n\nFator de Forma:\n\n-  ATX\n\n \n\nPotência Nominal:\n\n- 650W\n\n \n\nClassificação de Eficiência:\n\n- 80 Plus Bronze (até 85%)\n\n\n\nTamanho da Ventoinha:\n\n- 120 mm\n\n \n\nRolamento da Ventoinha:\n\n- Sleeve Bearing\n\n \n\nDimensões (PXLXA):\n\n- 140 x 150 x 86mm \n\n \n\nTipo de PFC:\n\n- PFC Ativo\n\n \n\nFaixa de Tensão:\n\n- Bivolt 100-240 VCA\n\n \n\nFaixa de Frequência de Entrada:\n\n- 50~60Hz\n\n \n\nProteção:\n\n- OCP / OVP / OPP / OTP / SCP\n\n \n\nCabos:\n\n- ATX (Pinos): 1\n\n- EPS (8 Pinos): 1\n\n- PCI-E (6+2 Pinos): 2\n\n- SATA (15 Pinos): 5\n\n- Molex (4 Pinos): 2\n\n- FDD (4 Pinos): 1\n\n \n\nConteúdo da Embalagem:\n\n- Fonte MSI MAG A650BN\n\n- Acompanha Cabo de Força\n\n\nGarantia:\n5 anos de garantia (3 meses de garantia legal + 57 meses de garantia contratual junto ao fabricante)\n\nPeso:\n2060 gramas (bruto com embalagem)",
+        "garantia": "5 ANOS",
+        "status": "ATIVO",
+        "motivoInativacao": null,
+        "categoriaInativacao": null,
+        "justificativaAtivacao": null,
+        "categoriaAtivacao": null,
+        "estoqueFisico": 27,
+        "estoqueReservado": 0,
+        "quantidadeVendida": 0,
+        "marca": "MSI",
+        "grupoPrecificacao": {
+          "nome": "Padrão",
+          "margemLucro": 1.1
+        },
+        "categorias": [
+          "ATX",
+          "650W",
+          "BIVOLT",
+          "80 PLUS BRONZE"
+        ],
+        "imagens": [
+          {
+            "url": "https://res.cloudinary.com/daung4k2j/image/upload/v1775011381/produtos/fonte-msi-mag-a650bn-atx-650w-80-plus-bronze-pfc-ativo-entrada-bivolt-preto-306-7zp2b22-ce0_1665770996_gg_dpuv8o.webp",
+            "capa": true
+          },
+          {
+            "url": "https://res.cloudinary.com/daung4k2j/image/upload/v1775011384/produtos/fonte-msi-mag-a650bn-atx-650w-80-plus-bronze-pfc-ativo-entrada-bivolt-preto-306-7zp2b22-ce0_1667590559_gg_zeuxzj.webp",
+            "capa": false
+          },
+          {
+            "url": "https://res.cloudinary.com/daung4k2j/image/upload/v1775011387/produtos/fonte-msi-mag-a650bn-atx-650w-80-plus-bronze-pfc-ativo-entrada-bivolt-preto-306-7zp2b22-ce0_1665770993_gg_jzf0yk.webp",
+            "capa": false
+          }
+        ],
+        "entradasEstoque": [
+          {
+            "dataEntrada": "2026-04-01",
+            "quantidade": 30,
+            "valorCusto": 280,
+            "fornecedor": {
+              "nome": "Tec Luis Felips",
+              "emailContato": "teclusfps@gmail.com",
+              "telefoneContato": "11 4685-4756"
+            }
+          }
+        ]
+      },
+      {
+        "codigoProduto": "PROD-84897",
+        "codigoBarras": "10100101110100001",
+        "nome": "MSI A520M-A PRO",
+        "modelo": "Placa-Mãe MSI A520M-A PRO, AMD AM4, mATX, DDR4, Preto - A520M-A PRO",
+        "descricaoTecnica": "Placa-Mãe MSI A520M-A PRO, AMD AM4, MATX, DDR4\nA Placa-Mãe MSI A520M-A da série PRO ajuda os usuários a trabalhar de forma mais inteligente, oferecendo uma experiência única em eficiência e produtividade para usuários DIY. Seu funcionamento estável e montagem de alta qualidade, fazem com que a Placa-Mãe MSI A520M-A PRO ofereça muito mais que fluxos de trabalho profissionais otimizados: são menos problemas para o usuário e máxima longevidade.\n\n \n\nTotalmente Controlável no Bios e Software\nAs placas-mãe MSI permitem que você gerencie velocidades e temperaturas para todos os ventiladores do seu sistema e da CPU. O Total Fan Control permite verificar as características do sistema primário em uma interface gráfica simplificada. \n\n \n\nPCB com revestimento de cobre engrossado de 2oz\nUm design de PCB melhorado com revestimento de cobre espesso de 2oz aumenta a condutividade, melhorando a dissipação do calor e a confiabilidade especialmente durante o overclocking.\n\n \n\nControle total em bios e software\nA Tecnologia Total Fan Control permite que você tenha controle total da sua placa-mãe permitindo o gerenciamento de velocidade e temperatura direto no BIOS ou no Software com uma interface gráfica simples e intuitiva. \n\n \n\nArmazenamento rápido e pronto para o futuro\nAs placas-mãe MSI PRO suportam todas as normas de armazenamento mais recentes, o que permite aos usuários se conectarem com qualquer dispositivo de armazenamento ultra-rápido. \n\n \n\nExperiência audiovisual \nEleve seu prazer auditivo e desfrute de uma qualidade de som extrema com funcionalidades que permitem ajustar o sistema para atingir o desempenho máximo.",
+        "especificacoesTecnicas": "Características:\n\n- Marca: MSI\n\n- Modelo: A520M-A PRO\n\n \n\nEspecificações:\n\n \n\nDestaques:\n\n- Suporte para processadores Desktop de 3ra Ger AMD Ryzen e AMD Ryzen 4000 G-Series\n\n- Suporta memória DDR4 de até 4600(OC) MHz\n\n- Turbo M.2: Com velocidade PCI-E Gen3 x4 maximiza o desempenho para os SSDs baseados em NVMe.\n\n- Core Boost: Com a distribuição premium e o design energético digital suporta mais núcleos e oferece melhor desempenho.\n\n- DDR4 Boost: A tecnologia avançada envia sinais de dados puros fornecendo um melhor desempenho e estabilidade.\n\n- PCB com cobre espesso de 2oz: Um design de PCB melhorado que aumenta a dissipação do calor e a confiabilidade.\n\n- Audio Boost: Som com qualidade de estúdio\n\n- Dragon Center: Um novo software que integra as ferramentas exclusivas da MSI em uma interface fácil de usar. \n\nCPU:\n\n- Suporta processadores de desktop AMD Ryze de 3ª geração e processadores de desktop AMD Ryzen™ 4000 G-Series\n\n \n\nChipset:\n\n- AMD A520\n\n \n\nMemória:\n\n- 2x slots de memória DDR4, suporta até 64 GB1\n\n- Suporta DDR4 1866/ 2133/ 2400/ 2667/ 2800/ 2933/ 3000/ 3066/ 3200 MHz por JEDEC\n\n- Suporta DDR4 2667/ 2800 /2933 /3000 /3066 /3200 /3466 /3600/ 3733 /3866 /4000 /4133 /4266 /4400/ 4600+ MHz por A-XMP OC MODE\n\n- 1DPC 1R velocidade máxima 4600 MHz\n\n- 1DPC 2R velocidade máxima 3866 MHz\n\n- Arquitetura de memória de canal duplo\n\n- Suporta memória UDIMM não ECC\n\n- Suporta memória ECC UDIMM (modo não-ECC)\n\n- Suporta memória sem buffer\n\n* Consulte www.msi.com para obter mais informações sobre memória compatível.\n\n \n\nSlot de Expansão:\n\n- 1x Slot PCIe 3.0 x11\n\n- 1x Slot PCIe x16\n\n* A especificação suportada depende do processador instalado.\n\n \n\nGráficos Integrados:\n\n- 1x porta HDMI 2.1, suporta uma resolução máxima de 4096x2160 @ 60Hz12\n\n- Suporta HDCP 1.4 e 2.3  \n\n- 1x porta DVI-D, suporta uma resolução máxima de 1920x1200@60Hz1\n\n- Memória compartilhada máxima de 16 GB\n\n* Disponível para o processador com gráficos integrados.\n\n* As Especificações gráficas podem variar dependendo da CPU instalada.\n\n \n\nArmazenamento:\n\n- Chipset AMD A520\n\n- 4 portas SATA 6Gb/s\n\n- 1x slot M.2 (Chave M) (do processador AMD)\n\n- Suporta PCIe 3.01\n\n- Suporta SATA 6Gb/s\n\n- Suporta dispositivos de armazenamento 2242/ 2260/ 2280\n\n* A especificação suportada depende do processador instalado.\n\n \n\nRAID:\n\n- Suporta RAID 0, RAID 1 e RAID 10 para dispositivos de armazenamento SATA\n\n- Suporta RAID 0 e RAID 1 para dispositivos de armazenamento M.2 NVMe\n\n \n\nUSB:\n\n- Chipset AMD A520\n\n- 2 portas USB 3.2 Gen 1 de 5 Gbps estão disponíveis através do conector interno USB 3.2 Gen 1 de 5 Gbps\n\n- 6 portas USB 2.0 (2 portas Tipo A no painel traseiro, 4 portas através dos conectores USB 2.0 internos)\n\n- Processador AMD\n\n- 4 portas USB 3.2 Gen 1 5 Gbps Tipo A no painel traseiro\n\n \n\nÁudio:\n\n- Codec Realtek ALC892/ ALC897\n\n- Áudio de alta definição de 7.1 Canais\n\n \n\nLAN:\n\n- 1 controlador de LAN Gigabit Realtek RTL8111H\n\n \n\nConectores Internos:\n\n- 1x Conector de alimentação principal ATX de 24 pinos\n\n- 1x Conector de alimentação ATX 12V de 4 pinos\n\n- 4x Conectores SATA 6Gb/s\n\n- 1x slots M.2 (M-Key)\n\n- 1x Conector USB 3.2 Gen 1 5 Gbps (suporta 2 portas USB 3.2 Gen 1 5 Gbps adicionais)\n\n- 2x Conectores USB 2.0 (suporta 4 portas USB 2.0 adicionais)\n\n- 1x Conector de ventoinha da CPU de 4 pinos\n\n- 1x Conectores de ventilador do sistema de 4 pinos\n\n- 1x Conector de áudio do painel frontal\n\n- 2x Conectores do painel do sistema\n\n- 1x Conector de intrusão do chassi\n\n- 1x Conector do módulo TPM\n\n- 1x jumper CMOS claro\n\n \n\nPortas Traseiro:\n\n- Porta LAN\n\n- HDMI\n\n- DVI-D\n\n- Teclado mouse\n\n- USB 3.2 Gen 1 5 Gbps Tipo A\n\n- USB 3.2 Gen 1 5 Gbps Tipo A\n\n- Portas USB 2.0\n\n- Conectores de áudio\n\n \n\nFator Forma:\n\n- Fator de forma micro-ATX\n\n- 9,3 pol. x 7,9 pol. (23,6 cm x 20 cm)\n\n \n\nMontagem:\n\n- 8 Furos\n\n \n\nConteúdo da Embalagem:\n\n- Placa-Mãe MSI A520M-A PRO\n\n- Guia de Instalação\n\n\nGarantia:\n3 anos de garantia (3 meses de garantia legal + 33 meses de garantia contratual junto ao fabricante)\n\nPeso:\n750 gramas (bruto com embalagem)",
+        "garantia": "3 ANOS",
+        "status": "INATIVO",
+        "motivoInativacao": "Por Enquanto, este produto está sem estoque, reative quando o mesmo receber mais estoque",
+        "categoriaInativacao": "SEM ESTOQUE",
+        "justificativaAtivacao": null,
+        "categoriaAtivacao": null,
+        "estoqueFisico": 0,
+        "estoqueReservado": 0,
+        "quantidadeVendida": 0,
+        "marca": "MSI",
+        "grupoPrecificacao": {
+          "nome": "Padrão",
+          "margemLucro": 1.1
+        },
+        "categorias": [
+          "PLACA-MÃE",
+          "mATX",
+          "DDR4",
+          "PCIe 3.0",
+          "HDMI",
+          "DVI-D"
+        ],
+        "imagens": [
+          {
+            "url": "https://res.cloudinary.com/daung4k2j/image/upload/v1775010949/produtos/placa-mae-msi-a520m-a-pro-amd-am4-matx-ddr4_1722881948_gg_y1jseh.webp",
+            "capa": true
+          },
+          {
+            "url": "https://res.cloudinary.com/daung4k2j/image/upload/v1775010950/produtos/placa-mae-msi-a520m-a-pro-amd-am4-matx-ddr4_1722881949_gg_gest0q.webp",
+            "capa": false
+          },
+          {
+            "url": "https://res.cloudinary.com/daung4k2j/image/upload/v1775010952/produtos/placa-mae-msi-a520m-a-pro-amd-am4-matx-ddr4_1722881950_gg_xg33kf.webp",
+            "capa": false
+          },
+          {
+            "url": "https://res.cloudinary.com/daung4k2j/image/upload/v1775010953/produtos/placa-mae-msi-a520m-a-pro-amd-am4-matx-ddr4_1722881952_gg_s6wa2z.webp",
+            "capa": false
+          }
+        ],
+        "entradasEstoque": []
+      },
+      {
+        "codigoProduto": "PROD-18480",
+        "codigoBarras": "100100000110000",
+        "nome": "Placa de Vídeo RX 7600 Series Graphics Cards",
+        "modelo": "Placa de Vídeo RX 7600 Series Graphics Cards XFX AMD Radeon, 8GB GDDR6 - RX-76PQICKBY",
+        "descricaoTecnica": "Placa de Vídeo RX 7600 Series Graphics Cards\n\nExperimente desempenho, visual e eficiência sem precedentes para jogos e streaming em 1080p com a placa de vídeo AMD Radeon RX 7600, desenvolvida com arquitetura RDNA 3. Mergulhe em visuais de tirar o fôlego com a precisão de cores do AMD Radiance Display Engine e aumente as taxas de quadros com as tecnologias de upscaling AMD FidelityFX Super Resolution e Radeon Super Resolution. Para obter ainda mais desempenho, combine a placa de vídeo AMD Radeon RX 7000 Series com um processador AMD Ryzen compatível para ativar as tecnologias inteligentes da AMD.\n\n\nSérie Speedster\nA série Speedster exemplifica um estilo aerodinâmico moderno com um design limpo e elegante. É um design cuidadoso com o único propósito de maximizar o fluxo de ar para melhorar o resfriamento e o desempenho.\n\n\nFluxo de Ar e Refrigeração\nEncontrar o equilíbrio entre uma placa de boa aparência e maximizar seu desempenho é uma arte. Onde podíamos melhorar o fluxo de ar, nós o fizemos, abrimos, mantendo o design limpo e fresco.\n\n\nXFX Dual Bios Ready\nConhecemos as opções de entusiastas, portanto, para nossas placas gráficas da série QICK 308 RX 7600, oferecemos BIOS duplo. Dando um BIOS de backup no caso de falha na atualização do BIOS.\n\n\nMemória de Acesso Inteligente da AMD\nObtenha mais desempenho por meio de novos níveis de comunicação entre processadores de desktop AMD Ryzen e placas gráficas AMD Radeon em PCI Express.\n\n\nSuporte Ultra HD\nA XFX RX 7600 foi desenvolvida para jogabilidade de alta definição e alto desempenho. Experimente um desempenho de jogabilidade suave. Com suporte para 8k, você está pronto para telas de última geração. Veja tudo em detalhes incríveis sem sacrificar o desempenho.",
+        "especificacoesTecnicas": "Características:\n\n- Marca: XFX\n\n- Modelo: RX-76PQICKBY\n\n\n\nEspecificações:\n\n\n\n- Tipo de barramento PCI-E 4.0\n\n- TGP 145W\n\n- Relógio base até 1875MHz\n\n- Relógio de jogo até 2355MHz\n\n- Aumente o clock até 2755MHz\n\n- Processadores de Fluxo 2048\n\n- Unidades de cálculo 32\n\n- Barramento de memória 128 bits\n\n- Relógio de memória 18Gbps\n\n- Tamanho da memória 8 GB\n\n- Tipo de Memória GDDR6\n\n- Slot de perfil de cartão 2.5\n\n- Solução Térmica 3 Ventilador\n\n*\"Game Clock\" é o clock esperado da GPU durante a execução em aplicativos de jogos típicos, definido como TGP (Total Graphics Power) típico. Os resultados reais do relógio de jogo individual podem variar\n\n\n\nSaída:\n\n- 3x Saída - Display Port (2.1 com DSC)\n\n- 1x Saída - HDMI (HDMI 2.1 VRR e FRL)\n\n\n\nTecnologias:\n\n- 32 unidades de computação AMD RDNA 3 (com aceleradores RT+AI) \n\n- Tecnologia AMD Infinity Cache de 32 MB \n\n- DisplayPort 2.1 \n\n- AMD Radiance Display Engine \n\n- Tecnologia AMD Radeon Boost \n\n- Tecnologia AMD Radeon Anti-Lag* \n\n- AMD Radiance Display Engine \n\n- 8 GB GDDR6 no barramento de memória de 128 bits \n\n- Pronto para PCI Express 4.0 \n\n- Tecnologias AMD FidelityFX* \n\n- Tecnologia AMD FidelityFX Super Resolution* \n\n- Microsoft DirectX 12 Ultimate \n\n- Microsoft DirectStorage \n\n- Vulkan Otimizado \n\n- Tecnologias inteligentes da AMD* \n\n- Software AMD: aplicativo Adrenalin Edition \n\n- Supressão de Ruído AMD \n\n- Exibição de privacidade da AMD* \n\n- Tecnologia AMD Radeon Super Resolution* \n\n- AMD Link* \n\n- Tecnologia AMD Freesync* \n\n\n\n\"“1. Não é compatível com o Windows 7.”\n\n“2. Não oferece suporte a todos os recursos, incluindo, entre outros, Raytracing de hardware.”\n\n* Para obter mais informações sobre as tecnologias Radeon, visite: AMD.com/gamingdetails\"\n\n\n\nCertificações:\n\n- RoHS\n\n\n\nRequisitos do Sistema:\n\n- Placa-mãe compatível com PCI Express com um slot PCIe x16\n\n- Fonte de alimentação mínima de 550 W ou superior\n\n* NOTA: A potência mínima recomendada da fonte de alimentação do sistema é baseada na placa gráfica específica e nos requisitos de energia típicos de outros componentes do sistema. Seu sistema pode exigir mais ou menos energia. OEM e outros PCs pré-montados podem ter requisitos de energia diferentes.\n\n- Mínimo de 8 GB de memória do sistema. Recomendado 16 GB.\n\n- Os sistemas operacionais suportados incluem Linux, Windows 10/11. Necessário sistema operacional de 64 bits.\n\n- Os termos HDMI e HDMI High-Definition Multimedia Interface e o logotipo HDMI são marcas comerciais ou marcas registradas da HDMI Licensing LLC nos Estados Unidos e em outros países.\n\n\n\nDimensões:\n\n- Dimensão do cartão (cm) 27,4 x 11,4 x 5\n\n\n\nConteúdo da Embalagem:\n\n- Placa de Vídeo\n\n\nGarantia:\n3 anos de garantia (3 meses de garantia legal + 33 meses de garantia contratual junto ao fabricante)\n\nPeso:\n1232 gramas (bruto com embalagem)",
+        "garantia": "9 Meses",
+        "status": "ATIVO",
+        "motivoInativacao": null,
+        "categoriaInativacao": null,
+        "justificativaAtivacao": null,
+        "categoriaAtivacao": null,
+        "estoqueFisico": 15,
+        "estoqueReservado": 0,
+        "quantidadeVendida": 0,
+        "marca": "AMD",
+        "grupoPrecificacao": {
+          "nome": "Padrão",
+          "margemLucro": 1.1
+        },
+        "categorias": [
+          "PLACA DE VÍDEO",
+          "8GB",
+          "DISPLAY PORT",
+          "HDMI"
+        ],
+        "imagens": [
+          {
+            "url": "https://res.cloudinary.com/daung4k2j/image/upload/v1775009206/produtos/placa-de-video-rx-7600-series-graphics-cards-xfx-amd-radeon-8gb-gddr6-rx-76pqickby_1689273145_gg_zy0x4d.webp",
+            "capa": true
+          },
+          {
+            "url": "https://res.cloudinary.com/daung4k2j/image/upload/v1775009225/produtos/placa-de-video-rx-7600-series-graphics-cards-xfx-amd-radeon-8gb-gddr6-rx-76pqickby_1687961874_gg_u67zux.webp",
+            "capa": false
+          },
+          {
+            "url": "https://res.cloudinary.com/daung4k2j/image/upload/v1775009224/produtos/placa-de-video-rx-7600-series-graphics-cards-xfx-amd-radeon-8gb-gddr6-rx-76pqickby_1687961872_gg_fdj8w2.webp",
+            "capa": false
+          },
+          {
+            "url": "https://res.cloudinary.com/daung4k2j/image/upload/v1775009226/produtos/placa-de-video-rx-7600-series-graphics-cards-xfx-amd-radeon-8gb-gddr6-rx-76pqickby_1687961875_gg_m0qbkl.webp",
+            "capa": false
+          }
+        ],
+        "entradasEstoque": [
+          {
+            "dataEntrada": "2026-04-01",
+            "quantidade": 15,
+            "valorCusto": 1900,
+            "fornecedor": {
+              "nome": "Filipe Tecnologies",
+              "emailContato": "filipetec@gmail.com",
+              "telefoneContato": "11 98765-6548"
+            }
+          }
+        ]
+      },
+      {
+        "codigoProduto": "PROD-67457",
+        "codigoBarras": "10000011110000001",
+        "nome": "RAM Corsair Vengeance LPX 16GB (2x8GB)",
+        "modelo": "Memória RAM Corsair Vengeance LPX 16GB (2x8GB), 3000MHz, DDR4, CL15, Preto - CMK16GX4M2B3000C15",
+        "descricaoTecnica": "Memória Corsair Vengeance LPX 16gb (2x8gb)\nA Corsair Vengeance LPX é uma memória de alta performance que foi projetada para overclocking de alto desempenho. Seu dissipador de calor foi desenvolvido em alumínio puro, o que possibilita uma dissipação mais rápida, além do PCB (Pure Circuit Board) personalizado para maior controle da temperatura, garantindo um overclocking de qualidade superior.\n\nCompatibilidade com toda a última geração\nOs processos de teste da memória 3200mHz 16GB da Corsair incluem praticamente todas as placas-mãe disponíveis no mercado, inclusive algumas ainda não comercializadas. Com um design discreto e formato pequeno, esta memória está disponível em diversas cores para você escolher aquela que mais combina com o estilo do seu setup de equipamentos.\n\nMemória otimizada para a sua máquina\nA memória Corsair Vengeance LPX oferece suporte a XMP 2.0, ideal para ajudar a definir automaticamente a velocidade segura mais rápida e obter um desempenho excelente da sua máquina sem travamentos ou qualquer comportamento fora do normal. Ela também oferece suporte DDR4 que oferece frequências mais altas, maior largura de banda e menor consumo de energia do que os módulos DDR3.",
+        "especificacoesTecnicas": "Características:\n\n- Marca: Corsair\n\n- Modelo: CMK16GX4M2B3000C15\n\n \n\nEspecificações:\n\n- Dissipador de calor: Vengeance LPX\n\n- Configuração da memória: Dual / Quad Channel\n\n- Séries da memória: Vengeance\n\n- Tipo de memória: DDR4\n\n- Formato: DIMM\n\n- Pino: 288\n\n- Perfil de desempenho: XMP 2.0\n\n- Tamanho: 16GB Kit (2 x 8GB)\n\n- Latência SPD: 15-15-15-36\n\n- Velocidade SPD: 2133MHz\n\n- Voltagem: 1.2V\n\n- Avaliação de velocidade: PC4-24000 (3000MHz)\n\n- Latência testada: 15-17-17-35\n\n- Velocidade testada: 3000MHz\n\n- Voltagem testada: 1.35V\n\n- Compatibilidade: Plataforma Intel X99/100 Series\n\n \n\nConteúdo da Embalagem:\n\n- 02 Memórias Corsair\n\n\nGarantia:\n1 ano de garantia (3 meses de garantia legal + 9 meses de garantia contratual junto ao fabricante)\n\nPeso:\n105 gramas (bruto com embalagem)",
+        "garantia": "1 ANO",
+        "status": "INATIVO",
+        "motivoInativacao": "Por Enquanto, este produto está sem estoque, reative quando o mesmo receber mais estoque",
+        "categoriaInativacao": "SEM ESTOQUE",
+        "justificativaAtivacao": null,
+        "categoriaAtivacao": null,
+        "estoqueFisico": 0,
+        "estoqueReservado": 0,
+        "quantidadeVendida": 0,
+        "marca": "CORSAIR",
+        "grupoPrecificacao": {
+          "nome": "Padrão",
+          "margemLucro": 1.1
+        },
+        "categorias": [
+          "MEMÓRIA RAM",
+          "2 PENTES",
+          "8GB",
+          "16GB",
+          "DDR4"
+        ],
+        "imagens": [
+          {
+            "url": "https://res.cloudinary.com/daung4k2j/image/upload/v1775010135/produtos/81417_index_gg_uwypgx.webp",
+            "capa": true
+          },
+          {
+            "url": "https://res.cloudinary.com/daung4k2j/image/upload/v1775010133/produtos/81417_1476446883_gg_xsxoei.webp",
+            "capa": false
+          }
+        ],
+        "entradasEstoque": []
+      },
+      {
+        "codigoProduto": "PROD-63242",
+        "codigoBarras": "1111011100001010",
+        "nome": "SSD Kingston A400 480GB",
+        "modelo": "SSD Kingston A400, 480GB, SATA III, 2.5\", Leitura: 500MB/s, Gravação: 450MB/s, Preto - SA400S37/480G",
+        "descricaoTecnica": "Mais Confiável e Durável que um HD\nA unidade de estado sólido A400 da Kingston aumenta drasticamente a resposta do seu computador com tempos incríveis de inicialização, carregamento e transferência, comparados a discos rígidos mecânicos.\n\n \n\nMais velocidade para o seu PC\nReforçado com uma controladora de última geração para velocidades de leitura e gravação de até 500MB/s e 450MB/s, este SSD é 10x mais rápido do que um disco rígido tradicional para melhor desempenho, resposta ultrarrápida em multitarefas e um computador mais rápido de modo geral. Também mais confiável e durável do que um disco rígido, o A400 é feito com memória Flash.\n\n \n\nO SSD mais resistente\nO SSD Kingston A400, não existem partes móveis, com menor probabilidade de falhas do que um disco rígido mecânico. Também é mais frio e mais silencioso e sua resistência a choques e vibração torna-o ideal para notebooks e outros dispositivos móveis de computação.\n\n \n\nDiversas Capacidades do A400\nO A400 está disponível em diversas capacidades de 480GB oferecendo todo o espaço que você precisa para aplicativos, vídeos, fotos e outros documentos importantes. Você também pode substituir seu disco rígido ou um SSD menor por uma unidade grande o suficiente para conter todos os seus arquivos. SSD confiável e durável para melhor desempenho do computador e respostas ultrarrápidas em multitarefas.\n\n \n\nSSD Kingston A400 é mais rápido que um disco Rígido \nRápida inicialização, carregamento e transferência de arquivos; Mais confiável e mais durável do que um disco rígido; Diversas capacidades com espaço para aplicativos ou para substituição do disco rígido.",
+        "especificacoesTecnicas": "Características:\n\n- Marca: Kingston\n\n- Modelo: SA400S37/480G\n\n \n\nEspecificações:\n\n- Formato: 2,5 pol \n\n- Interface: SATA Rev. 3.0 (6Gb/s) — compatível com a versão anterior SATA Rev. 2.0 (3Gb/s)\n\n- Capacidades: 480GB\n\n- NAND: TLC \n\n- Performance de referência - até 500MB/s para leitura e 450MB/s para gravação\n\n- Temperatura de armazenamento: -40 °C a 85 °C \n\n- Temperatura de operação: 0 °C a 70 °C\n\n- Vibração quando em operação: 2,17G pico (7 – 800 Hz)\n\n- Vibração quando não está em operação: 20G pico (10 – 2000 Hz)\n\n- Expectativa de vida útil: 1 milhão de horas MTB\n\n \n\nBenefícios: \n\n- 10x mais rápido do que um disco rígido: Com incríveis velocidades de leitura/gravação, o SSD A400 não somente irá aumentar o desempenho, como também poderá ser usado para dar vida nova em computadores mais antigos. \n\n- Robusto: O A400 é resistente a impactos e vibrações, para confiabilidade reforçada em notebooks e outros dispositivos móveis. \n\n- Ideal para desktops e notebooks: A400 tem um formato de 7 mm parase ajustar auma grande variedade de computadores. É ideal para notebooks mais finos e computadores, ultrabooks e ultratop com espaço limitado.\n\n\n\nConteúdo da embalagem:\n\n- SSD Kingston\n\n\nGarantia:\n1 ano de garantia (3 meses de garantia legal + 9 meses de garantia contratual junto ao fabricante)\n\nPeso:\n54 gramas (bruto com embalagem)",
+        "garantia": "1 ANO E 6 MESES",
+        "status": "ATIVO",
+        "motivoInativacao": null,
+        "categoriaInativacao": null,
+        "justificativaAtivacao": "O estoque deste produto será reabastecido",
+        "categoriaAtivacao": "SERÁ REABASTECIDO",
+        "estoqueFisico": 0,
+        "estoqueReservado": 0,
+        "quantidadeVendida": 0,
+        "marca": "KINGSTON",
+        "grupoPrecificacao": {
+          "nome": "Padrão",
+          "margemLucro": 1.1
+        },
+        "categorias": [
+          "ARMAZENAMENTO",
+          "SSD",
+          "480GB",
+          "SATA III"
+        ],
+        "imagens": [
+          {
+            "url": "https://res.cloudinary.com/daung4k2j/image/upload/v1775010344/produtos/85198_1484306114_gg_igciem.webp",
+            "capa": true
+          },
+          {
+            "url": "https://res.cloudinary.com/daung4k2j/image/upload/v1775010347/produtos/85198_index_gg_bqhs8r.webp",
+            "capa": false
+          },
+          {
+            "url": "https://res.cloudinary.com/daung4k2j/image/upload/v1775010349/produtos/ssd-kingston-a400-480gb-sata-leitura-500mb-s-gravacao-450mb-s-sa400s37-480g_1629133546_gg_auvuo6.webp",
+            "capa": false
+          }
+        ],
+        "entradasEstoque": [
+          {
+            "dataEntrada": "2026-04-02",
+            "quantidade": 2,
+            "valorCusto": 450,
+            "fornecedor": {
+              "nome": "Mats Hardwares Rogue",
+              "emailContato": "matsrogue@hotmail.com",
+              "telefoneContato": "11 96842-7589"
+            }
+          }
+        ]
+      }
+    ]
+  }
+}
