@@ -29,6 +29,22 @@ function formatCurrency(value) {
   return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
+function getProdutoMarca(produto) {
+  return produto?.getMarcaNome?.() || "-";
+}
+
+function getProdutoCategorias(produto) {
+  return produto?.getCategoriasTexto?.() || "-";
+}
+
+function getProdutoImagens(produto) {
+  return produto?.getImagensOrdenadas?.() || [];
+}
+
+function getProdutoPreco(produto) {
+  return Number(produto?.getPreco?.() ?? 0);
+}
+
 function setMainImage(url) {
   mainImage.innerHTML = "";
   if (!url) {
@@ -44,6 +60,7 @@ function setMainImage(url) {
 function renderThumbs(imagens) {
   thumbs.innerHTML = "";
   imagens.forEach((imagem, index) => {
+    const imageUrl = imagem?.url || imagem?.urlImagem || "";
     const btn = document.createElement("button");
     btn.type = "button";
     btn.className = "thumb-button";
@@ -51,9 +68,9 @@ function renderThumbs(imagens) {
       btn.classList.add("is-active");
     }
 
-    if (imagem.url) {
+    if (imageUrl) {
       const img = document.createElement("img");
-      img.src = imagem.url;
+      img.src = imageUrl;
       img.alt = "Miniatura";
       btn.appendChild(img);
     } else {
@@ -61,7 +78,7 @@ function renderThumbs(imagens) {
     }
 
     btn.addEventListener("click", () => {
-      setMainImage(imagem.url);
+      setMainImage(imageUrl);
       Array.from(thumbs.children).forEach((child) => child.classList.remove("is-active"));
       btn.classList.add("is-active");
     });
@@ -79,25 +96,21 @@ function renderProduto(produto) {
   codigoProdutoAtual = produto.codigoProduto || "";
   nomeEl.textContent = produto.nome || "SEM NOME";
   modeloEl.textContent = `Modelo: ${produto.modelo || "-"}`;
-  marcaEl.textContent = `Marca: ${produto.marca || "-"}`;
-  categoriasEl.textContent = `Categorias: ${(produto.categorias || []).join(", ") || "-"}`;
+  marcaEl.textContent = `Marca: ${getProdutoMarca(produto)}`;
+  categoriasEl.textContent = `Categorias: ${getProdutoCategorias(produto)}`;
   descricaoEl.textContent = produto.descricaoTecnica || "-";
   especificacoesEl.textContent = produto.especificacoesTecnicas || "-";
 
-  const imagens = (produto.imagens || []).slice().sort((a, b) => {
-    if (a.capa && !b.capa) return -1;
-    if (!a.capa && b.capa) return 1;
-    return 0;
-  });
+  const imagens = getProdutoImagens(produto);
 
   if (imagens.length) {
-    setMainImage(imagens[0].url);
+    setMainImage(imagens[0].url || imagens[0].urlImagem || "");
   } else {
     setMainImage("");
   }
   renderThumbs(imagens);
 
-  const priceLabel = formatCurrency(Number(produto.preco));
+  const priceLabel = formatCurrency(getProdutoPreco(produto));
   addCarrinhoButton.textContent = `${priceLabel} - ADICIONAR AO CARRINHO`;
 }
 

@@ -1,8 +1,10 @@
+import { Pedido } from "../pedido/Pedido.js";
 import { adminRequest } from "./AdminRequest.js";
 
-export async function listarPedidos(params) {
-  const query = new URLSearchParams(params);
-  const response = await adminRequest(`/api/admin/pedidos?${query.toString()}`, {
+let pedidosCache = null;
+
+async function fetchPedidos() {
+  const response = await adminRequest("/api/admin/pedidos", {
     method: "GET"
   });
   const payload = await response.json().catch(() => ({}));
@@ -10,7 +12,38 @@ export async function listarPedidos(params) {
     const message = payload?.error || payload?.message || "Erro ao buscar pedidos.";
     throw new Error(message);
   }
-  return payload?.pedidos || [];
+
+  pedidosCache = (payload?.pedidos || []).map((item) => Pedido.fromApi(item));
+  return pedidosCache;
+}
+
+async function getPedidosCache() {
+  if (pedidosCache) {
+    return pedidosCache;
+  }
+  return fetchPedidos();
+}
+
+function ordenarPedidos(pedidos, sortField, sortOrder) {
+  if (!sortField || !sortOrder) {
+    return pedidos;
+  }
+
+  return [...pedidos].sort((a, b) => a.compareWith(b, sortField, sortOrder));
+}
+
+export async function listarPedidos(params = {}) {
+  const pedidos = await getPedidosCache();
+  const status = `${params.status || ""}`
+    .split(",")
+    .map((item) => item.trim().toUpperCase())
+    .filter(Boolean);
+
+  const filtrados = pedidos.filter(
+    (pedido) => pedido.matchesSearch(params.q) && pedido.matchesStatus(status)
+  );
+
+  return ordenarPedidos(filtrados, params.sortField || "", params.sortOrder || "");
 }
 
 export async function obterPedidoDetalhe(pedidoId) {
@@ -22,7 +55,7 @@ export async function obterPedidoDetalhe(pedidoId) {
     const message = payload?.error || payload?.message || "Erro ao buscar pedido.";
     throw new Error(message);
   }
-  return payload?.pedido || null;
+  return payload?.pedido ? Pedido.fromApi(payload.pedido) : null;
 }
 
 export async function atualizarStatusPedido(pedidoId, status) {
@@ -36,5 +69,7 @@ export async function atualizarStatusPedido(pedidoId, status) {
     const message = payload?.error || payload?.message || "Erro ao atualizar status.";
     throw new Error(message);
   }
+
+  pedidosCache = null;
   return true;
 }

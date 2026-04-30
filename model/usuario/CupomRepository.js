@@ -1,4 +1,5 @@
 import { backendConfig } from "../firebaseApp.js";
+import { Cupom } from "../cupom/Cupom.js";
 
 const baseUrl = backendConfig.baseUrl;
 
@@ -14,5 +15,10 @@ export async function obterCupons(idToken) {
     const message = data?.error || data?.message || "Erro ao carregar cupons.";
     throw new Error(message);
   }
-  return data;
+  return {
+    ...data,
+    promocionais: (data?.promocionais || []).map((cupom) => Cupom.fromApi(cupom)),
+    troca: (data?.troca || []).map((cupom) => Cupom.fromApi(cupom)),
+    todos: (data?.todos || []).map((cupom) => Cupom.fromApi(cupom))
+  };
 }

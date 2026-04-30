@@ -20,6 +20,34 @@ function formatCurrency(value) {
   return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
+function getCarrinhoItens(carrinho) {
+  return carrinho?.getItens?.() || carrinho?.itens || [];
+}
+
+function getCarrinhoValorTotal(carrinho) {
+  return Number(carrinho?.getValorTotal?.() ?? carrinho?.valorTotal ?? 0);
+}
+
+function getItemImagem(item) {
+  return item?.getImagemUrl?.() || item?.imagem || "";
+}
+
+function getItemNome(item) {
+  return item?.nome || item?.produto?.nome || "SEM NOME";
+}
+
+function getItemModelo(item) {
+  return item?.modelo || item?.produto?.modelo || "";
+}
+
+function getItemPrecoUnitario(item) {
+  return Number(item?.getPrecoUnitario?.() ?? item?.precoUnitario ?? item?.precoAtual ?? 0);
+}
+
+function getItemPrecoTotal(item) {
+  return Number(item?.getPrecoTotal?.() ?? item?.precoTotal ?? getItemPrecoUnitario(item) * Number(item?.quantidade || 0));
+}
+
 function renderSummary(valorTotal) {
   summaryDetails.innerHTML = `
     <div>Total: ${formatCurrency(Number(valorTotal || 0))}</div>
@@ -61,10 +89,11 @@ function renderItems(itens) {
 
     const imageBox = document.createElement("div");
     imageBox.className = "cart-item-image";
-    if (item.imagem) {
+    const imageUrl = getItemImagem(item);
+    if (imageUrl) {
       const img = document.createElement("img");
-      img.src = item.imagem;
-      img.alt = item.nome || "Produto";
+      img.src = imageUrl;
+      img.alt = getItemNome(item) || "Produto";
       imageBox.appendChild(img);
     } else {
       imageBox.textContent = "IMAGEM";
@@ -73,13 +102,14 @@ function renderItems(itens) {
     const details = document.createElement("div");
     details.className = "cart-item-details";
     const title = document.createElement("strong");
-    title.textContent = item.nome || "SEM NOME";
+    title.textContent = getItemNome(item);
     const modelo = document.createElement("span");
-    modelo.textContent = item.modelo ? `Modelo: ${item.modelo}` : "Modelo: -";
+    const modeloTexto = getItemModelo(item);
+    modelo.textContent = modeloTexto ? `Modelo: ${modeloTexto}` : "Modelo: -";
     const precoUnit = document.createElement("span");
-    precoUnit.textContent = `Preco p/unidade: ${formatCurrency(Number(item.precoUnitario || 0))}`;
+    precoUnit.textContent = `Preco p/unidade: ${formatCurrency(getItemPrecoUnitario(item))}`;
     const precoTotal = document.createElement("span");
-    precoTotal.textContent = `Preco total: ${formatCurrency(Number(item.precoTotal || 0))}`;
+    precoTotal.textContent = `Preco total: ${formatCurrency(getItemPrecoTotal(item))}`;
 
     const actions = document.createElement("div");
     actions.className = "cart-item-actions";
@@ -190,8 +220,8 @@ function renderItems(itens) {
 
 async function carregarCarrinhoPagina() {
   const carrinho = await carregarCarrinho();
-  renderItems(carrinho?.itens || []);
-  renderSummary(carrinho?.valorTotal || 0);
+  renderItems(getCarrinhoItens(carrinho));
+  renderSummary(getCarrinhoValorTotal(carrinho));
 }
 
 carregarPerfil((perfil, error) => {

@@ -220,8 +220,8 @@ function carregarDados() {
     }
 
     const usuario = dados.usuario || {};
-    const telefone = dados.telefone || {};
-    const endereco = dados.endereco || {};
+    const telefone = dados.telefone || null;
+    const endereco = dados.endereco || null;
 
     setValue("nome", usuario.nome);
     setValue("cpf", usuario.cpf);
@@ -233,6 +233,10 @@ function carregarDados() {
       setValue("telefoneTipo", telefone.tipoId);
       setValue("telefoneDdd", telefone.ddd);
       setValue("telefoneNumero", telefone.numero);
+    } else {
+      setValue("telefoneTipo", "");
+      setValue("telefoneDdd", "");
+      setValue("telefoneNumero", "");
     }
 
     if (endereco) {
@@ -246,6 +250,17 @@ function carregarDados() {
       setValue("estado", endereco.estado);
       setValue("pais", endereco.pais || "Brasil");
       setValue("observacoes", endereco.observacoes);
+    } else {
+      setValue("tipoLogradouro", "");
+      setValue("tipoResidencia", "");
+      setValue("logradouro", "");
+      setValue("numero", "");
+      setValue("bairro", "");
+      setValue("cep", "");
+      setValue("cidade", "");
+      setValue("estado", "");
+      setValue("pais", "Brasil");
+      setValue("observacoes", "");
     }
 
     if (!endereco?.pais) {
@@ -334,7 +349,7 @@ function abrirEnderecoForm(endereco) {
     setEnderecoValue("end-estado", endereco.estado);
     setEnderecoValue("end-pais", endereco.pais || "Brasil");
     setEnderecoValue("end-observacoes", endereco.observacoes || "");
-    setEnderecoValue("end-residencial", endereco.tipo === "Principal");
+    setEnderecoValue("end-residencial", endereco.isPrincipal?.() || endereco.tipo === "Principal");
   } else {
     limparEnderecoForm();
   }
@@ -384,8 +399,8 @@ function formatEnderecoLinha(endereco) {
   const logradouro = endereco.logradouro || "";
   const numero = endereco.numero ? `, ${endereco.numero}` : "";
   const linha1 = [tipoLogradouro, logradouro].filter(Boolean).join(" ") + numero;
-  const linha2 = `${endereco.bairro || ""} - ${endereco.cidade || ""}/${endereco.estado || ""}`;
-  const linha3 = `CEP: ${endereco.cep || ""} | ${endereco.pais || ""}`;
+  const linha2 = endereco.getLinhaBairroCidade?.() || `${endereco.bairro || ""} - ${endereco.cidade || ""}/${endereco.estado || ""}`;
+  const linha3 = endereco.getLinhaCepPais?.() || `CEP: ${endereco.cep || ""} | ${endereco.pais || ""}`;
   const linha4 = tipoResidencia ? `Tipo residencia: ${tipoResidencia}` : "";
   return [linha1, linha2, linha3, linha4].filter(Boolean);
 }
@@ -402,8 +417,8 @@ function renderEnderecos(enderecos) {
   }
 
   const ordenados = [...enderecos].sort((a, b) => {
-    if (a.tipo === "Principal" && b.tipo !== "Principal") return -1;
-    if (a.tipo !== "Principal" && b.tipo === "Principal") return 1;
+    if (a.isPrincipal?.() && !b.isPrincipal?.()) return -1;
+    if (!a.isPrincipal?.() && b.isPrincipal?.()) return 1;
     return 0;
   });
 
@@ -415,7 +430,7 @@ function renderEnderecos(enderecos) {
     info.className = "endereco-info";
     const title = document.createElement("strong");
     title.textContent = `ENDERECO ${index + 1}`;
-    if (endereco.tipo === "Principal") {
+    if (endereco.isPrincipal?.()) {
       const badge = document.createElement("span");
       badge.className = "badge";
       badge.textContent = "RESIDENCIAL";
@@ -439,7 +454,7 @@ function renderEnderecos(enderecos) {
     btnEditar.addEventListener("click", () => abrirEnderecoForm(endereco));
     actions.appendChild(btnEditar);
 
-    if (endereco.tipo !== "Principal") {
+    if (!endereco.isPrincipal?.()) {
       const btnPrincipal = document.createElement("button");
       btnPrincipal.className = "btn small";
       btnPrincipal.textContent = "DEFINIR RESIDENCIAL";
@@ -458,7 +473,7 @@ function renderEnderecos(enderecos) {
     const btnExcluir = document.createElement("button");
     btnExcluir.className = "btn small";
     btnExcluir.textContent = "EXCLUIR";
-    btnExcluir.disabled = endereco.tipo === "Principal";
+    btnExcluir.disabled = endereco.isPrincipal?.();
     btnExcluir.addEventListener("click", async () => {
       const confirmacao = window.confirm("Deseja excluir este endereco?");
       if (!confirmacao) {
@@ -594,17 +609,7 @@ function formatCurrency(value) {
 }
 
 function getCupomStatusExibicao(cupom) {
-  const status = normalizeText(cupom?.status?.nome);
-  const validade = cupom?.validade ? new Date(cupom.validade) : null;
-  const expirado = !validade || Number.isNaN(validade.getTime()) || validade.getTime() < Date.now();
-
-  if (status === "USADO") {
-    return "USADO";
-  }
-  if (expirado) {
-    return "EXPIRADO";
-  }
-  return "ATIVO";
+  return cupom?.getStatusExibicao?.() || "ATIVO";
 }
 
 function formatTempoRestante(validade) {
@@ -642,22 +647,11 @@ function formatTempoRestante(validade) {
 }
 
 function getCupomTipoTitulo(cupom) {
-  const tipo = normalizeText(cupom?.tipo?.nome);
-  if (tipo === "FRETE GRATIS") {
-    return "FRETE GRÁTIS";
-  }
-  if (tipo === "TROCA" || tipo === "SOBRA") {
-    return "TROCA/SOBRA";
-  }
-  return cupom?.tipo?.nome || "CUPOM";
+  return cupom?.getTipoTitulo?.() || cupom?.tipo?.nome || "CUPOM";
 }
 
 function getCupomDescricaoValor(cupom) {
-  const tipo = normalizeText(cupom?.tipo?.nome);
-  if (tipo === "FRETE GRATIS") {
-    return `Valor minimo para frete gratis: ${formatCurrency(cupom?.valor)}`;
-  }
-  return `Valor: ${formatCurrency(cupom?.valor)}`;
+  return cupom?.getDescricaoValor?.() || `Valor: ${formatCurrency(cupom?.valor)}`;
 }
 
 function renderCuponsLista(listEl, cupons, inactive = false) {
@@ -688,7 +682,7 @@ function renderCuponsLista(listEl, cupons, inactive = false) {
     if (inactive) {
       status.textContent = `Status: ${getCupomStatusExibicao(cupom)}`;
     } else {
-      status.textContent = `Expira em: ${formatTempoRestante(cupom.validade)}`;
+      status.textContent = `Expira em: ${cupom?.getTempoRestante?.() || formatTempoRestante(cupom.validade)}`;
     }
 
     card.appendChild(title);
@@ -748,23 +742,19 @@ function formatPedidoDataCompleta(value) {
 }
 
 function getPedidoCupomPromocional(pedido) {
-  return pedido?.pagamentos_on_pedido?.[0]?.cupomPromocional || null;
+  return pedido?.getCupomPromocional?.() || null;
 }
 
 function pedidoTemFreteGratis(pedido) {
-  const tipo = normalizeText(getPedidoCupomPromocional(pedido)?.tipo?.nome);
-  return tipo === "FRETE GRATIS";
+  return pedido?.temFreteGratis?.() || false;
 }
 
 function contarItensPedido(pedido) {
-  return (pedido?.itemPedidos_on_pedido || []).reduce(
-    (acc, item) => acc + Number(item?.quantidade || 0),
-    0
-  );
+  return pedido?.getQuantidadeTotalItens?.() || 0;
 }
 
 function pedidoPodeReadicionarCarrinho(pedido) {
-  return normalizeText(pedido?.status?.nome) === "REPROVADA";
+  return pedido?.podeReadicionarCarrinho?.() || false;
 }
 
 function mostrarListaPedidos() {
@@ -796,7 +786,7 @@ function renderPedidos(pedidos) {
     info.className = "pedido-info";
 
     const titulo = document.createElement("strong");
-    titulo.textContent = `${formatPedidoDataHora(pedido.dataCriacao)} - ${pedido?.status?.nome || "-"}`;
+    titulo.textContent = `${formatPedidoDataHora(pedido.dataCriacao)} - ${pedido?.getStatusNome?.() || "-"}`;
     info.appendChild(titulo);
 
     const total = document.createElement("span");
@@ -867,7 +857,7 @@ function renderPedidoDetalhe(pedido) {
     return;
   }
 
-  pedidoDetalheTitle.textContent = `${formatPedidoDataHora(pedido.dataCriacao)} - ${pedido?.status?.nome || "-"}`;
+  pedidoDetalheTitle.textContent = `${formatPedidoDataHora(pedido.dataCriacao)} - ${pedido?.getStatusNome?.() || "-"}`;
 
   const freteGratis = pedidoTemFreteGratis(pedido);
   pedidoDetalheMeta.innerHTML = `
@@ -879,17 +869,17 @@ function renderPedidoDetalhe(pedido) {
   `;
 
   pedidoItensList.innerHTML = "";
-  (pedido?.itemPedidos_on_pedido || []).forEach((item) => {
+  (pedido?.getItens?.() || []).forEach((item) => {
     const card = document.createElement("div");
     card.className = "pedido-item";
 
     const image = document.createElement("div");
     image.className = "pedido-item-image";
-    const imageUrl = item?.produto?.imagemProdutos_on_produto?.[0]?.url;
+    const imageUrl = item?.getImagemUrl?.() || "";
     if (imageUrl) {
       const img = document.createElement("img");
       img.src = imageUrl;
-      img.alt = item?.produto?.nome || "Produto";
+      img.alt = item?.nome || item?.produto?.nome || "Produto";
       image.appendChild(img);
     } else {
       image.textContent = "IMG";
@@ -898,10 +888,10 @@ function renderPedidoDetalhe(pedido) {
     const info = document.createElement("div");
     info.className = "pedido-item-info";
     info.innerHTML = `
-      <strong>${item?.produto?.nome || "SEM NOME"}</strong>
-      <span>Modelo: ${item?.produto?.modelo || "-"}</span>
+      <strong>${item?.nome || item?.produto?.nome || "SEM NOME"}</strong>
+      <span>Modelo: ${item?.modelo || item?.produto?.modelo || "-"}</span>
       <span>Quantidade: ${Number(item?.quantidade || 0)}x</span>
-      <span>Preco na compra: ${formatCurrency(item?.precoAtual || 0)}</span>
+      <span>Preco na compra: ${formatCurrency(item?.getPrecoAtual?.() ?? item?.getPrecoUnitario?.() ?? 0)}</span>
     `;
 
     card.appendChild(image);
@@ -909,7 +899,7 @@ function renderPedidoDetalhe(pedido) {
     pedidoItensList.appendChild(card);
   });
 
-  const pagamento = pedido?.pagamentos_on_pedido?.[0] || null;
+  const pagamento = pedido?.getPagamentoPrincipal?.() || null;
   const lines = [];
 
   if (pagamento) {
@@ -918,29 +908,34 @@ function renderPedidoDetalhe(pedido) {
   }
 
   const cupomPromo = getPedidoCupomPromocional(pedido);
-  const cupomTipo = normalizeText(cupomPromo?.tipo?.nome);
   if (cupomPromo) {
-    if (cupomTipo === "DESCONTO") {
+    if (cupomPromo?.isDesconto?.()) {
       lines.push(`<div>Cupom promocional: ${cupomPromo.codigo} (${formatCurrency(cupomPromo.valor)})</div>`);
-    } else if (cupomTipo === "FRETE GRATIS") {
+    } else if (cupomPromo?.isFreteGratis?.()) {
       lines.push(`<div>Cupom promocional: ${cupomPromo.codigo} - Frete Grátis</div>`);
     }
   }
 
-  const cuponsTroca = pagamento?.pagamentoCupomTrocas_on_pagamento || [];
+  const cuponsTroca = pagamento?.getCuponsTroca?.() || [];
   if (cuponsTroca.length) {
     const lista = cuponsTroca
-      .map((item) => `<li>${item?.cupomTroca?.codigo || "-"} - ${formatCurrency(item?.cupomTroca?.valor || 0)}</li>`)
+      .map((item) => {
+        const cupom = item?.getCupomTroca?.() || item?.cupomTroca || null;
+        return `<li>${cupom?.codigo || "-"} - ${formatCurrency(cupom?.valor || 0)}</li>`;
+      })
       .join("");
     lines.push(`<div>Cupons troca/sobra:</div><ul>${lista}</ul>`);
   }
 
-  const cartoes = pagamento?.pagamentoCartaos_on_pagamento || [];
+  const cartoes = pagamento?.getCartoes?.() || [];
   if (cartoes.length) {
     const lista = cartoes
       .map((item) => {
-        const nome = `${item?.cartaoCredito?.nomeImpresso || ""}`.trim().split(/\s+/)[0] || "-";
-        return `<li>${mascararNumeroCartao(item?.cartaoCredito?.numero || "")} - ${nome} - ${formatValidade(item?.cartaoCredito?.dataValidade || "")}</li>`;
+        const cartao = item?.getCartao?.() || item?.cartaoCredito || null;
+        const nome = cartao?.getNomeTitularCurto?.() || `${cartao?.nomeImpresso || ""}`.trim().split(/\s+/)[0] || "-";
+        const numero = cartao?.getNumeroMascarado?.() || mascararNumeroCartao(cartao?.numero || "");
+        const validade = cartao?.getValidadeFormatada?.() || formatValidade(cartao?.dataValidade || "");
+        return `<li>${numero} - ${nome} - ${validade}</li>`;
       })
       .join("");
     lines.push(`<div>Cartoes utilizados:</div><ul>${lista}</ul>`);
@@ -981,9 +976,9 @@ function renderCartoes(cartoes) {
     info.className = "cartao-info";
 
     const title = document.createElement("strong");
-    const bandeira = cartao.bandeira?.nome || bandeiraMap.get(cartao.bandeiraId) || "";
+    const bandeira = cartao.getBandeiraNome?.() || cartao.bandeira?.nome || bandeiraMap.get(cartao.bandeiraId) || "";
     title.textContent = bandeira ? `CARTAO ${index + 1} - ${bandeira}` : `CARTAO ${index + 1}`;
-    if (cartao.preferencial) {
+    if (cartao.isPreferencial?.()) {
       const badge = document.createElement("span");
       badge.className = "badge";
       badge.textContent = "PREFERENCIAL";
@@ -992,7 +987,7 @@ function renderCartoes(cartoes) {
     info.appendChild(title);
 
     const numero = document.createElement("span");
-    numero.textContent = mascararNumeroCartao(cartao.numero);
+    numero.textContent = cartao.getNumeroMascarado?.() || mascararNumeroCartao(cartao.numero);
     info.appendChild(numero);
 
     const nome = document.createElement("span");
@@ -1000,13 +995,13 @@ function renderCartoes(cartoes) {
     info.appendChild(nome);
 
     const validade = document.createElement("span");
-    validade.textContent = `Validade: ${formatValidade(cartao.dataValidade)}`;
+    validade.textContent = `Validade: ${cartao.getValidadeFormatada?.() || formatValidade(cartao.dataValidade)}`;
     info.appendChild(validade);
 
     const actions = document.createElement("div");
     actions.className = "cartao-actions";
 
-    if (!cartao.preferencial) {
+    if (!cartao.isPreferencial?.()) {
       const btnPreferencial = document.createElement("button");
       btnPreferencial.className = "btn small";
       btnPreferencial.textContent = "DEFINIR PREFERENCIAL";

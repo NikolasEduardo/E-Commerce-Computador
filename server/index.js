@@ -2353,7 +2353,7 @@ function buildProdutosQuery({ search, status, marcaId, sortField, sortOrder }) {
         : `where: { _and: [${whereParts.join(", ")}] }`;
 
   const orderClause = sortField && sortOrder ? `orderBy: [{ ${sortField}: ${sortOrder} }]` : "";
-  const args = [whereClause, orderClause, "limit: 100"].filter(Boolean).join(", ");
+  const args = [whereClause, orderClause, "limit: 500"].filter(Boolean).join(", ");
 
   return `
     query ListarProdutos {
@@ -2363,6 +2363,7 @@ function buildProdutosQuery({ search, status, marcaId, sortField, sortOrder }) {
         modelo
         status
         estoqueFisico
+        estoqueReservado
         quantidadeVendida
         motivoInativacao
         categoriaInativacao
@@ -2399,6 +2400,7 @@ async function fetchProdutoDetalhe(accessToken, produtoId) {
         justificativaAtivacao
         categoriaAtivacao
         estoqueFisico
+        estoqueReservado
         quantidadeVendida
         marca { id nome }
         grupoPrecificacao { id nome margemLucro }
@@ -2469,7 +2471,7 @@ function buildClientesQuery({ search, statusFilters, generoFilters, sortField, s
         : `where: { _and: [${whereParts.join(", ")}] }`;
 
   const orderClause = sortField && sortOrder ? `orderBy: [{ ${sortField}: ${sortOrder} }]` : "";
-  const args = [whereClause, orderClause, "limit: 50"].filter(Boolean).join(", ");
+  const args = [whereClause, orderClause, "limit: 500"].filter(Boolean).join(", ");
 
   return `
       query ListarClientes {
@@ -2520,7 +2522,7 @@ function buildPedidosQuery({ search, statusFilters, sortField, sortOrder }) {
     }
   }
 
-  const args = [whereClause, orderClause, "limit: 50"].filter(Boolean).join(", ");
+  const args = [whereClause, orderClause, "limit: 500"].filter(Boolean).join(", ");
 
   return `
       query ListarPedidos {

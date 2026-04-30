@@ -1,4 +1,9 @@
 import { backendConfig } from "../firebaseApp.js";
+import { CartaoCredito } from "../cliente/CartaoCredito.js";
+import { Endereco } from "../cliente/Endereco.js";
+import { Telefone } from "../cliente/Telefone.js";
+import { Pedido } from "../pedido/Pedido.js";
+import { Usuario } from "../usuario/Usuario.js";
 
 const baseUrl = backendConfig.baseUrl;
 
@@ -29,7 +34,14 @@ export async function obterDadosPerfil(idToken) {
     const message = payload?.error || payload?.message || "Erro ao carregar dados.";
     throw new Error(message);
   }
-  return payload;
+  return {
+    ...payload,
+    usuario: payload?.usuario ? Usuario.fromApi(payload.usuario) : null,
+    telefone: payload?.telefone ? Telefone.fromApi(payload.telefone) : null,
+    endereco: payload?.endereco
+      ? Endereco.fromApi({ ...payload.endereco, tipo: "Principal" })
+      : null
+  };
 }
 
 export async function atualizarDadosPerfil(idToken, payload) {
@@ -73,7 +85,10 @@ export async function obterEnderecos(idToken) {
     const message = data?.error || data?.message || "Erro ao carregar enderecos.";
     throw new Error(message);
   }
-  return data;
+  return {
+    ...data,
+    enderecos: (data?.enderecos || []).map((endereco) => Endereco.fromApi(endereco))
+  };
 }
 
 export async function criarEndereco(idToken, payload) {
@@ -156,7 +171,10 @@ export async function obterCartoes(idToken) {
     const message = data?.error || data?.message || "Erro ao carregar cartoes.";
     throw new Error(message);
   }
-  return data;
+  return {
+    ...data,
+    cartoes: (data?.cartoes || []).map((cartao) => CartaoCredito.fromApi(cartao))
+  };
 }
 
 export async function criarCartao(idToken, payload) {
@@ -222,7 +240,10 @@ export async function obterPedidos(idToken) {
     const message = data?.error || data?.message || "Erro ao carregar pedidos.";
     throw new Error(message);
   }
-  return data;
+  return {
+    ...data,
+    pedidos: (data?.pedidos || []).map((pedido) => Pedido.fromApi(pedido))
+  };
 }
 
 export async function obterPedidoDetalhe(idToken, pedidoId) {
@@ -237,7 +258,10 @@ export async function obterPedidoDetalhe(idToken, pedidoId) {
     const message = data?.error || data?.message || "Erro ao carregar detalhes do pedido.";
     throw new Error(message);
   }
-  return data;
+  return {
+    ...data,
+    pedido: data?.pedido ? Pedido.fromApi(data.pedido) : null
+  };
 }
 
 export async function readicionarPedidoCarrinho(idToken, pedidoId) {

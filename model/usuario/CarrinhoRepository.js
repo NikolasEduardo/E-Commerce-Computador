@@ -1,4 +1,5 @@
 import { backendConfig } from "../firebaseApp.js";
+import { Pedido } from "../pedido/Pedido.js";
 
 const baseUrl = backendConfig.baseUrl;
 
@@ -16,7 +17,8 @@ export async function obterCarrinho(idToken) {
     method: "GET",
     headers: { Authorization: `Bearer ${idToken}` }
   });
-  return handleResponse(response, "Erro ao carregar carrinho.");
+  const payload = await handleResponse(response, "Erro ao carregar carrinho.");
+  return Pedido.fromCarrinhoApi(payload);
 }
 
 export async function obterStatusCarrinho(idToken) {

@@ -1,8 +1,10 @@
+import { Usuario } from "../usuario/Usuario.js";
 import { adminRequest } from "./AdminRequest.js";
 
-export async function listarClientes(params) {
-  const query = new URLSearchParams(params);
-  const response = await adminRequest(`/api/admin/clientes?${query.toString()}`, {
+let clientesCache = null;
+
+async function fetchClientes() {
+  const response = await adminRequest("/api/admin/clientes", {
     method: "GET"
   });
   const payload = await response.json().catch(() => ({}));
@@ -10,7 +12,45 @@ export async function listarClientes(params) {
     const message = payload?.error || payload?.message || "Erro ao buscar clientes.";
     throw new Error(message);
   }
-  return payload?.clientes || [];
+
+  clientesCache = (payload?.clientes || []).map((item) => Usuario.fromApi(item));
+  return clientesCache;
+}
+
+async function getClientesCache() {
+  if (clientesCache) {
+    return clientesCache;
+  }
+  return fetchClientes();
+}
+
+function ordenarClientes(clientes, sortField, sortOrder) {
+  if (!sortField || !sortOrder) {
+    return clientes;
+  }
+
+  return [...clientes].sort((a, b) => a.compareWith(b, sortField, sortOrder));
+}
+
+export async function listarClientes(params = {}) {
+  const clientes = await getClientesCache();
+  const status = `${params.status || ""}`
+    .split(",")
+    .map((item) => item.trim().toUpperCase())
+    .filter(Boolean);
+  const genero = `${params.genero || ""}`
+    .split(",")
+    .map((item) => item.trim().toUpperCase())
+    .filter(Boolean);
+
+  const filtrados = clientes.filter(
+    (cliente) =>
+      cliente.matchesSearch(params.q) &&
+      cliente.matchesStatus(status) &&
+      cliente.matchesGenero(genero)
+  );
+
+  return ordenarClientes(filtrados, params.sortField || "", params.sortOrder || "");
 }
 
 export async function atualizarStatusCliente(usuarioId, status) {
@@ -24,5 +64,7 @@ export async function atualizarStatusCliente(usuarioId, status) {
     const message = payload?.error || payload?.message || "Erro ao atualizar status.";
     throw new Error(message);
   }
+
+  clientesCache = null;
   return true;
 }

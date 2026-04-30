@@ -75,6 +75,65 @@ function formatCurrency(value) {
   return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
+function getCarrinhoItens(carrinho) {
+  return carrinho?.getItens?.() || carrinho?.itens || [];
+}
+
+function getItemImagem(item) {
+  return item?.getImagemUrl?.() || item?.imagem || "";
+}
+
+function getItemNome(item) {
+  return item?.nome || item?.produto?.nome || "SEM NOME";
+}
+
+function getItemModelo(item) {
+  return item?.modelo || item?.produto?.modelo || "";
+}
+
+function getItemPrecoUnitario(item) {
+  return Number(item?.getPrecoUnitario?.() ?? item?.precoUnitario ?? item?.precoAtual ?? 0);
+}
+
+function getItemPrecoTotal(item) {
+  return Number(item?.getPrecoTotal?.() ?? item?.precoTotal ?? getItemPrecoUnitario(item) * Number(item?.quantidade || 0));
+}
+
+function isEnderecoPrincipal(endereco) {
+  return endereco?.isPrincipal?.() || endereco?.tipo === "Principal";
+}
+
+function getEnderecoResumo(endereco) {
+  return endereco?.getResumoSelect?.() || `${isEnderecoPrincipal(endereco) ? "Residencial" : "Endereco"}: ${endereco?.logradouro || ""}, ${endereco?.numero || ""} - ${endereco?.bairro || ""}`;
+}
+
+function getEnderecoCidadeEstadoCep(endereco) {
+  return endereco?.getCidadeEstadoCep?.() || `${endereco?.cidade || ""}/${endereco?.estado || ""} - CEP ${endereco?.cep || ""}`;
+}
+
+function getCartaoLabel(cartao) {
+  if (!cartao) {
+    return "Cartao";
+  }
+  return cartao?.getLabel?.() || `${cartao.bandeira?.nome || "CARTAO"} - final ${`${cartao.numero || ""}`.slice(-4) || "----"}`;
+}
+
+function isCartaoPreferencial(cartao) {
+  return cartao?.isPreferencial?.() || Boolean(cartao?.preferencial);
+}
+
+function getCupomTipoNome(cupom) {
+  return cupom?.getTipoNome?.() || cupom?.tipo?.nome || "";
+}
+
+function isCupomFreteGratis(cupom) {
+  return cupom?.isFreteGratis?.() || normalizeTexto(getCupomTipoNome(cupom)) === "FRETE GRATIS";
+}
+
+function isCupomDesconto(cupom) {
+  return cupom?.isDesconto?.() || normalizeTexto(getCupomTipoNome(cupom)) === "DESCONTO";
+}
+
 function normalizeTexto(texto) {
   return `${texto || ""}`
     .normalize("NFD")
@@ -181,15 +240,6 @@ function fillSelect(select, items, labelBuilder, placeholder = "") {
   });
 }
 
-function getCartaoLabel(cartao) {
-  if (!cartao) {
-    return "Cartao";
-  }
-  const bandeira = cartao.bandeira?.nome || "CARTAO";
-  const final = `${cartao.numero || ""}`.slice(-4) || "----";
-  return `${bandeira} - final ${final}`;
-}
-
 function getCartaoById(cartaoId) {
   return cartoes.find((cartao) => cartao.id === cartaoId) || null;
 }
@@ -239,10 +289,11 @@ function renderItems() {
 
     const imageBox = document.createElement("div");
     imageBox.className = "checkout-item-image";
-    if (item.imagem) {
+    const imageUrl = getItemImagem(item);
+    if (imageUrl) {
       const img = document.createElement("img");
-      img.src = item.imagem;
-      img.alt = item.nome || "Produto";
+      img.src = imageUrl;
+      img.alt = getItemNome(item) || "Produto";
       imageBox.appendChild(img);
     } else {
       imageBox.textContent = "IMAGEM";
@@ -252,13 +303,14 @@ function renderItems() {
     details.className = "checkout-item-details";
 
     const title = document.createElement("strong");
-    title.textContent = item.nome || "SEM NOME";
+    title.textContent = getItemNome(item);
     const modelo = document.createElement("span");
-    modelo.textContent = item.modelo ? `Modelo: ${item.modelo}` : "Modelo: -";
+    const modeloTexto = getItemModelo(item);
+    modelo.textContent = modeloTexto ? `Modelo: ${modeloTexto}` : "Modelo: -";
     const precoUnit = document.createElement("span");
-    precoUnit.textContent = `Preco p/unidade: ${formatCurrency(Number(item.precoUnitario || 0))}`;
+    precoUnit.textContent = `Preco p/unidade: ${formatCurrency(getItemPrecoUnitario(item))}`;
     const precoTotal = document.createElement("span");
-    precoTotal.textContent = `Preco total: ${formatCurrency(Number(item.precoTotal || 0))}`;
+    precoTotal.textContent = `Preco total: ${formatCurrency(getItemPrecoTotal(item))}`;
     const quantidade = document.createElement("span");
     quantidade.textContent = `Quantidade: ${item.quantidade ?? 0}`;
 
@@ -285,12 +337,11 @@ function renderEnderecos() {
     return;
   }
 
-  const principal = enderecos.find((item) => item.tipo === "Principal") || enderecos[0];
+  const principal = enderecos.find((item) => isEnderecoPrincipal(item)) || enderecos[0];
   enderecos.forEach((endereco) => {
     const option = document.createElement("option");
     option.value = endereco.id;
-    const tipo = endereco.tipo === "Principal" ? "Residencial" : "Endereco";
-    option.textContent = `${tipo}: ${endereco.logradouro}, ${endereco.numero} - ${endereco.bairro}`;
+    option.textContent = getEnderecoResumo(endereco);
     enderecoSelect.appendChild(option);
   });
   enderecoSelect.value = principal.id;
@@ -300,7 +351,7 @@ function renderEnderecos() {
 function updateEnderecoInfo() {
   const endereco = enderecos.find((item) => item.id === enderecoSelect.value);
   enderecoInfo.textContent = endereco
-    ? `${endereco.cidade}/${endereco.estado} - CEP ${endereco.cep}`
+    ? getEnderecoCidadeEstadoCep(endereco)
     : "";
 }
 
@@ -333,7 +384,7 @@ function renderCartoes() {
     cartaoPrincipalSelect.appendChild(option);
   });
 
-  const preferencial = cartoes.find((item) => item.preferencial) || cartoes[0];
+  const preferencial = cartoes.find((item) => isCartaoPreferencial(item)) || cartoes[0];
   const principalValido = cartoes.some((item) => item.id === valorAtual)
     ? valorAtual
     : preferencial?.id || cartoes[0]?.id || "";
@@ -440,8 +491,7 @@ function renderCupons() {
   cuponsPromo.forEach((cupom) => {
     const option = document.createElement("option");
     option.value = cupom.id;
-    const tipo = normalizeTexto(cupom.tipo?.nome || "");
-    if (tipo === "FRETE GRATIS") {
+    if (isCupomFreteGratis(cupom)) {
       option.textContent = `${cupom.codigo} (Frete gratis acima de ${formatCurrency(cupom.valor)})`;
     } else {
       option.textContent = `${cupom.codigo} (${formatCurrency(cupom.valor)})`;
@@ -499,7 +549,7 @@ function obterCupomPromoSelecionado() {
 function calcularTotais() {
   const totalProdutos = carrinhoItens
     .filter((item) => Number(item.quantidade || 0) > 0)
-    .reduce((acc, item) => acc + Number(item.precoTotal || 0), 0);
+    .reduce((acc, item) => acc + getItemPrecoTotal(item), 0);
 
   const endereco = enderecos.find((item) => item.id === enderecoSelect.value);
   const frete = endereco ? calcularFrete(endereco.cep) : 0;
@@ -509,10 +559,9 @@ function calcularTotais() {
   let promoMsg = "";
   const promo = obterCupomPromoSelecionado();
   if (promo) {
-    const tipo = normalizeTexto(promo.tipo?.nome || "");
-    if (tipo === "DESCONTO") {
+    if (isCupomDesconto(promo)) {
       promoValor = Number(promo.valor || 0);
-    } else if (tipo === "FRETE GRATIS") {
+    } else if (isCupomFreteGratis(promo)) {
       if (totalProdutos >= Number(promo.valor || 0)) {
         promoValor = frete;
       } else {
@@ -984,7 +1033,7 @@ function carregarCuponsAsync() {
 
 async function carregarDados() {
   const carrinho = await carregarCarrinho();
-  carrinhoItens = carrinho?.itens || [];
+  carrinhoItens = getCarrinhoItens(carrinho);
   renderItems();
 
   await carregarEnderecosAsync();

@@ -450,7 +450,7 @@ function renderClientes(clientes) {
       <strong>${cliente.nome || "SEM NOME"}</strong>
       <span>CPF: ${cliente.cpf || "-"}</span>
       <span>Email: ${cliente.email || "-"}</span>
-      <span>Status: ${cliente.status?.nome || "-"}</span>
+      <span>Status: ${cliente.getStatusNome?.() || cliente.status?.nome || "-"}</span>
       <span>Genero: ${cliente.genero || "-"}</span>
       <span>Ranking: ${cliente.ranking ?? "-"}</span>
       <span>Nascimento: ${cliente.dataNascimento || "-"}</span>
@@ -458,7 +458,7 @@ function renderClientes(clientes) {
 
     const actions = document.createElement("div");
     actions.className = "cliente-actions";
-    const isInativo = cliente.status?.nome === "INATIVO";
+    const isInativo = (cliente.getStatusNome?.() || cliente.status?.nome) === "INATIVO";
     const actionLabel = isInativo ? "ATIVAR" : "INATIVAR";
     actions.innerHTML = `
       <button type="button">TRANSACOES</button>
@@ -506,7 +506,7 @@ function formatNomeCliente(nomeCompleto) {
 }
 
 function obterCupomPromocional(pedido) {
-  return pedido?.pagamentos_on_pedido?.[0]?.cupomPromocional || null;
+  return pedido?.getCupomPromocional?.() || null;
 }
 
 function calcularDescontoCupom(pedido) {
@@ -514,10 +514,10 @@ function calcularDescontoCupom(pedido) {
   if (!cupom) {
     return { desconto: 0, freteGratis: false };
   }
-  const tipo = normalizeTexto(cupom?.tipo?.nome);
-  if (tipo === "DESCONTO") {
+  if (cupom?.isDesconto?.()) {
     return { desconto: Number(cupom.valor || 0), freteGratis: false };
   }
+  const tipo = normalizeTexto(cupom?.getTipoNome?.() || cupom?.tipo?.nome);
   if (tipo === "FRETE GRATIS" || tipo === "FRETE GRÁTIS") {
     return { desconto: 0, freteGratis: true };
   }
@@ -559,10 +559,7 @@ function renderPedidos(pedidos) {
     const valores = document.createElement("div");
     valores.className = "pedido-valores";
 
-    const quantidade = (pedido?.itemPedidos_on_pedido || []).reduce(
-      (acc, item) => acc + Number(item.quantidade || 0),
-      0
-    );
+    const quantidade = pedido.getQuantidadeTotalItens?.() ?? 0;
 
     const cupom = obterCupomPromocional(pedido);
     const { desconto, freteGratis } = calcularDescontoCupom(pedido);
@@ -582,7 +579,7 @@ function renderPedidos(pedidos) {
       ? "<span>Frete: Grátis</span>"
       : `<span>Frete: ${formatMoney(Number(pedido.valorFrete || 0))}</span>`;
     valores.innerHTML += `<span>Quantidade: ${quantidade}x</span>`;
-    valores.innerHTML += `<span>Status: ${pedido?.status?.nome || "-"}</span>`;
+    valores.innerHTML += `<span>Status: ${pedido?.getStatusNome?.() || "-"}</span>`;
 
     info.appendChild(title);
     info.appendChild(valores);
@@ -590,7 +587,7 @@ function renderPedidos(pedidos) {
     const actions = document.createElement("div");
     actions.className = "pedido-actions";
 
-    const status = normalizeTexto(pedido?.status?.nome);
+    const status = normalizeTexto(pedido?.getStatusNome?.());
     if (status === "APROVADA") {
       const btn = document.createElement("button");
       btn.textContent = "ENTREGAR PRODUTO";
@@ -663,12 +660,12 @@ function renderPedidoDetalhe(pedido) {
   if (!pedido) {
     return;
   }
-  const status = pedido?.status?.nome || "-";
+  const status = pedido?.getStatusNome?.() || "-";
   const cliente = pedido?.usuario?.nome || "SEM NOME";
   pedidoDetalheTitle.textContent = `${cliente} - ${status}`;
 
-  const cupomPromo = pedido?.pagamentos_on_pedido?.[0]?.cupomPromocional || null;
-  const cupomTipo = normalizeTexto(cupomPromo?.tipo?.nome);
+  const cupomPromo = pedido?.getCupomPromocional?.() || null;
+  const cupomTipo = normalizeTexto(cupomPromo?.getTipoNome?.() || cupomPromo?.tipo?.nome);
   const freteGratis = cupomTipo === "FRETE GRATIS" || cupomTipo === "FRETE GRÁTIS";
 
   pedidoDetalheMeta.innerHTML = `
@@ -682,27 +679,27 @@ function renderPedidoDetalhe(pedido) {
   }
 
   pedidoItensList.innerHTML = "";
-  (pedido?.itemPedidos_on_pedido || []).forEach((item) => {
+  (pedido?.getItens?.() || []).forEach((item) => {
     const card = document.createElement("div");
     card.className = "pedido-item";
     const imgWrap = document.createElement("div");
     imgWrap.className = "pedido-item-image";
-    const imgUrl = item?.produto?.imagemProdutos_on_produto?.[0]?.url;
+    const imgUrl = item?.getImagemUrl?.() || "";
     if (imgUrl) {
       const img = document.createElement("img");
       img.src = imgUrl;
-      img.alt = item?.produto?.nome || "Produto";
+      img.alt = item?.nome || item?.produto?.nome || "Produto";
       imgWrap.appendChild(img);
     } else {
       imgWrap.textContent = "IMG";
     }
 
-    const precoAtual = Number(item?.precoAtual);
+    const precoAtual = Number(item?.getPrecoAtual?.() ?? item?.precoAtual);
     const precoTexto = Number.isFinite(precoAtual) ? formatMoney(precoAtual) : "-";
     const info = document.createElement("div");
     info.innerHTML = `
-      <strong>${item?.produto?.nome || "SEM NOME"}</strong>
-      <span>Modelo: ${item?.produto?.modelo || "-"}</span>
+      <strong>${item?.nome || item?.produto?.nome || "SEM NOME"}</strong>
+      <span>Modelo: ${item?.modelo || item?.produto?.modelo || "-"}</span>
       <span>Quantidade: ${item.quantidade}x</span>
       <span>Preco na compra: ${precoTexto}</span>
     `;
@@ -711,9 +708,9 @@ function renderPedidoDetalhe(pedido) {
     pedidoItensList.appendChild(card);
   });
 
-  const pagamento = pedido?.pagamentos_on_pedido?.[0] || null;
-  const cartoes = pagamento?.pagamentoCartaos_on_pagamento || [];
-  const cuponsTroca = pagamento?.pagamentoCupomTrocas_on_pagamento || [];
+  const pagamento = pedido?.getPagamentoPrincipal?.() || null;
+  const cartoes = pagamento?.getCartoes?.() || [];
+  const cuponsTroca = pagamento?.getCuponsTroca?.() || [];
 
   const lines = [];
   if (pagamento) {
@@ -722,13 +719,13 @@ function renderPedidoDetalhe(pedido) {
   }
 
   if (cupomPromo) {
-    if (cupomTipo === "DESCONTO") {
+    if (cupomPromo?.isDesconto?.()) {
       lines.push(
         `<div>Cupom promocional: ${cupomPromo.codigo} (${formatMoney(
           Number(cupomPromo.valor || 0)
         )})</div>`
       );
-    } else if (freteGratis) {
+    } else if (cupomPromo?.isFreteGratis?.() || freteGratis) {
       lines.push(`<div>Cupom promocional: Frete Gratis</div>`);
     }
   }
@@ -737,7 +734,7 @@ function renderPedidoDetalhe(pedido) {
     const lista = cuponsTroca
       .map(
         (item) =>
-          `<li>${item.cupomTroca?.codigo} - ${formatMoney(Number(item.cupomTroca?.valor || 0))}</li>`
+          `<li>${item?.getCupomTroca?.()?.codigo || "-"} - ${formatMoney(Number(item?.getCupomTroca?.()?.valor || 0))}</li>`
       )
       .join("");
     lines.push(`<div>Cupons troca/sobra:</div><ul>${lista}</ul>`);
@@ -746,9 +743,11 @@ function renderPedidoDetalhe(pedido) {
   if (cartoes.length) {
     const lista = cartoes
       .map((item) => {
-        const nome = `${item.cartaoCredito?.nomeImpresso || ""}`.trim().split(/\s+/)[0] || "-";
-        const validade = item.cartaoCredito?.dataValidade || "-";
-        return `<li>${maskCartao(item.cartaoCredito?.numero)} - ${nome} - ${validade}</li>`;
+        const cartao = item?.getCartao?.() || item?.cartaoCredito || null;
+        const nome = cartao?.getNomeTitularCurto?.() || `${cartao?.nomeImpresso || ""}`.trim().split(/\s+/)[0] || "-";
+        const validade = cartao?.getValidadeFormatada?.() || cartao?.dataValidade || "-";
+        const numero = cartao?.getNumeroMascarado?.() || maskCartao(cartao?.numero);
+        return `<li>${numero} - ${nome} - ${validade}</li>`;
       })
       .join("");
     lines.push(`<div>Cartoes utilizados:</div><ul>${lista}</ul>`);
@@ -873,7 +872,7 @@ function renderProdutos(produtos) {
 
     const imageWrap = document.createElement("div");
     imageWrap.className = "produto-image";
-    const imgUrl = produto?.imagemProdutos_on_produto?.[0]?.url;
+    const imgUrl = produto?.getImagemPrincipalUrl?.() || "";
     if (imgUrl) {
       const img = document.createElement("img");
       img.src = imgUrl;
@@ -885,18 +884,15 @@ function renderProdutos(produtos) {
 
     const info = document.createElement("div");
     info.className = "produto-info";
-    const categorias = (produto?.produtoCategorias_on_produto || [])
-      .map((item) => item?.categoria?.nome)
-      .filter(Boolean)
-      .join(", ");
+    const categorias = produto?.getCategoriasTexto?.() || "";
     info.innerHTML = `
       <strong>${produto.nome || "SEM NOME"}</strong>
-      <span>Marca: ${produto?.marca?.nome || "-"}</span>
+      <span>Marca: ${produto?.getMarcaNome?.() || "-"}</span>
       <span>Modelo: ${produto.modelo || "-"}</span>
       <span>Categoria(s): ${categorias || "-"}</span>
       <span>Estoque fisico: ${produto.estoqueFisico ?? 0}</span>
       <span>Quantidade vendida: ${produto.quantidadeVendida ?? 0}</span>
-      <span>Status: ${produto.status || "-"}</span>
+      <span>Status: ${produto?.getStatusNome?.() || "-"}</span>
     `;
 
     const actions = document.createElement("div");
@@ -906,7 +902,7 @@ function renderProdutos(produtos) {
     btnEditar.addEventListener("click", () => abrirEdicaoProduto(produto.id));
 
     const btnToggle = document.createElement("button");
-    const isInativo = produto.status === "INATIVO";
+    const isInativo = produto?.isInativo?.() || false;
     btnToggle.textContent = isInativo ? "ATIVAR" : "INATIVAR";
     btnToggle.addEventListener("click", async () => {
       const proximoStatus = isInativo ? "ATIVO" : "INATIVO";
@@ -1053,8 +1049,7 @@ async function abrirEdicaoProduto(produtoId) {
     produtoDescricaoInput.value = produto.descricaoTecnica || "";
     produtoEspecificacoesInput.value = produto.especificacoesTecnicas || "";
 
-    categoriasSelecionadas = (produto?.produtoCategorias_on_produto || [])
-      .map((item) => item?.categoria)
+    categoriasSelecionadas = (produto?.getCategorias?.() || [])
       .filter(Boolean)
       .map((categoria) => ({ id: categoria.id, nome: categoria.nome }));
     renderCategoriasSelecionadas();
@@ -1233,7 +1228,7 @@ function renderFornecedores(fornecedores) {
     const card = document.createElement("div");
     card.className = "fornecedor-card";
     card.innerHTML = `
-      <strong>${fornecedor.nome || "SEM NOME"}</strong>
+      <strong>${fornecedor.getNomeExibicao?.() || fornecedor.nome || "SEM NOME"}</strong>
       <span>Email: ${fornecedor.emailContato || "-"}</span>
       <span>Telefone: ${fornecedor.telefoneContato || "-"}</span>
     `;
@@ -1254,13 +1249,13 @@ function renderEntradas(entradas) {
   entradas.forEach((entrada) => {
     const card = document.createElement("div");
     card.className = "entrada-card";
-    const produtoNome = entrada?.produto?.nome || "PRODUTO";
-    const produtoModelo = entrada?.produto?.modelo ? ` - ${entrada.produto.modelo}` : "";
+    const produtoNome = entrada?.produto?.getNomeComModelo?.()
+      || `${entrada?.produto?.nome || "PRODUTO"}${entrada?.produto?.modelo ? ` - ${entrada.produto.modelo}` : ""}`;
     card.innerHTML = `
-      <strong>${produtoNome}${produtoModelo}</strong>
+      <strong>${produtoNome}</strong>
       <span>Quantidade: ${entrada.quantidade ?? 0}</span>
       <span>Valor unitario: ${formatCurrency(Number(entrada.valorCusto))}</span>
-      <span>Fornecedor: ${entrada?.fornecedor?.nome || "-"}</span>
+      <span>Fornecedor: ${entrada?.fornecedor?.getNomeExibicao?.() || entrada?.fornecedor?.nome || "-"}</span>
       <span>Data: ${formatDateBr(entrada.dataEntrada)}</span>
     `;
     entradasList.appendChild(card);
@@ -1272,9 +1267,8 @@ function preencherSelectProdutosEstoque(produtos) {
     entradaProdutoSelect,
     produtos,
     (item) => {
-      const modelo = item.modelo ? ` - ${item.modelo}` : "";
-      const status = item.status === "INATIVO" ? " (INATIVO)" : "";
-      return `${item.nome || "PRODUTO"}${modelo}${status}`;
+      const status = item?.isInativo?.() ? " (INATIVO)" : "";
+      return `${item?.getNomeComModelo?.() || item.nome || "PRODUTO"}${status}`;
     }
   );
 }
