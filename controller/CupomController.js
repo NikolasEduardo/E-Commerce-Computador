@@ -1,11 +1,12 @@
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
 import { auth } from "../model/firebaseApp.js";
+import { SYSTEM_MESSAGES, getErrorMessage } from "../model/SystemMessages.js";
 import { obterCupons } from "../model/usuario/CupomRepository.js";
 
 export function carregarCupons(callback) {
   onAuthStateChanged(auth, async (user) => {
     if (!user) {
-      callback(null, "Usuario nao autenticado.");
+      callback(null, SYSTEM_MESSAGES.general.unauthenticated);
       return;
     }
 
@@ -14,7 +15,7 @@ export function carregarCupons(callback) {
       const cupons = await obterCupons(idToken);
       callback(cupons, null);
     } catch (error) {
-      callback(null, error?.message || "Erro ao carregar cupons.");
+      callback(null, getErrorMessage(error, SYSTEM_MESSAGES.perfil.errors.couponsLoadFailed));
     }
   });
 }

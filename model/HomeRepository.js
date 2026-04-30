@@ -1,5 +1,6 @@
 import { backendConfig } from "./firebaseApp.js";
 import { Produto } from "./produto/Produto.js";
+import { SYSTEM_MESSAGES } from "./SystemMessages.js";
 
 const baseUrl = backendConfig.baseUrl;
 
@@ -9,7 +10,7 @@ export async function listarProdutosPopulares() {
   });
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) {
-    const message = payload?.error || payload?.message || "Erro ao carregar produtos.";
+    const message = payload?.error || payload?.message || SYSTEM_MESSAGES.produto.errors.loadListFailed;
     throw new Error(message);
   }
   return (payload?.produtos || []).map((produto) => Produto.fromApi(produto));
@@ -22,7 +23,7 @@ export async function obterProdutoPublico(codigo) {
   );
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) {
-    const message = payload?.error || payload?.message || "Erro ao carregar produto.";
+    const message = payload?.error || payload?.message || SYSTEM_MESSAGES.produto.errors.loadFailed;
     throw new Error(message);
   }
   return payload?.produto ? Produto.fromApi(payload.produto) : null;

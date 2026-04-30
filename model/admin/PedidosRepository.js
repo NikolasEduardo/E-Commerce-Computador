@@ -1,4 +1,5 @@
 import { Pedido } from "../pedido/Pedido.js";
+import { SYSTEM_MESSAGES } from "../SystemMessages.js";
 import { adminRequest } from "./AdminRequest.js";
 
 let pedidosCache = null;
@@ -9,7 +10,7 @@ async function fetchPedidos() {
   });
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) {
-    const message = payload?.error || payload?.message || "Erro ao buscar pedidos.";
+    const message = payload?.error || payload?.message || SYSTEM_MESSAGES.admin.errors.loadPedidosFailed;
     throw new Error(message);
   }
 
@@ -52,7 +53,7 @@ export async function obterPedidoDetalhe(pedidoId) {
   });
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) {
-    const message = payload?.error || payload?.message || "Erro ao buscar pedido.";
+    const message = payload?.error || payload?.message || SYSTEM_MESSAGES.admin.errors.loadPedidoFailed;
     throw new Error(message);
   }
   return payload?.pedido ? Pedido.fromApi(payload.pedido) : null;
@@ -66,7 +67,7 @@ export async function atualizarStatusPedido(pedidoId, status) {
   });
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) {
-    const message = payload?.error || payload?.message || "Erro ao atualizar status.";
+    const message = payload?.error || payload?.message || SYSTEM_MESSAGES.admin.errors.updateStatusFailed;
     throw new Error(message);
   }
 

@@ -1,6 +1,7 @@
 import { carregarPerfil } from "../../controller/PerfilController.js";
 import { carregarProdutoPublico } from "../../controller/HomeController.js";
 import { adicionarAoCarrinho } from "../../controller/CarrinhoController.js";
+import { SYSTEM_MESSAGES, getErrorMessage } from "../../model/SystemMessages.js";
 import { initCartNotice, refreshCartNotice, showCartPopup } from "./cart-notice.js";
 
 const perfilButton = document.getElementById("perfil-btn");
@@ -89,7 +90,7 @@ function renderThumbs(imagens) {
 
 function renderProduto(produto) {
   if (!produto) {
-    setMessage("Produto nao encontrado.");
+    setMessage(SYSTEM_MESSAGES.produto.errors.notFound);
     return;
   }
 
@@ -118,7 +119,7 @@ async function carregarProduto() {
   const params = new URLSearchParams(window.location.search);
   const codigo = params.get("codigo");
   if (!codigo) {
-    setMessage("Codigo do produto nao informado.");
+    setMessage(SYSTEM_MESSAGES.produto.errors.codeMissing);
     return;
   }
 
@@ -126,7 +127,7 @@ async function carregarProduto() {
     const produto = await carregarProdutoPublico(codigo);
     renderProduto(produto);
   } catch (error) {
-    setMessage(error?.message || "Erro ao carregar produto.");
+    setMessage(getErrorMessage(error, SYSTEM_MESSAGES.produto.errors.loadFailed));
   }
 }
 
@@ -154,11 +155,11 @@ addCarrinhoButton.addEventListener("click", async () => {
     const resp = await adicionarAoCarrinho(codigoProdutoAtual);
     if (resp?.warning) {
       showCartPopup({
-        title: "Aviso",
+        title: SYSTEM_MESSAGES.general.warningTitle,
         message: resp.warning,
         actions: [
           {
-            label: "Fechar",
+            label: SYSTEM_MESSAGES.general.close,
             onClick: () => {
               const overlay = document.getElementById("cart-popup");
               if (overlay) overlay.classList.add("hidden");
@@ -170,11 +171,11 @@ addCarrinhoButton.addEventListener("click", async () => {
     await refreshCartNotice();
   } catch (error) {
     showCartPopup({
-      title: "Erro",
-      message: error?.message || "Erro ao adicionar ao carrinho.",
+      title: SYSTEM_MESSAGES.general.errorTitle,
+      message: getErrorMessage(error, SYSTEM_MESSAGES.carrinho.errors.addFailed),
       actions: [
         {
-          label: "Fechar",
+          label: SYSTEM_MESSAGES.general.close,
           onClick: () => {
             const overlay = document.getElementById("cart-popup");
             if (overlay) overlay.classList.add("hidden");

@@ -1,5 +1,6 @@
 import { backendConfig } from "../firebaseApp.js";
 import { Cupom } from "../cupom/Cupom.js";
+import { SYSTEM_MESSAGES } from "../SystemMessages.js";
 
 const baseUrl = backendConfig.baseUrl;
 
@@ -12,7 +13,7 @@ export async function obterCupons(idToken) {
   });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
-    const message = data?.error || data?.message || "Erro ao carregar cupons.";
+    const message = data?.error || data?.message || SYSTEM_MESSAGES.perfil.errors.couponsLoadFailed;
     throw new Error(message);
   }
   return {

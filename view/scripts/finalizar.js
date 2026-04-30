@@ -9,6 +9,7 @@ import {
 import { carregarCarrinho } from "../../controller/CarrinhoController.js";
 import { carregarCupons } from "../../controller/CupomController.js";
 import { concluirCompra } from "../../controller/CheckoutController.js";
+import { SYSTEM_MESSAGES, getErrorMessage } from "../../model/SystemMessages.js";
 import { initCartNotice, refreshCartNotice, showCartPopup } from "./cart-notice.js";
 
 const perfilButton = document.getElementById("perfil-btn");
@@ -205,11 +206,11 @@ function calcularFrete(cep) {
 
 function showWarning(message) {
   showCartPopup({
-    title: "Aviso",
+    title: SYSTEM_MESSAGES.general.warningTitle,
     message,
     actions: [
       {
-        label: "Fechar",
+        label: SYSTEM_MESSAGES.general.close,
         onClick: () => {
           const overlay = document.getElementById("cart-popup");
           if (overlay) {
@@ -278,7 +279,7 @@ function renderItems() {
   if (!ativos.length) {
     const empty = document.createElement("div");
     empty.className = "checkout-item";
-    empty.textContent = "Nenhum produto para finalizar.";
+    empty.textContent = SYSTEM_MESSAGES.checkout.empty.noItems;
     itemsList.appendChild(empty);
     return;
   }
@@ -331,9 +332,9 @@ function renderEnderecos() {
   if (!enderecos.length) {
     const option = document.createElement("option");
     option.value = "";
-    option.textContent = "Nenhum endereco cadastrado";
+    option.textContent = SYSTEM_MESSAGES.checkout.empty.noAddress;
     enderecoSelect.appendChild(option);
-    enderecoInfo.textContent = "Cadastre um endereco para prosseguir.";
+    enderecoInfo.textContent = SYSTEM_MESSAGES.checkout.errors.addressRequired;
     return;
   }
 
@@ -366,7 +367,7 @@ function renderCartoes() {
     btnCartaoExtraAdd.disabled = true;
     const option = document.createElement("option");
     option.value = "";
-    option.textContent = "Nenhum cartao cadastrado";
+    option.textContent = SYSTEM_MESSAGES.checkout.errors.noCards;
     cartaoPrincipalSelect.appendChild(option);
     cartoesExtras = [];
     renderCartoesExtras();
@@ -485,7 +486,7 @@ function renderCupons() {
   cupomPromoSelect.innerHTML = "";
   const defaultOption = document.createElement("option");
   defaultOption.value = "";
-  defaultOption.textContent = "Nenhum cupom";
+  defaultOption.textContent = SYSTEM_MESSAGES.checkout.empty.noCoupons;
   cupomPromoSelect.appendChild(defaultOption);
 
   cuponsPromo.forEach((cupom) => {
@@ -507,7 +508,7 @@ function renderCupons() {
   if (!cuponsTroca.length) {
     const empty = document.createElement("div");
     empty.className = "hint";
-    empty.textContent = "Nenhum cupom de troca disponivel.";
+    empty.textContent = SYSTEM_MESSAGES.checkout.empty.noExchangeCoupons;
     cupomTrocaList.appendChild(empty);
     return;
   }
@@ -565,7 +566,7 @@ function calcularTotais() {
       if (totalProdutos >= Number(promo.valor || 0)) {
         promoValor = frete;
       } else {
-        promoMsg = "Cupom nao aplicavel (valor minimo nao atingido).";
+        promoMsg = SYSTEM_MESSAGES.checkout.errors.couponNotApplicable;
       }
     }
   }
@@ -658,7 +659,7 @@ function normalizarCartoesExtras(restante) {
   }
 
   if (originalLength > sanitizados.length) {
-    mensagens.push("Cartoes adicionais ajustados ao valor restante.");
+    mensagens.push(SYSTEM_MESSAGES.checkout.errors.extraCardsAdjusted);
   }
 
   cartoesExtras = sanitizados;
@@ -673,7 +674,7 @@ function calcularPagamentosCartao(totais) {
     return {
       principal: 0,
       extras: [],
-      mensagem: restante > 0 ? "Nenhum cartao cadastrado." : "",
+      mensagem: restante > 0 ? SYSTEM_MESSAGES.checkout.errors.noCards : "",
       totalCartoes: 0
     };
   }
@@ -683,7 +684,7 @@ function calcularPagamentosCartao(totais) {
     return {
       principal: 0,
       extras: [],
-      mensagem: "Compra coberta pelos cupons.",
+      mensagem: SYSTEM_MESSAGES.checkout.errors.cardRemainingCovered,
       totalCartoes: 0
     };
   }
@@ -736,7 +737,7 @@ function calcularPagamentosCartao(totais) {
   let mensagem = normalizacao.mensagem;
 
   if (!cartoesExtras.length && restante < 20 && cartoes.length >= 2) {
-    mensagem = "Valor restante menor que R$ 20. Cartoes adicionais removidos.";
+    mensagem = SYSTEM_MESSAGES.checkout.errors.extraCardsRemovedByValue;
   }
 
   return {
@@ -817,28 +818,28 @@ function adicionarLinhaCartaoExtra() {
   const maxExtras = getMaxCartoesExtras(restante);
 
   if (!cartoes.length) {
-    cartaoMsg.textContent = "Cadastre um cartao para continuar.";
+    cartaoMsg.textContent = SYSTEM_MESSAGES.checkout.errors.cardRequired;
     return;
   }
 
   if (restante <= 0) {
-    cartaoMsg.textContent = "Compra coberta pelos cupons.";
+    cartaoMsg.textContent = SYSTEM_MESSAGES.checkout.errors.cardRemainingCovered;
     return;
   }
 
   if (maxExtras <= 0) {
-    cartaoMsg.textContent = "O valor restante nao permite adicionar outro cartao.";
+    cartaoMsg.textContent = SYSTEM_MESSAGES.checkout.errors.cardRemainingTooSmall;
     return;
   }
 
   if (cartoesExtras.length >= maxExtras) {
-    cartaoMsg.textContent = "Nao e possivel adicionar mais cartoes para este valor.";
+    cartaoMsg.textContent = SYSTEM_MESSAGES.checkout.errors.cardLimitByValue;
     return;
   }
 
   const disponiveis = getCartoesDisponiveisParaLinha();
   if (!disponiveis.length) {
-    cartaoMsg.textContent = "Nao ha mais cartoes disponiveis para adicionar.";
+    cartaoMsg.textContent = SYSTEM_MESSAGES.checkout.errors.noMoreCards;
     return;
   }
 
@@ -909,12 +910,12 @@ async function salvarNovoEndereco() {
     !endereco.estado ||
     !endereco.pais
   ) {
-    enderecoModalMsg.textContent = "Preencha todos os campos obrigatorios.";
+    enderecoModalMsg.textContent = SYSTEM_MESSAGES.checkout.errors.addressFieldsRequired;
     return;
   }
 
   if (!cepRegex.test(endereco.cep)) {
-    enderecoModalMsg.textContent = "CEP invalido. Use 00000-000.";
+    enderecoModalMsg.textContent = SYSTEM_MESSAGES.checkout.errors.cepInvalidShort;
     return;
   }
 
@@ -928,7 +929,7 @@ async function salvarNovoEndereco() {
     }
     atualizarResumo();
   } catch (error) {
-    enderecoModalMsg.textContent = error?.message || "Erro ao cadastrar endereco.";
+    enderecoModalMsg.textContent = getErrorMessage(error, SYSTEM_MESSAGES.checkout.errors.addressCreateFailed);
   }
 }
 
@@ -940,13 +941,13 @@ function validarCartaoModal() {
   const dataValidade = normalizeValidade(modalCartaoValidade.value);
 
   if (!bandeiraId || !numero || !nomeImpresso || !codigoSeguranca || !dataValidade) {
-    return "Preencha todos os dados do cartao.";
+    return SYSTEM_MESSAGES.checkout.errors.cardFieldsRequired;
   }
   if (!cardNumberRegex.test(numero)) {
-    return "Numero do cartao invalido. Use entre 13 e 16 digitos.";
+    return SYSTEM_MESSAGES.checkout.errors.cardNumberInvalid;
   }
   if (!cvvRegex.test(codigoSeguranca)) {
-    return "CVV invalido. Use 3 ou 4 digitos.";
+    return SYSTEM_MESSAGES.checkout.errors.cvvInvalid;
   }
   return null;
 }
@@ -980,7 +981,7 @@ async function salvarNovoCartao() {
     }
     atualizarResumo();
   } catch (error) {
-    cartaoModalMsg.textContent = error?.message || "Erro ao cadastrar cartao.";
+    cartaoModalMsg.textContent = getErrorMessage(error, SYSTEM_MESSAGES.checkout.errors.cardCreateFailed);
   }
 }
 
@@ -1062,7 +1063,7 @@ async function carregarMetadataCheckout() {
       "Selecione a bandeira"
     );
   } catch (error) {
-    showWarning(error?.message || "Erro ao carregar metadata.");
+    showWarning(getErrorMessage(error, SYSTEM_MESSAGES.checkout.errors.metadataLoadFailed));
   }
 }
 
@@ -1130,7 +1131,7 @@ btnComprar.addEventListener("click", async () => {
     await refreshCartNotice();
     window.location.href = "./perfil.html#pedidos";
   } catch (error) {
-    showWarning(error?.message || "Erro ao finalizar compra.");
+    showWarning(getErrorMessage(error, SYSTEM_MESSAGES.checkout.errors.finishFailed));
   }
 });
 
@@ -1151,10 +1152,10 @@ modalCartaoCvv.addEventListener("input", () => {
 });
 
 window.addEventListener("cart-updated", () => {
-  carregarDados().catch((error) => showWarning(error?.message || "Erro ao atualizar carrinho."));
+  carregarDados().catch((error) => showWarning(getErrorMessage(error, SYSTEM_MESSAGES.checkout.errors.updateCartFailed)));
 });
 
 carregarMetadataCheckout();
-carregarDados().catch((error) => showWarning(error?.message || "Erro ao carregar dados."));
+carregarDados().catch((error) => showWarning(getErrorMessage(error, SYSTEM_MESSAGES.checkout.errors.loadDataFailed)));
 initCartNotice();
 refreshCartNotice();

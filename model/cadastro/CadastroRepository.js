@@ -1,4 +1,5 @@
 import { backendConfig } from "../firebaseApp.js";
+import { SYSTEM_MESSAGES } from "../SystemMessages.js";
 
 const baseUrl = backendConfig.baseUrl;
 
@@ -6,7 +7,7 @@ async function requestJson(url, options) {
   const response = await fetch(url, options);
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) {
-    const message = payload?.error || payload?.message || "Erro na requisicao.";
+    const message = payload?.error || payload?.message || SYSTEM_MESSAGES.general.invalidRequest;
     throw new Error(message);
   }
   return payload;

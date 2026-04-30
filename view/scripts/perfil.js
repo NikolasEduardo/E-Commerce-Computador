@@ -19,6 +19,7 @@ import {
 import { carregarCupons } from "../../controller/CupomController.js";
 import { signOut } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
 import { auth } from "../../model/firebaseApp.js";
+import { SYSTEM_MESSAGES, getErrorMessage } from "../../model/SystemMessages.js";
 import { initCartNotice, refreshCartNotice } from "./cart-notice.js";
 
 const messageBox = document.getElementById("perfil-message");
@@ -202,7 +203,7 @@ async function carregarMetadata() {
 
     return data;
   } catch (error) {
-    setMessage(error?.message || "Erro ao carregar dados.");
+    setMessage(getErrorMessage(error, SYSTEM_MESSAGES.perfil.errors.loadDataFailed));
     return null;
   }
 }
@@ -215,7 +216,7 @@ function carregarDados() {
     }
 
     if (!dados) {
-      setMessage("Dados nao encontrados.");
+      setMessage(SYSTEM_MESSAGES.general.dataNotFound);
       return;
     }
 
@@ -383,11 +384,11 @@ function validarEnderecoForm() {
     !estado ||
     !pais
   ) {
-    return "Preencha todos os dados do endereco.";
+    return SYSTEM_MESSAGES.perfil.errors.addressFormRequired;
   }
 
   if (!cepRegex.test(cep)) {
-    return "CEP invalido. Use o formato 00000-000.";
+    return SYSTEM_MESSAGES.perfil.errors.cepInvalid;
   }
 
   return null;
@@ -411,7 +412,7 @@ function renderEnderecos(enderecos) {
   if (!enderecos.length) {
     const empty = document.createElement("div");
     empty.className = "endereco-card";
-    empty.textContent = "Nenhum endereco cadastrado.";
+    empty.textContent = SYSTEM_MESSAGES.perfil.empty.noAddresses;
     enderecosList.appendChild(empty);
     return;
   }
@@ -464,7 +465,7 @@ function renderEnderecos(enderecos) {
           await carregarEnderecosLista();
           carregarDados();
         } catch (error) {
-          setMessage(error?.message || "Erro ao definir endereco residencial.");
+          setMessage(getErrorMessage(error, SYSTEM_MESSAGES.perfil.errors.addressPrincipalFailed));
         }
       });
       actions.appendChild(btnPrincipal);
@@ -475,7 +476,7 @@ function renderEnderecos(enderecos) {
     btnExcluir.textContent = "EXCLUIR";
     btnExcluir.disabled = endereco.isPrincipal?.();
     btnExcluir.addEventListener("click", async () => {
-      const confirmacao = window.confirm("Deseja excluir este endereco?");
+      const confirmacao = window.confirm(SYSTEM_MESSAGES.perfil.confirmations.deleteAddress);
       if (!confirmacao) {
         return;
       }
@@ -483,7 +484,7 @@ function renderEnderecos(enderecos) {
         await excluirEnderecoUsuario(endereco.id);
         await carregarEnderecosLista();
       } catch (error) {
-        setMessage(error?.message || "Erro ao excluir endereco.");
+        setMessage(getErrorMessage(error, SYSTEM_MESSAGES.perfil.errors.addressDeleteFailed));
       }
     });
     actions.appendChild(btnExcluir);
@@ -544,15 +545,15 @@ function validarCartaoForm() {
   const validade = getCartaoValue("cartao-validade");
 
   if (!bandeiraId || !numero || !nome || !cvv || !validade) {
-    return "Preencha todos os dados do cartao.";
+    return SYSTEM_MESSAGES.perfil.errors.cardRequired;
   }
 
   if (!/^\d+$/.test(numero) || numero.length < 13 || numero.length > 16) {
-    return "Numero do cartao invalido. Use entre 13 e 16 digitos.";
+    return SYSTEM_MESSAGES.perfil.errors.cardNumberInvalid;
   }
 
   if (!/^\d+$/.test(cvv) || cvv.length < 3 || cvv.length > 4) {
-    return "CVV invalido. Use 3 ou 4 digitos.";
+    return SYSTEM_MESSAGES.perfil.errors.cvvInvalid;
   }
 
   return null;
@@ -661,8 +662,8 @@ function renderCuponsLista(listEl, cupons, inactive = false) {
     const empty = document.createElement("div");
     empty.className = "cupom-card";
     empty.textContent = inactive
-      ? "Nenhum cupom expirado ou usado."
-      : "Nenhum cupom ativo.";
+      ? SYSTEM_MESSAGES.perfil.empty.noInactiveCoupons
+      : SYSTEM_MESSAGES.perfil.empty.noActiveCoupons;
     listEl.appendChild(empty);
     return;
   }
@@ -773,7 +774,7 @@ function renderPedidos(pedidos) {
   if (!pedidos.length) {
     const empty = document.createElement("div");
     empty.className = "pedido-card";
-    empty.textContent = "Nenhum pedido encontrado.";
+    empty.textContent = SYSTEM_MESSAGES.perfil.empty.noOrders;
     pedidosList.appendChild(empty);
     return;
   }
@@ -815,7 +816,7 @@ function renderPedidos(pedidos) {
         renderPedidoDetalhe(data?.pedido || null);
         mostrarDetalhePedido();
       } catch (error) {
-        setMessage(error?.message || "Erro ao carregar pedido.");
+        setMessage(getErrorMessage(error, SYSTEM_MESSAGES.perfil.errors.orderLoadFailed));
       }
     });
     actions.appendChild(btnDetalhes);
@@ -829,11 +830,11 @@ function renderPedidos(pedidos) {
         btnReadicionar.textContent = "RECOLOCANDO...";
         try {
           const resultado = await readicionarPedidoAoCarrinhoUsuario(pedido.id);
-          setMessage(resultado?.message || "Itens readicionados ao carrinho.");
+          setMessage(resultado?.message || SYSTEM_MESSAGES.perfil.success.orderReadicionado);
           window.dispatchEvent(new CustomEvent("cart-updated"));
           await refreshCartNotice();
         } catch (error) {
-          setMessage(error?.message || "Erro ao readicionar itens ao carrinho.");
+          setMessage(getErrorMessage(error, SYSTEM_MESSAGES.perfil.errors.orderReadicionarFailed));
         } finally {
           btnReadicionar.disabled = false;
           btnReadicionar.textContent = "RECOLOCAR NO CARRINHO";
@@ -851,7 +852,7 @@ function renderPedidos(pedidos) {
 function renderPedidoDetalhe(pedido) {
   if (!pedido) {
     pedidoDetalheTitle.textContent = "DETALHES DO PEDIDO";
-    pedidoDetalheMeta.innerHTML = "<div>Pedido nao encontrado.</div>";
+    pedidoDetalheMeta.innerHTML = `<div>${SYSTEM_MESSAGES.perfil.errors.orderNotFound}</div>`;
     pedidoItensList.innerHTML = "";
     pedidoPagamento.innerHTML = "";
     return;
@@ -943,7 +944,7 @@ function renderPedidoDetalhe(pedido) {
 
   pedidoPagamento.innerHTML = lines.length
     ? lines.join("")
-    : "<div>Nenhuma forma de pagamento encontrada.</div>";
+    : `<div>${SYSTEM_MESSAGES.perfil.empty.noPayment}</div>`;
 }
 
 function carregarPedidosLista() {
@@ -963,7 +964,7 @@ function renderCartoes(cartoes) {
   if (!cartoes.length) {
     const empty = document.createElement("div");
     empty.className = "cartao-card";
-    empty.textContent = "Nenhum cartao cadastrado.";
+    empty.textContent = SYSTEM_MESSAGES.perfil.empty.noCards;
     cartoesList.appendChild(empty);
     return;
   }
@@ -1010,7 +1011,7 @@ function renderCartoes(cartoes) {
           await definirCartaoPreferencialUsuario(cartao.id);
           await carregarCartoesLista();
         } catch (error) {
-          setMessage(error?.message || "Erro ao definir cartao preferencial.");
+          setMessage(getErrorMessage(error, SYSTEM_MESSAGES.perfil.errors.cardPreferentialFailed));
         }
       });
       actions.appendChild(btnPreferencial);
@@ -1020,7 +1021,7 @@ function renderCartoes(cartoes) {
     btnExcluir.className = "btn small";
     btnExcluir.textContent = "EXCLUIR";
     btnExcluir.addEventListener("click", async () => {
-      const confirmacao = window.confirm("Deseja excluir este cartao?");
+      const confirmacao = window.confirm(SYSTEM_MESSAGES.perfil.confirmations.deleteCard);
       if (!confirmacao) {
         return;
       }
@@ -1028,7 +1029,7 @@ function renderCartoes(cartoes) {
         await inativarCartaoUsuario(cartao.id);
         await carregarCartoesLista();
       } catch (error) {
-        setMessage(error?.message || "Erro ao excluir cartao.");
+        setMessage(getErrorMessage(error, SYSTEM_MESSAGES.perfil.errors.cardDeleteFailed));
       }
     });
     actions.appendChild(btnExcluir);
@@ -1080,15 +1081,15 @@ function validarFormulario() {
   const pais = getValue("pais");
 
   if (!nome || !cpf || !email || !dataNascimento || !genero) {
-    return "Preencha os dados cadastrais.";
+    return SYSTEM_MESSAGES.perfil.errors.profileRequired;
   }
 
   if (!cpfRegex.test(cpf)) {
-    return "CPF invalido. Use o formato 000.000.000-00.";
+    return SYSTEM_MESSAGES.perfil.errors.cpfInvalid;
   }
 
   if (!telefoneTipo || !telefoneDdd || !telefoneNumero) {
-    return "Preencha os dados de telefone.";
+    return SYSTEM_MESSAGES.perfil.errors.phoneRequired;
   }
 
   if (
@@ -1102,11 +1103,11 @@ function validarFormulario() {
     !estado ||
     !pais
   ) {
-    return "Preencha todos os dados de endereco.";
+    return SYSTEM_MESSAGES.perfil.errors.addressRequired;
   }
 
   if (!cepRegex.test(cep)) {
-    return "CEP invalido. Use o formato 00000-000.";
+    return SYSTEM_MESSAGES.perfil.errors.cepInvalid;
   }
 
   return null;
@@ -1202,12 +1203,12 @@ editButton.addEventListener("click", async () => {
 
   try {
     await salvar();
-    setMessage("Dados atualizados com sucesso.");
+    setMessage(SYSTEM_MESSAGES.perfil.success.updated);
     isEditing = false;
     setEditable(false);
     editButton.textContent = "EDITAR DADOS";
   } catch (err) {
-    setMessage(err?.message || "Erro ao atualizar dados.");
+    setMessage(getErrorMessage(err, SYSTEM_MESSAGES.perfil.errors.updateFailed));
     editButton.textContent = "SALVAR";
   } finally {
     editButton.disabled = false;
@@ -1313,7 +1314,7 @@ btnSaveEndereco.addEventListener("click", async () => {
     await carregarEnderecosLista();
     carregarDados();
   } catch (err) {
-    setMessage(err?.message || "Erro ao salvar endereco.");
+    setMessage(getErrorMessage(err, SYSTEM_MESSAGES.perfil.errors.addressSaveFailed));
   } finally {
     btnSaveEndereco.disabled = false;
     btnSaveEndereco.textContent = "SALVAR";
@@ -1355,7 +1356,7 @@ btnSaveCartao.addEventListener("click", async () => {
     carregarCartoesLista();
     carregarCuponsLista();
   } catch (err) {
-    setMessage(err?.message || "Erro ao cadastrar cartao.");
+    setMessage(getErrorMessage(err, SYSTEM_MESSAGES.perfil.errors.cardCreateFailed));
   } finally {
     btnSaveCartao.disabled = false;
     btnSaveCartao.textContent = "SALVAR";

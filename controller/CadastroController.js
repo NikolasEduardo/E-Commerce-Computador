@@ -1,6 +1,7 @@
 import { createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
 import { auth } from "../model/firebaseApp.js";
 import { beginGlobalLoading, endGlobalLoading } from "../model/loadingOverlay.js";
+import { SYSTEM_MESSAGES, systemError } from "../model/SystemMessages.js";
 import {
   carregarMetadata,
   validarUnicidade,
@@ -39,6 +40,8 @@ export async function registrarNovoUsuario(payload) {
       }
       throw error;
     }
+  } catch (error) {
+    throw systemError(error, SYSTEM_MESSAGES.cadastro.errors.registerFailed);
   } finally {
     endGlobalLoading();
   }

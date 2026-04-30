@@ -1,4 +1,5 @@
 import { Produto } from "../produto/Produto.js";
+import { SYSTEM_MESSAGES } from "../SystemMessages.js";
 import { adminRequest } from "./AdminRequest.js";
 
 let produtosCache = null;
@@ -9,7 +10,7 @@ async function fetchProdutos() {
   });
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) {
-    const message = payload?.error || payload?.message || "Erro ao buscar produtos.";
+    const message = payload?.error || payload?.message || SYSTEM_MESSAGES.admin.errors.loadProdutosFailed;
     throw new Error(message);
   }
 
@@ -52,7 +53,7 @@ export async function obterMetadataProdutos() {
   });
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) {
-    const message = payload?.error || payload?.message || "Erro ao buscar metadata.";
+    const message = payload?.error || payload?.message || SYSTEM_MESSAGES.produto.errors.metadataLoadFailed;
     throw new Error(message);
   }
   return payload;
@@ -64,7 +65,7 @@ export async function obterProduto(id) {
   });
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) {
-    const message = payload?.error || payload?.message || "Erro ao buscar produto.";
+    const message = payload?.error || payload?.message || SYSTEM_MESSAGES.admin.errors.loadProdutoFailed;
     throw new Error(message);
   }
   return payload?.produto ? Produto.fromApi(payload.produto) : null;
@@ -78,7 +79,7 @@ export async function criarProduto(payload) {
   });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
-    const message = data?.error || data?.message || "Erro ao criar produto.";
+    const message = data?.error || data?.message || SYSTEM_MESSAGES.produto.errors.createFailed;
     throw new Error(message);
   }
 
@@ -94,7 +95,7 @@ export async function editarProduto(payload) {
   });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
-    const message = data?.error || data?.message || "Erro ao editar produto.";
+    const message = data?.error || data?.message || SYSTEM_MESSAGES.produto.errors.editFailed;
     throw new Error(message);
   }
 
@@ -110,7 +111,7 @@ export async function atualizarStatusProduto(payload) {
   });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
-    const message = data?.error || data?.message || "Erro ao atualizar status.";
+    const message = data?.error || data?.message || SYSTEM_MESSAGES.produto.errors.statusUpdateFailed;
     throw new Error(message);
   }
 

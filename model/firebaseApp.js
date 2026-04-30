@@ -4,6 +4,7 @@ import {
   initGlobalLoadingOverlay,
   loadingOverlayConfig
 } from "./loadingOverlay.js";
+import { SYSTEM_MESSAGES } from "./SystemMessages.js";
 
 const backendHost =
   typeof window !== "undefined" && window.location && window.location.hostname
@@ -36,14 +37,12 @@ async function loadPublicConfig() {
   const payload = await response.json().catch(() => ({}));
 
   if (!response.ok) {
-    throw new Error(payload?.error || "Nao foi possivel carregar a configuracao publica.");
+    throw new Error(payload?.error || SYSTEM_MESSAGES.general.publicConfigLoadError);
   }
 
   const firebase = payload?.firebase || {};
   if (!firebase.apiKey || !firebase.projectId) {
-    throw new Error(
-      "Configuracao publica do Firebase incompleta. Verifique o arquivo server/.env."
-    );
+    throw new Error(SYSTEM_MESSAGES.general.publicConfigIncomplete);
   }
 
   return {

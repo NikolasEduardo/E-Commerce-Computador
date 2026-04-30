@@ -3,6 +3,7 @@ import { CartaoCredito } from "../cliente/CartaoCredito.js";
 import { Endereco } from "../cliente/Endereco.js";
 import { Telefone } from "../cliente/Telefone.js";
 import { Pedido } from "../pedido/Pedido.js";
+import { SYSTEM_MESSAGES } from "../SystemMessages.js";
 import { Usuario } from "../usuario/Usuario.js";
 
 const baseUrl = backendConfig.baseUrl;
@@ -16,7 +17,7 @@ export async function obterPerfil(idToken) {
   });
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) {
-    const message = payload?.error || payload?.message || "Erro ao carregar perfil.";
+    const message = payload?.error || payload?.message || SYSTEM_MESSAGES.perfil.errors.loadFailed;
     throw new Error(message);
   }
   return payload;
@@ -31,7 +32,7 @@ export async function obterDadosPerfil(idToken) {
   });
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) {
-    const message = payload?.error || payload?.message || "Erro ao carregar dados.";
+    const message = payload?.error || payload?.message || SYSTEM_MESSAGES.perfil.errors.loadDataFailed;
     throw new Error(message);
   }
   return {
@@ -55,7 +56,7 @@ export async function atualizarDadosPerfil(idToken, payload) {
   });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
-    const message = data?.error || data?.message || "Erro ao salvar dados.";
+    const message = data?.error || data?.message || SYSTEM_MESSAGES.perfil.errors.updateFailed;
     throw new Error(message);
   }
   return data;
@@ -67,7 +68,7 @@ export async function obterMetadataCadastro() {
   });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
-    const message = data?.error || data?.message || "Erro ao carregar metadata.";
+    const message = data?.error || data?.message || SYSTEM_MESSAGES.produto.errors.metadataLoadFailed;
     throw new Error(message);
   }
   return data;
@@ -82,7 +83,7 @@ export async function obterEnderecos(idToken) {
   });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
-    const message = data?.error || data?.message || "Erro ao carregar enderecos.";
+    const message = data?.error || data?.message || SYSTEM_MESSAGES.perfil.errors.addressLoadFailed;
     throw new Error(message);
   }
   return {
@@ -102,7 +103,7 @@ export async function criarEndereco(idToken, payload) {
   });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
-    const message = data?.error || data?.message || "Erro ao criar endereco.";
+    const message = data?.error || data?.message || SYSTEM_MESSAGES.perfil.errors.addressCreateFailed;
     throw new Error(message);
   }
   return data;
@@ -119,7 +120,7 @@ export async function atualizarEndereco(idToken, payload) {
   });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
-    const message = data?.error || data?.message || "Erro ao atualizar endereco.";
+    const message = data?.error || data?.message || SYSTEM_MESSAGES.perfil.errors.addressUpdateFailed;
     throw new Error(message);
   }
   return data;
@@ -136,7 +137,7 @@ export async function excluirEndereco(idToken, enderecoId) {
   });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
-    const message = data?.error || data?.message || "Erro ao excluir endereco.";
+    const message = data?.error || data?.message || SYSTEM_MESSAGES.perfil.errors.addressDeleteFailed;
     throw new Error(message);
   }
   return data;
@@ -153,7 +154,7 @@ export async function definirEnderecoPrincipal(idToken, enderecoId) {
   });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
-    const message = data?.error || data?.message || "Erro ao definir endereco residencial.";
+    const message = data?.error || data?.message || SYSTEM_MESSAGES.perfil.errors.addressPrincipalFailed;
     throw new Error(message);
   }
   return data;
@@ -168,7 +169,7 @@ export async function obterCartoes(idToken) {
   });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
-    const message = data?.error || data?.message || "Erro ao carregar cartoes.";
+    const message = data?.error || data?.message || SYSTEM_MESSAGES.perfil.errors.cardLoadFailed;
     throw new Error(message);
   }
   return {
@@ -188,7 +189,7 @@ export async function criarCartao(idToken, payload) {
   });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
-    const message = data?.error || data?.message || "Erro ao cadastrar cartao.";
+    const message = data?.error || data?.message || SYSTEM_MESSAGES.perfil.errors.cardCreateFailed;
     throw new Error(message);
   }
   return data;
@@ -205,7 +206,7 @@ export async function inativarCartao(idToken, cartaoId) {
   });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
-    const message = data?.error || data?.message || "Erro ao excluir cartao.";
+    const message = data?.error || data?.message || SYSTEM_MESSAGES.perfil.errors.cardDeleteFailed;
     throw new Error(message);
   }
   return data;
@@ -222,7 +223,7 @@ export async function definirCartaoPreferencial(idToken, cartaoId) {
   });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
-    const message = data?.error || data?.message || "Erro ao definir cartao preferencial.";
+    const message = data?.error || data?.message || SYSTEM_MESSAGES.perfil.errors.cardPreferentialFailed;
     throw new Error(message);
   }
   return data;
@@ -237,7 +238,7 @@ export async function obterPedidos(idToken) {
   });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
-    const message = data?.error || data?.message || "Erro ao carregar pedidos.";
+    const message = data?.error || data?.message || SYSTEM_MESSAGES.perfil.errors.ordersLoadFailed;
     throw new Error(message);
   }
   return {
@@ -255,7 +256,7 @@ export async function obterPedidoDetalhe(idToken, pedidoId) {
   });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
-    const message = data?.error || data?.message || "Erro ao carregar detalhes do pedido.";
+    const message = data?.error || data?.message || SYSTEM_MESSAGES.perfil.errors.orderDetailLoadFailed;
     throw new Error(message);
   }
   return {
@@ -275,7 +276,7 @@ export async function readicionarPedidoCarrinho(idToken, pedidoId) {
   });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
-    const message = data?.error || data?.message || "Erro ao readicionar pedido ao carrinho.";
+    const message = data?.error || data?.message || SYSTEM_MESSAGES.perfil.errors.orderReadicionarFailed;
     throw new Error(message);
   }
   return data;

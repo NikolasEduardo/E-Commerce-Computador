@@ -1,4 +1,5 @@
 import { Usuario } from "../usuario/Usuario.js";
+import { SYSTEM_MESSAGES } from "../SystemMessages.js";
 import { adminRequest } from "./AdminRequest.js";
 
 let clientesCache = null;
@@ -9,7 +10,7 @@ async function fetchClientes() {
   });
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) {
-    const message = payload?.error || payload?.message || "Erro ao buscar clientes.";
+    const message = payload?.error || payload?.message || SYSTEM_MESSAGES.admin.errors.loadClientesFailed;
     throw new Error(message);
   }
 
@@ -61,7 +62,7 @@ export async function atualizarStatusCliente(usuarioId, status) {
   });
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) {
-    const message = payload?.error || payload?.message || "Erro ao atualizar status.";
+    const message = payload?.error || payload?.message || SYSTEM_MESSAGES.admin.errors.updateStatusFailed;
     throw new Error(message);
   }
 

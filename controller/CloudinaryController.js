@@ -1,4 +1,5 @@
 import { auth } from "../model/firebaseApp.js";
+import { SYSTEM_MESSAGES } from "../model/SystemMessages.js";
 import {
   obterCloudinaryConfig,
   obterAssinaturaCloudinary,
@@ -8,7 +9,7 @@ import {
 export async function prepararUploadCloudinary(params = {}) {
   const user = auth.currentUser;
   if (!user) {
-    throw new Error("Usuario nao autenticado.");
+    throw new Error(SYSTEM_MESSAGES.general.unauthenticated);
   }
   const idToken = await user.getIdToken(true);
   const assinatura = await obterAssinaturaCloudinary(idToken, params);
@@ -17,7 +18,7 @@ export async function prepararUploadCloudinary(params = {}) {
 
 export async function uploadImagemCloudinary(file, params = {}) {
   if (!file) {
-    throw new Error("Arquivo invalido.");
+    throw new Error(SYSTEM_MESSAGES.admin.errors.invalidFile);
   }
   const assinatura = await prepararUploadCloudinary(params);
   return enviarImagemCloudinary(file, assinatura, params);
@@ -26,7 +27,7 @@ export async function uploadImagemCloudinary(file, params = {}) {
 export async function carregarConfigCloudinary() {
   const user = auth.currentUser;
   if (!user) {
-    throw new Error("Usuario nao autenticado.");
+    throw new Error(SYSTEM_MESSAGES.general.unauthenticated);
   }
   const idToken = await user.getIdToken(true);
   return obterCloudinaryConfig(idToken);

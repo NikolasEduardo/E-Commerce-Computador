@@ -25,6 +25,7 @@ import {
   carregarProdutosEstoque
 } from "../../controller/AdminEstoqueController.js";
 import { uploadImagemCloudinary } from "../../controller/CloudinaryController.js";
+import { SYSTEM_MESSAGES, getErrorMessage } from "../../model/SystemMessages.js";
 
 const searchInput = document.getElementById("searchInput");
 const clientesList = document.getElementById("clientesList");
@@ -218,7 +219,7 @@ async function inicializarAcessoAdmin() {
     if (!acesso.autorizado) {
       showAccessOverlay(
         "ACESSO NEGADO",
-        "Voce nao deveria acessar esta pagina.",
+        SYSTEM_MESSAGES.auth.errors.adminDenied,
         "IR PARA O INICIO",
         () => {
           window.location.href = "../pages/home.html";
@@ -233,7 +234,7 @@ async function inicializarAcessoAdmin() {
   } catch (error) {
     showAccessOverlay(
       "ACESSO BLOQUEADO",
-      error?.message || "Nao foi possivel validar o acesso administrativo.",
+      getErrorMessage(error, SYSTEM_MESSAGES.auth.errors.adminValidationFailed),
       "IR PARA LOGIN",
       () => {
         window.location.href = "../index.html";
@@ -435,7 +436,7 @@ function renderClientes(clientes) {
   if (!clientes.length) {
     const empty = document.createElement("div");
     empty.className = "empty-state";
-    empty.textContent = "Nenhum cliente encontrado.";
+    empty.textContent = SYSTEM_MESSAGES.admin.empty.noClientes;
     clientesList.appendChild(empty);
     return;
   }
@@ -477,7 +478,7 @@ function renderClientes(clientes) {
         await atualizarStatus(cliente.id, nextStatus);
         await carregarClientes();
       } catch (error) {
-        clientesList.innerHTML = `<div class="empty-state">${error.message}</div>`;
+        clientesList.innerHTML = `<div class="empty-state">${getErrorMessage(error, SYSTEM_MESSAGES.admin.errors.updateStatusFailed)}</div>`;
       } finally {
         toggleButton.disabled = false;
       }
@@ -530,7 +531,7 @@ async function abrirPedidoDetalhe(pedidoId) {
     renderPedidoDetalhe(pedido);
     setAdminSection("pedido-detalhe");
   } catch (error) {
-    pedidosList.innerHTML = `<div class="empty-state">${error.message}</div>`;
+    pedidosList.innerHTML = `<div class="empty-state">${getErrorMessage(error, SYSTEM_MESSAGES.admin.errors.loadPedidoFailed)}</div>`;
   }
 }
 
@@ -539,7 +540,7 @@ function renderPedidos(pedidos) {
   if (!pedidos.length) {
     const empty = document.createElement("div");
     empty.className = "empty-state";
-    empty.textContent = "Nenhum pedido encontrado.";
+    empty.textContent = SYSTEM_MESSAGES.admin.empty.noPedidos;
     pedidosList.appendChild(empty);
     return;
   }
@@ -601,7 +602,7 @@ function renderPedidos(pedidos) {
           await atualizarStatusPedidoAdmin(pedido.id, "EM TRANSPORTE");
           await carregarPedidos();
         } catch (error) {
-          pedidosList.innerHTML = `<div class="empty-state">${error.message}</div>`;
+          pedidosList.innerHTML = `<div class="empty-state">${getErrorMessage(error, SYSTEM_MESSAGES.admin.errors.updateStatusFailed)}</div>`;
         }
       });
       actions.appendChild(btn);
@@ -618,7 +619,7 @@ function renderPedidos(pedidos) {
           await atualizarStatusPedidoAdmin(pedido.id, "ENTREGUE");
           await carregarPedidos();
         } catch (error) {
-          pedidosList.innerHTML = `<div class="empty-state">${error.message}</div>`;
+          pedidosList.innerHTML = `<div class="empty-state">${getErrorMessage(error, SYSTEM_MESSAGES.admin.errors.updateStatusFailed)}</div>`;
         }
       });
       actions.appendChild(btn);
@@ -754,7 +755,7 @@ function renderPedidoDetalhe(pedido) {
   }
 
   if (!lines.length) {
-    pedidoPagamento.innerHTML = "<div>Nenhum pagamento encontrado.</div>";
+    pedidoPagamento.innerHTML = `<div>${SYSTEM_MESSAGES.admin.empty.noPayment}</div>`;
   } else {
     pedidoPagamento.innerHTML = lines.join("");
   }
@@ -861,7 +862,7 @@ function renderProdutos(produtos) {
   if (!produtos.length) {
     const empty = document.createElement("div");
     empty.className = "empty-state";
-    empty.textContent = "Nenhum produto encontrado.";
+    empty.textContent = SYSTEM_MESSAGES.admin.empty.noProdutos;
     produtosList.appendChild(empty);
     return;
   }
@@ -920,7 +921,7 @@ function renderProdutos(produtos) {
         });
         await carregarProdutos();
       } catch (error) {
-        produtosList.innerHTML = `<div class="empty-state">${error.message}</div>`;
+        produtosList.innerHTML = `<div class="empty-state">${getErrorMessage(error, SYSTEM_MESSAGES.produto.errors.statusUpdateFailed)}</div>`;
       } finally {
         btnToggle.disabled = false;
       }
@@ -940,7 +941,7 @@ function scheduleProdutosSearch() {
   clearTimeout(produtosDebounce);
   produtosDebounce = setTimeout(() => {
     carregarProdutos().catch((error) => {
-      produtosList.innerHTML = `<div class="empty-state">${error.message}</div>`;
+      produtosList.innerHTML = `<div class="empty-state">${getErrorMessage(error, SYSTEM_MESSAGES.produto.errors.loadListFailed)}</div>`;
     });
   }, 300);
 }
@@ -1065,61 +1066,61 @@ async function abrirEdicaoProduto(produtoId) {
 
     setAdminSection("produto-form");
   } catch (error) {
-    produtosList.innerHTML = `<div class="empty-state">${error.message}</div>`;
+    produtosList.innerHTML = `<div class="empty-state">${getErrorMessage(error, SYSTEM_MESSAGES.produto.errors.loadFailed)}</div>`;
   }
 }
 
 function validarProdutoForm() {
   if (!produtoNomeInput.value.trim() || !produtoModeloInput.value.trim()) {
-    return "Informe nome e modelo.";
+    return SYSTEM_MESSAGES.produto.validation.nameModelRequired;
   }
   const garantiaTipo = produtoGarantiaTipoSelect.value;
   const anos = Number(produtoGarantiaAnosInput.value);
   const meses = Number(produtoGarantiaMesesInput.value);
   if (!garantiaTipo) {
-    return "Selecione o tipo de garantia.";
+    return SYSTEM_MESSAGES.produto.validation.warrantyTypeRequired;
   }
   if (garantiaTipo === "MESES") {
     if (!Number.isFinite(meses) || meses < 2 || meses > 11) {
-      return "Informe a garantia em meses (entre 2 e 11).";
+      return SYSTEM_MESSAGES.produto.validation.warrantyMonthsInvalid;
     }
   }
   if (garantiaTipo === "ANOS") {
     if (!Number.isFinite(anos) || anos < 1) {
-      return "Informe a garantia em anos (minimo 1).";
+      return SYSTEM_MESSAGES.produto.validation.warrantyYearsInvalid;
     }
   }
   if (garantiaTipo === "ANOS_MESES") {
     if (!Number.isFinite(anos) || anos < 1) {
-      return "Informe os anos da garantia (minimo 1).";
+      return SYSTEM_MESSAGES.produto.validation.warrantyYearsRequired;
     }
     if (!Number.isFinite(meses) || meses < 2 || meses > 11) {
-      return "Informe os meses da garantia (entre 2 e 11).";
+      return SYSTEM_MESSAGES.produto.validation.warrantyMonthsRequired;
     }
   }
   if (!produtoDescricaoInput.value.trim() || !produtoEspecificacoesInput.value.trim()) {
-    return "Informe descricao e especificacoes.";
+    return SYSTEM_MESSAGES.produto.validation.descriptionRequired;
   }
   const marcaNova = produtoMarcaNovaInput.value.trim();
   const marcaSelecionada = produtoMarcaSelect.value;
   if (!marcaNova && !marcaSelecionada) {
-    return "Selecione ou informe uma marca.";
+    return SYSTEM_MESSAGES.produto.validation.brandRequired;
   }
   if (!produtoGrupoSelect.value) {
-    return "Selecione o grupo de precificacao.";
+    return SYSTEM_MESSAGES.produto.validation.pricingGroupRequired;
   }
   if (!categoriasSelecionadas.length) {
-    return "Adicione pelo menos uma categoria.";
+    return SYSTEM_MESSAGES.produto.validation.categoryRequired;
   }
   if (!imagensSelecionadas.length) {
-    return "Adicione pelo menos uma imagem.";
+    return SYSTEM_MESSAGES.produto.validation.imageRequired;
   }
   const capaCount = imagensSelecionadas.filter((img) => img.capa).length;
   if (capaCount !== 1) {
-    return "Defina exatamente uma imagem como capa.";
+    return SYSTEM_MESSAGES.produto.validation.coverRequired;
   }
   if (uploadsPendentes > 0) {
-    return "Aguarde o upload das imagens.";
+    return SYSTEM_MESSAGES.produto.validation.uploadPending;
   }
   return null;
 }
@@ -1219,7 +1220,7 @@ function renderFornecedores(fornecedores) {
   if (!fornecedores.length) {
     const empty = document.createElement("div");
     empty.className = "empty-state";
-    empty.textContent = "Nenhum fornecedor cadastrado.";
+    empty.textContent = SYSTEM_MESSAGES.admin.empty.noFornecedores;
     fornecedoresList.appendChild(empty);
     return;
   }
@@ -1241,7 +1242,7 @@ function renderEntradas(entradas) {
   if (!entradas.length) {
     const empty = document.createElement("div");
     empty.className = "empty-state";
-    empty.textContent = "Nenhuma entrada registrada.";
+    empty.textContent = SYSTEM_MESSAGES.admin.empty.noEntradas;
     entradasList.appendChild(empty);
     return;
   }
@@ -1292,7 +1293,7 @@ function scheduleSearch() {
   clearTimeout(debounceTimer);
   debounceTimer = setTimeout(() => {
     carregarClientes().catch((error) => {
-      clientesList.innerHTML = `<div class="empty-state">${error.message}</div>`;
+      clientesList.innerHTML = `<div class="empty-state">${getErrorMessage(error, SYSTEM_MESSAGES.admin.errors.loadClientesFailed)}</div>`;
     });
   }, 300);
 }
@@ -1301,7 +1302,7 @@ function schedulePedidosSearch() {
   clearTimeout(pedidosDebounce);
   pedidosDebounce = setTimeout(() => {
     carregarPedidos().catch((error) => {
-      pedidosList.innerHTML = `<div class="empty-state">${error.message}</div>`;
+      pedidosList.innerHTML = `<div class="empty-state">${getErrorMessage(error, SYSTEM_MESSAGES.admin.errors.loadPedidosFailed)}</div>`;
     });
   }, 300);
 }
@@ -1439,7 +1440,7 @@ btnAddProduto.addEventListener("click", async () => {
   try {
     await ensureProdutosMetadata();
   } catch (error) {
-    setProdutoFormMessage(error?.message || "Erro ao carregar metadata.");
+    setProdutoFormMessage(getErrorMessage(error, SYSTEM_MESSAGES.produto.errors.metadataLoadFailed));
     return;
   }
   limparProdutoForm();
@@ -1509,14 +1510,14 @@ produtoImagensInput.addEventListener("change", async (event) => {
       const data = await uploadImagemCloudinary(file, { folder: "produtos" });
       const url = data?.secure_url || data?.url;
       if (!url) {
-        throw new Error("Upload nao retornou URL.");
+        throw new Error(SYSTEM_MESSAGES.produto.errors.uploadMissingUrl);
       }
       imagensSelecionadas.push({
         url,
         capa: imagensSelecionadas.length === 0
       });
     } catch (error) {
-      setProdutoFormMessage(error?.message || "Erro ao enviar imagem.");
+      setProdutoFormMessage(getErrorMessage(error, SYSTEM_MESSAGES.produto.errors.uploadFailed));
     } finally {
       uploadsPendentes = Math.max(0, uploadsPendentes - 1);
       if (!imagensSelecionadas.some((img) => img.capa) && imagensSelecionadas.length) {
@@ -1578,7 +1579,7 @@ btnSaveProduto.addEventListener("click", async () => {
     limparProdutoForm();
     setAdminSection("produtos");
   } catch (err) {
-    setProdutoFormMessage(err?.message || "Erro ao salvar produto.");
+    setProdutoFormMessage(getErrorMessage(err, SYSTEM_MESSAGES.produto.errors.saveFailed));
   } finally {
     btnSaveProduto.disabled = false;
     btnSaveProduto.textContent = "SALVAR";
@@ -1593,7 +1594,7 @@ statusModalConfirm.addEventListener("click", () => {
   const titulo = statusModalTitulo.value.trim();
   const descricao = statusModalDescricao.value.trim();
   if (!titulo || !descricao) {
-    statusModalContext.textContent = `${statusModalContextBase} (Informe titulo e descricao.)`;
+    statusModalContext.textContent = `${statusModalContextBase} (${SYSTEM_MESSAGES.produto.validation.justificationRequired})`;
     return;
   }
   fecharModalStatus({ titulo, descricao });
@@ -1605,7 +1606,7 @@ navProdutos.addEventListener("click", async () => {
     await ensureProdutosMetadata();
     await carregarProdutos();
   } catch (error) {
-    produtosList.innerHTML = `<div class="empty-state">${error.message}</div>`;
+    produtosList.innerHTML = `<div class="empty-state">${getErrorMessage(error, SYSTEM_MESSAGES.produto.errors.loadListFailed)}</div>`;
   }
 });
 
@@ -1619,7 +1620,7 @@ navPedidos.addEventListener("click", async () => {
   try {
     await carregarPedidos();
   } catch (error) {
-    pedidosList.innerHTML = `<div class="empty-state">${error.message}</div>`;
+    pedidosList.innerHTML = `<div class="empty-state">${getErrorMessage(error, SYSTEM_MESSAGES.admin.errors.loadPedidosFailed)}</div>`;
   }
 });
 
@@ -1630,7 +1631,7 @@ navEstoque.addEventListener("click", async () => {
   try {
     await carregarEstoqueDados();
   } catch (error) {
-    setEstoqueMessage(error?.message || "Erro ao carregar estoque.");
+    setEstoqueMessage(getErrorMessage(error, SYSTEM_MESSAGES.admin.errors.loadEstoqueFailed));
   }
 });
 
@@ -1655,7 +1656,7 @@ pedidoVoltar.addEventListener("click", async () => {
   try {
     await carregarPedidos();
   } catch (error) {
-    pedidosList.innerHTML = `<div class="empty-state">${error.message}</div>`;
+    pedidosList.innerHTML = `<div class="empty-state">${getErrorMessage(error, SYSTEM_MESSAGES.admin.errors.loadPedidosFailed)}</div>`;
   }
 });
 
@@ -1674,7 +1675,7 @@ btnSaveFornecedor.addEventListener("click", async () => {
   const telefoneContato = fornecedorTelefoneInput.value.trim();
 
   if (!nome || !emailContato || !telefoneContato) {
-    setEstoqueMessage("Preencha os dados do fornecedor.");
+    setEstoqueMessage(SYSTEM_MESSAGES.admin.errors.fornecedorRequired);
     return;
   }
 
@@ -1686,7 +1687,7 @@ btnSaveFornecedor.addEventListener("click", async () => {
     await carregarEstoqueDados();
     fecharFornecedorForm();
   } catch (error) {
-    setEstoqueMessage(error?.message || "Erro ao cadastrar fornecedor.");
+    setEstoqueMessage(getErrorMessage(error, SYSTEM_MESSAGES.admin.errors.fornecedorCreateFailed));
   } finally {
     btnSaveFornecedor.disabled = false;
     btnSaveFornecedor.textContent = "SALVAR";
@@ -1702,12 +1703,12 @@ btnSaveEntrada.addEventListener("click", async () => {
   const custoTipo = entradaCustoTipoSelect.value;
 
   if (!produtoId || !fornecedorId || !Number.isFinite(quantidade) || quantidade <= 0) {
-    setEstoqueMessage("Informe produto, fornecedor e quantidade.");
+    setEstoqueMessage(SYSTEM_MESSAGES.admin.errors.entradaRequired);
     return;
   }
 
   if (!Number.isFinite(custo) || custo <= 0) {
-    setEstoqueMessage("Informe um custo valido.");
+    setEstoqueMessage(SYSTEM_MESSAGES.admin.errors.custoInvalid);
     return;
   }
 
@@ -1729,7 +1730,7 @@ btnSaveEntrada.addEventListener("click", async () => {
     await carregarEstoqueDados();
     fecharEntradaForm();
   } catch (error) {
-    setEstoqueMessage(error?.message || "Erro ao registrar entrada.");
+    setEstoqueMessage(getErrorMessage(error, SYSTEM_MESSAGES.admin.errors.entradaCreateFailed));
   } finally {
     btnSaveEntrada.disabled = false;
     btnSaveEntrada.textContent = "SALVAR";
@@ -1769,11 +1770,11 @@ inicializarAcessoAdmin().then((liberado) => {
   }
 
   carregarClientes().catch((error) => {
-    clientesList.innerHTML = `<div class="empty-state">${error.message}</div>`;
+    clientesList.innerHTML = `<div class="empty-state">${getErrorMessage(error, SYSTEM_MESSAGES.admin.errors.loadClientesFailed)}</div>`;
   });
 
   carregarProdutosMetadataAdmin().catch((error) => {
-    produtosList.innerHTML = `<div class="empty-state">${error.message}</div>`;
-    setProdutoFormMessage(error?.message || "Erro ao carregar metadata.");
+    produtosList.innerHTML = `<div class="empty-state">${getErrorMessage(error, SYSTEM_MESSAGES.produto.errors.metadataLoadFailed)}</div>`;
+    setProdutoFormMessage(getErrorMessage(error, SYSTEM_MESSAGES.produto.errors.metadataLoadFailed));
   });
 });

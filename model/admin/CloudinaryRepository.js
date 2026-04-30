@@ -1,4 +1,5 @@
 import { backendConfig } from "../firebaseApp.js";
+import { SYSTEM_MESSAGES } from "../SystemMessages.js";
 
 const baseUrl = backendConfig.baseUrl;
 
@@ -11,7 +12,7 @@ export async function obterCloudinaryConfig(idToken) {
   });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
-    const message = data?.error || data?.message || "Erro ao carregar Cloudinary.";
+    const message = data?.error || data?.message || SYSTEM_MESSAGES.admin.errors.cloudinaryLoadFailed;
     throw new Error(message);
   }
   return data;
@@ -28,7 +29,7 @@ export async function obterAssinaturaCloudinary(idToken, params) {
   });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
-    const message = data?.error || data?.message || "Erro ao gerar assinatura.";
+    const message = data?.error || data?.message || SYSTEM_MESSAGES.admin.errors.cloudinarySignFailed;
     throw new Error(message);
   }
   return data;
@@ -59,7 +60,7 @@ export async function enviarImagemCloudinary(file, assinatura, params = {}) {
 
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
-    const message = data?.error?.message || data?.message || "Erro ao enviar imagem.";
+    const message = data?.error?.message || data?.message || SYSTEM_MESSAGES.produto.errors.uploadFailed;
     throw new Error(message);
   }
   return data;

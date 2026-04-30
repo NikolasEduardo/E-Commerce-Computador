@@ -1,5 +1,6 @@
 import { backendConfig } from "../firebaseApp.js";
 import { Pedido } from "../pedido/Pedido.js";
+import { SYSTEM_MESSAGES } from "../SystemMessages.js";
 
 const baseUrl = backendConfig.baseUrl;
 
@@ -17,7 +18,7 @@ export async function obterCarrinho(idToken) {
     method: "GET",
     headers: { Authorization: `Bearer ${idToken}` }
   });
-  const payload = await handleResponse(response, "Erro ao carregar carrinho.");
+  const payload = await handleResponse(response, SYSTEM_MESSAGES.carrinho.errors.loadFailed);
   return Pedido.fromCarrinhoApi(payload);
 }
 
@@ -26,7 +27,7 @@ export async function obterStatusCarrinho(idToken) {
     method: "GET",
     headers: { Authorization: `Bearer ${idToken}` }
   });
-  return handleResponse(response, "Erro ao carregar status.");
+  return handleResponse(response, SYSTEM_MESSAGES.carrinho.errors.loadStatusFailed);
 }
 
 export async function adicionarItemCarrinho(idToken, payload) {
@@ -38,7 +39,7 @@ export async function adicionarItemCarrinho(idToken, payload) {
     },
     body: JSON.stringify(payload)
   });
-  return handleResponse(response, "Erro ao adicionar item.");
+  return handleResponse(response, SYSTEM_MESSAGES.carrinho.errors.addFailed);
 }
 
 export async function atualizarQuantidadeCarrinho(idToken, payload) {
@@ -50,7 +51,7 @@ export async function atualizarQuantidadeCarrinho(idToken, payload) {
     },
     body: JSON.stringify(payload)
   });
-  return handleResponse(response, "Erro ao atualizar quantidade.");
+  return handleResponse(response, SYSTEM_MESSAGES.carrinho.errors.updateQuantityFailed);
 }
 
 export async function removerItemCarrinho(idToken, payload) {
@@ -62,7 +63,7 @@ export async function removerItemCarrinho(idToken, payload) {
     },
     body: JSON.stringify(payload)
   });
-  return handleResponse(response, "Erro ao remover item.");
+  return handleResponse(response, SYSTEM_MESSAGES.carrinho.errors.removeFailed);
 }
 
 export async function estenderCarrinho(idToken) {
@@ -73,7 +74,7 @@ export async function estenderCarrinho(idToken) {
       Authorization: `Bearer ${idToken}`
     }
   });
-  return handleResponse(response, "Erro ao estender carrinho.");
+  return handleResponse(response, SYSTEM_MESSAGES.carrinho.errors.extendFailed);
 }
 
 export async function cancelarCarrinho(idToken) {
@@ -84,5 +85,5 @@ export async function cancelarCarrinho(idToken) {
       Authorization: `Bearer ${idToken}`
     }
   });
-  return handleResponse(response, "Erro ao cancelar carrinho.");
+  return handleResponse(response, SYSTEM_MESSAGES.carrinho.errors.cancelFailed);
 }

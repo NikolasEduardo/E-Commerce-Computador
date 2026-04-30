@@ -1,4 +1,9 @@
 import { autenticarEVerificarStatus } from "../../controller/AuthController.js";
+import {
+  SYSTEM_MESSAGES,
+  formatSystemMessage,
+  getErrorMessage
+} from "../../model/SystemMessages.js";
 
 const emailInput = document.getElementById("email");
 const senhaInput = document.getElementById("senha");
@@ -7,7 +12,7 @@ const messageBox = document.getElementById("login-message");
 
 function setLoading(isLoading) {
   loginButton.disabled = isLoading;
-  loginButton.textContent = isLoading ? "ENTRANDO..." : "ACESSAR";
+  loginButton.textContent = isLoading ? SYSTEM_MESSAGES.general.accessing : "ACESSAR";
 }
 
 function showMessage(text) {
@@ -22,7 +27,7 @@ async function handleLogin() {
   const senha = senhaInput.value;
 
   if (!email || !senha) {
-    showMessage("Informe email e senha para continuar.");
+    showMessage(SYSTEM_MESSAGES.auth.errors.missingCredentials);
     return;
   }
 
@@ -41,13 +46,13 @@ async function handleLogin() {
     }
 
     if (status === "INATIVO") {
-      showMessage("O usuario atual foi inativado.");
+      showMessage(SYSTEM_MESSAGES.auth.errors.inactiveUser);
       return;
     }
 
-    showMessage(`Status de usuario desconhecido: ${status}`);
+    showMessage(formatSystemMessage(SYSTEM_MESSAGES.auth.errors.unknownStatus, { status }));
   } catch (error) {
-    showMessage(error?.message || "Erro ao autenticar.");
+    showMessage(getErrorMessage(error, SYSTEM_MESSAGES.auth.errors.loginFailed));
   } finally {
     setLoading(false);
   }

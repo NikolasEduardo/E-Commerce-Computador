@@ -3,6 +3,7 @@ import {
   validarEmailECpf,
   registrarNovoUsuario
 } from "../../controller/CadastroController.js";
+import { SYSTEM_MESSAGES, getErrorMessage } from "../../model/SystemMessages.js";
 
 const step1 = document.getElementById("step-1");
 const step2 = document.getElementById("step-2");
@@ -24,7 +25,7 @@ function setMessage(text) {
 
 function setLoading(button, isLoading, label) {
   button.disabled = isLoading;
-  button.textContent = isLoading ? "AGUARDE..." : label;
+  button.textContent = isLoading ? SYSTEM_MESSAGES.general.loading : label;
 }
 
 function showStep(step) {
@@ -89,23 +90,23 @@ function validateStep1() {
   const senhaConfirmar = getValue("senhaConfirmar");
 
   if (!nome || !cpf || !dataNascimento || !genero || !telefoneTipo || !telefoneDdd || !telefoneNumero || !email || !senha) {
-    return "Preencha todos os campos da primeira etapa.";
+    return SYSTEM_MESSAGES.cadastro.errors.step1Required;
   }
 
   if (!cpfRegex.test(cpf)) {
-    return "CPF invalido. Use o formato 000.000.000-00.";
+    return SYSTEM_MESSAGES.cadastro.errors.cpfInvalid;
   }
 
   if (!emailRegex.test(email)) {
-    return "Email invalido. Use um formato com apenas um @.";
+    return SYSTEM_MESSAGES.cadastro.errors.emailInvalid;
   }
 
   if (!senhaRegex.test(senha)) {
-    return "Senha fraca. Minimo 8 caracteres, 1 maiusculo, 1 minusculo e 1 especial.";
+    return SYSTEM_MESSAGES.cadastro.errors.passwordWeak;
   }
 
   if (senha !== senhaConfirmar) {
-    return "As senhas nao conferem.";
+    return SYSTEM_MESSAGES.cadastro.errors.passwordMismatch;
   }
 
   return null;
@@ -133,11 +134,11 @@ function validateStep2() {
     !cidade ||
     !pais
   ) {
-    return "Preencha todos os campos de endereco.";
+    return SYSTEM_MESSAGES.cadastro.errors.step2Required;
   }
 
   if (!cepRegex.test(cep)) {
-    return "CEP invalido. Use o formato 00000-000.";
+    return SYSTEM_MESSAGES.cadastro.errors.cepInvalid;
   }
 
   return null;
@@ -175,7 +176,7 @@ async function carregarMetadata() {
       logradouroSelect.appendChild(option);
     });
   } catch (error) {
-    setMessage(error?.message || "Erro ao carregar dados do cadastro.");
+    setMessage(getErrorMessage(error, SYSTEM_MESSAGES.cadastro.errors.metadataLoadFailed));
   }
 }
 
@@ -225,17 +226,17 @@ btnNext.addEventListener("click", async () => {
     const validation = await validarEmailECpf(email, cpf);
 
     if (validation.emailExists) {
-      setMessage("Email ja cadastrado.");
+      setMessage(SYSTEM_MESSAGES.cadastro.errors.emailExists);
       return;
     }
     if (validation.cpfExists) {
-      setMessage("CPF ja cadastrado.");
+      setMessage(SYSTEM_MESSAGES.cadastro.errors.cpfExists);
       return;
     }
 
     showStep(2);
   } catch (error) {
-    setMessage(error?.message || "Erro ao validar email e CPF.");
+    setMessage(getErrorMessage(error, SYSTEM_MESSAGES.cadastro.errors.uniquenessFailed));
   } finally {
     setLoading(btnNext, false, "PROXIMO");
   }
@@ -286,12 +287,12 @@ btnSubmit.addEventListener("click", async () => {
     };
 
     await registrarNovoUsuario(payload);
-    setMessage("Cadastro concluido com sucesso.");
+    setMessage(SYSTEM_MESSAGES.cadastro.success.completed);
     setTimeout(() => {
       window.location.href = "../index.html";
     }, 1200);
   } catch (error) {
-    setMessage(error?.message || "Erro ao cadastrar usuario.");
+    setMessage(getErrorMessage(error, SYSTEM_MESSAGES.cadastro.errors.registerFailed));
   } finally {
     setLoading(btnSubmit, false, "CADASTRAR");
   }

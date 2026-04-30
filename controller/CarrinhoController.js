@@ -1,5 +1,6 @@
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
 import { auth } from "../model/firebaseApp.js";
+import { SYSTEM_MESSAGES } from "../model/SystemMessages.js";
 import {
   obterCarrinho,
   obterStatusCarrinho,
@@ -19,7 +20,7 @@ async function getToken() {
   return new Promise((resolve, reject) => {
     onAuthStateChanged(auth, async (user) => {
       if (!user) {
-        reject(new Error("Usuario nao autenticado."));
+        reject(new Error(SYSTEM_MESSAGES.general.unauthenticated));
         return;
       }
       try {

@@ -1,6 +1,7 @@
 import { EntradaEstoque } from "../estoque/EntradaEstoque.js";
 import { Fornecedor } from "../estoque/Fornecedor.js";
 import { Produto } from "../produto/Produto.js";
+import { SYSTEM_MESSAGES } from "../SystemMessages.js";
 import { adminRequest } from "./AdminRequest.js";
 
 let fornecedoresCache = null;
@@ -24,7 +25,7 @@ export async function listarFornecedores() {
   const response = await adminRequest("/api/admin/estoque/fornecedores", {
     method: "GET"
   });
-  const data = await handleResponse(response, "Erro ao carregar fornecedores.");
+  const data = await handleResponse(response, SYSTEM_MESSAGES.admin.errors.loadFornecedoresFailed);
   fornecedoresCache = (data?.fornecedores || []).map((item) => Fornecedor.fromApi(item));
   return fornecedoresCache;
 }
@@ -35,7 +36,7 @@ export async function criarFornecedor(payload) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload)
   });
-  const data = await handleResponse(response, "Erro ao cadastrar fornecedor.");
+  const data = await handleResponse(response, SYSTEM_MESSAGES.admin.errors.fornecedorCreateFailed);
   fornecedoresCache = null;
   return data;
 }
@@ -48,7 +49,7 @@ export async function listarEntradasEstoque() {
   const response = await adminRequest("/api/admin/estoque/entradas", {
     method: "GET"
   });
-  const data = await handleResponse(response, "Erro ao carregar entradas.");
+  const data = await handleResponse(response, SYSTEM_MESSAGES.admin.errors.loadEntradasFailed);
   entradasCache = (data?.entradas || []).map((item) => EntradaEstoque.fromApi(item));
   return entradasCache;
 }
@@ -59,7 +60,7 @@ export async function criarEntradaEstoque(payload) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload)
   });
-  const data = await handleResponse(response, "Erro ao registrar entrada.");
+  const data = await handleResponse(response, SYSTEM_MESSAGES.admin.errors.entradaCreateFailed);
   entradasCache = null;
   produtosEstoqueCache = null;
   return data;
@@ -73,7 +74,7 @@ export async function listarProdutosEstoque() {
   const response = await adminRequest("/api/admin/estoque/produtos", {
     method: "GET"
   });
-  const data = await handleResponse(response, "Erro ao carregar produtos.");
+  const data = await handleResponse(response, SYSTEM_MESSAGES.admin.errors.loadProdutosFailed);
   produtosEstoqueCache = (data?.produtos || []).map((item) => Produto.fromApi(item));
   return produtosEstoqueCache;
 }

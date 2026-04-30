@@ -1,5 +1,6 @@
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
 import { auth } from "../model/firebaseApp.js";
+import { SYSTEM_MESSAGES } from "../model/SystemMessages.js";
 import { getUsuarioStatusByAuthId } from "../model/usuario/UsuarioRepository.js";
 
 function waitForAuthResolution() {
@@ -22,7 +23,7 @@ export async function getAuthenticatedUser() {
 export async function getAuthenticatedIdToken() {
   const user = await getAuthenticatedUser();
   if (!user) {
-    throw new Error("Voce precisa estar autenticado e com permissoes administrativas para acessar esta pagina.");
+    throw new Error(SYSTEM_MESSAGES.auth.errors.adminRequired);
   }
 
   return user.getIdToken(true);
@@ -35,8 +36,7 @@ export async function verificarAcessoAdministrador() {
       autenticado: false,
       autorizado: false,
       status: null,
-      mensagem:
-        "Voce precisa estar autenticado e com permissoes administrativas para acessar esta pagina."
+      mensagem: SYSTEM_MESSAGES.auth.errors.adminRequired
     };
   }
 
@@ -48,7 +48,7 @@ export async function verificarAcessoAdministrador() {
       autenticado: true,
       autorizado: false,
       status,
-      mensagem: "Voce nao deveria acessar esta pagina."
+      mensagem: SYSTEM_MESSAGES.auth.errors.adminDenied
     };
   }
 

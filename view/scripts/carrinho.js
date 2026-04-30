@@ -4,6 +4,7 @@ import {
   atualizarQuantidadeItem,
   removerItem
 } from "../../controller/CarrinhoController.js";
+import { SYSTEM_MESSAGES, getErrorMessage } from "../../model/SystemMessages.js";
 import { initCartNotice, refreshCartNotice, showCartPopup } from "./cart-notice.js";
 
 const perfilButton = document.getElementById("perfil-btn");
@@ -56,11 +57,11 @@ function renderSummary(valorTotal) {
 
 function showWarning(message) {
   showCartPopup({
-    title: "Aviso",
+    title: SYSTEM_MESSAGES.general.warningTitle,
     message,
     actions: [
       {
-        label: "Fechar",
+        label: SYSTEM_MESSAGES.general.close,
         onClick: () => {
           const overlay = document.getElementById("cart-popup");
           if (overlay) overlay.classList.add("hidden");
@@ -75,7 +76,7 @@ function renderItems(itens) {
   if (!itens.length) {
     const empty = document.createElement("div");
     empty.className = "cart-item";
-    empty.textContent = "Nenhum produto no carrinho.";
+    empty.textContent = SYSTEM_MESSAGES.carrinho.empty.noItems;
     itemsList.appendChild(empty);
     return;
   }
@@ -121,7 +122,7 @@ function renderItems(itens) {
         await carregarCarrinhoPagina();
         await refreshCartNotice();
       } catch (error) {
-        showWarning(error?.message || "Erro ao remover item.");
+        showWarning(getErrorMessage(error, SYSTEM_MESSAGES.carrinho.errors.removeFailed));
       }
     });
 
@@ -137,7 +138,7 @@ function renderItems(itens) {
         await carregarCarrinhoPagina();
         await refreshCartNotice();
       } catch (error) {
-        showWarning(error?.message || "Erro ao atualizar quantidade.");
+        showWarning(getErrorMessage(error, SYSTEM_MESSAGES.carrinho.errors.updateQuantityFailed));
       }
     });
 
@@ -164,7 +165,7 @@ function renderItems(itens) {
         await carregarCarrinhoPagina();
         await refreshCartNotice();
       } catch (error) {
-        showWarning(error?.message || "Erro ao atualizar quantidade.");
+        showWarning(getErrorMessage(error, SYSTEM_MESSAGES.carrinho.errors.updateQuantityFailed));
         qty.value = item.quantidade ?? 0;
       }
     };
@@ -197,7 +198,7 @@ function renderItems(itens) {
         await carregarCarrinhoPagina();
         await refreshCartNotice();
       } catch (error) {
-        showWarning(error?.message || "Erro ao atualizar quantidade.");
+        showWarning(getErrorMessage(error, SYSTEM_MESSAGES.carrinho.errors.updateQuantityFailed));
       }
     });
 
@@ -251,13 +252,13 @@ btnFinalizar.addEventListener("click", () => {
 window.addEventListener("cart-updated", () => {
   carregarCarrinhoPagina().catch((error) => {
     renderItems([]);
-    showWarning(error?.message || "Erro ao carregar carrinho.");
+    showWarning(getErrorMessage(error, SYSTEM_MESSAGES.carrinho.errors.loadFailed));
   });
 });
 
 carregarCarrinhoPagina().catch((error) => {
   renderItems([]);
-  showWarning(error?.message || "Erro ao carregar carrinho.");
+  showWarning(getErrorMessage(error, SYSTEM_MESSAGES.carrinho.errors.loadFailed));
 });
 
 initCartNotice();

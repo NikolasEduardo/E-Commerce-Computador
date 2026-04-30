@@ -1,4 +1,5 @@
 import { backendConfig } from "../firebaseApp.js";
+import { SYSTEM_MESSAGES } from "../SystemMessages.js";
 
 export async function getUsuarioStatusByAuthId(authId, idToken) {
   const endpoint = `${backendConfig.baseUrl}/api/usuario-status`;
@@ -15,7 +16,7 @@ export async function getUsuarioStatusByAuthId(authId, idToken) {
 
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) {
-    const message = payload?.error || payload?.message || "Erro ao consultar o Data Connect.";
+    const message = payload?.error || payload?.message || SYSTEM_MESSAGES.general.invalidRequest;
     throw new Error(message);
   }
 

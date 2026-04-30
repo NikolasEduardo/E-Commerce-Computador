@@ -1,6 +1,7 @@
 import { carregarPerfil } from "../../controller/PerfilController.js";
 import { carregarProdutosPopulares } from "../../controller/HomeController.js";
 import { adicionarAoCarrinho } from "../../controller/CarrinhoController.js";
+import { SYSTEM_MESSAGES, getErrorMessage } from "../../model/SystemMessages.js";
 import { initCartNotice, refreshCartNotice, showCartPopup } from "./cart-notice.js";
 
 const perfilButton = document.getElementById("perfil-btn");
@@ -51,7 +52,7 @@ function renderProdutos(produtos) {
   if (!produtos.length) {
     const empty = document.createElement("div");
     empty.className = "product-card";
-    empty.textContent = "Nenhum produto disponivel.";
+    empty.textContent = SYSTEM_MESSAGES.produto.empty.noAvailableProducts;
     productsList.appendChild(empty);
     return;
   }
@@ -108,11 +109,11 @@ function renderProdutos(produtos) {
         const resp = await adicionarAoCarrinho(produto.codigoProduto);
         if (resp?.warning) {
           showCartPopup({
-            title: "Aviso",
+            title: SYSTEM_MESSAGES.general.warningTitle,
             message: resp.warning,
             actions: [
               {
-                label: "Fechar",
+                label: SYSTEM_MESSAGES.general.close,
                 onClick: () => {
                   const overlay = document.getElementById("cart-popup");
                   if (overlay) overlay.classList.add("hidden");
@@ -124,11 +125,11 @@ function renderProdutos(produtos) {
         await refreshCartNotice();
       } catch (error) {
         showCartPopup({
-          title: "Erro",
-          message: error?.message || "Erro ao adicionar ao carrinho.",
+          title: SYSTEM_MESSAGES.general.errorTitle,
+          message: getErrorMessage(error, SYSTEM_MESSAGES.carrinho.errors.addFailed),
           actions: [
             {
-              label: "Fechar",
+              label: SYSTEM_MESSAGES.general.close,
               onClick: () => {
                 const overlay = document.getElementById("cart-popup");
                 if (overlay) overlay.classList.add("hidden");
@@ -163,7 +164,7 @@ async function carregarProdutos() {
     const produtos = await carregarProdutosPopulares();
     renderProdutos(produtos);
   } catch (error) {
-    productsList.innerHTML = `<article class="product-card">${error.message}</article>`;
+    productsList.innerHTML = `<article class="product-card">${getErrorMessage(error, SYSTEM_MESSAGES.produto.errors.loadListFailed)}</article>`;
   }
 }
 
