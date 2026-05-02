@@ -28,6 +28,7 @@
         <button id="nav-produtos" class="nav-item">PRODUTOS</button>
         <button id="nav-clientes" class="nav-item is-active">CLIENTES</button>
         <button id="nav-pedidos" class="nav-item">PEDIDOS</button>
+        <button id="nav-trocas" class="nav-item">TROCAS</button>
         <button id="nav-estoque" class="nav-item">ESTOQUE</button>
         <button class="nav-item">GRAFICO</button>
       </aside>
@@ -96,6 +97,29 @@
 
             <div class="actions">
               <button id="pedido-voltar" type="button">VOLTAR</button>
+            </div>
+          </div>
+        </section>
+
+        <section id="trocas-section" class="admin-section hidden">
+          <section class="panel">
+            <div class="panel-title">SOLICITACOES DE TROCA</div>
+            <p class="panel-text">Consulte solicitacoes em aberto e trocas ja concluidas.</p>
+          </section>
+
+          <section id="trocasList" class="trocas-list"></section>
+        </section>
+
+        <section id="troca-detalhe-section" class="admin-section hidden">
+          <div class="panel">
+            <div class="panel-title" id="troca-detalhe-title">DETALHES DA TROCA</div>
+            <div id="troca-detalhe-meta" class="troca-detalhe-meta"></div>
+
+            <div id="troca-itens-list" class="troca-itens-list"></div>
+
+            <div class="actions">
+              <button id="troca-voltar" type="button">VOLTAR</button>
+              <button id="troca-finalizar" type="button">FINALIZAR AVALIACAO</button>
             </div>
           </div>
         </section>
@@ -396,6 +420,41 @@
       <div class="modal-actions">
         <button id="status-modal-cancel" type="button">CANCELAR</button>
         <button id="status-modal-confirm" type="button">CONFIRMAR</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="troca-avaliacao-modal" class="modal hidden">
+    <div class="modal-content">
+      <h3>AVALIAR PRODUTO DEVOLVIDO</h3>
+      <p id="troca-avaliacao-produto"></p>
+
+      <label for="troca-avaliacao-classificacao">CLASSIFICACAO TECNICA</label>
+      <select id="troca-avaliacao-classificacao">
+        <option value="">SELECIONE</option>
+        <option value="Produto sem defeito constatado">1 Produto sem defeito constatado</option>
+        <option value="Produto com defeito de fabricacao">2 Produto com defeito de fabricacao</option>
+        <option value="Produto danificado por mau uso">3 Produto danificado por mau uso</option>
+        <option value="Produto incompativel com sistema do cliente">4 Produto incompativel com sistema do cliente</option>
+        <option value="Produto com defeito intermitente">5 Produto com defeito intermitente</option>
+        <option value="Produto alterado/modificado">6 Produto alterado/modificado</option>
+        <option value="Produto fora das condicoes de garantia">7 Produto fora das condicoes de garantia</option>
+      </select>
+
+      <label for="troca-avaliacao-descricao">DESCRICAO TECNICA</label>
+      <textarea id="troca-avaliacao-descricao" rows="4" placeholder="Descreva a avaliacao tecnica da peca"></textarea>
+
+      <div id="troca-avaliacao-alerta" class="modal-alert hidden"></div>
+
+      <div id="troca-avaliacao-estoque" class="troca-stock-choice">
+        <span>Produto pode voltar ao estoque?</span>
+        <label><input type="radio" name="troca-retorna-estoque" value="sim"> SIM</label>
+        <label><input type="radio" name="troca-retorna-estoque" value="nao"> NAO</label>
+      </div>
+
+      <div class="modal-actions">
+        <button id="troca-avaliacao-cancel" type="button">CANCELAR</button>
+        <button id="troca-avaliacao-confirm" type="button">CONFIRMAR</button>
       </div>
     </div>
   </div>

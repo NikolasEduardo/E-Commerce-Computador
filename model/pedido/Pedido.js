@@ -1,6 +1,7 @@
 import { ItemPedido } from "./ItemPedido.js";
 import { Pagamento } from "./Pagamento.js";
 import { StatusPedido } from "./StatusPedido.js";
+import { Troca } from "../cupom/Troca.js";
 import { Usuario } from "../usuario/Usuario.js";
 
 function normalizeText(value) {
@@ -23,7 +24,8 @@ export class Pedido {
         dataExpiracaoCarrinho,
         justificativaReprovacao = "",
         itemPedidos = [],
-        pagamentos = []
+        pagamentos = [],
+        trocas = []
     ) {
         this.usuario = usuario
         this.id = id
@@ -36,6 +38,7 @@ export class Pedido {
         this.justificativaReprovacao = justificativaReprovacao
         this.itemPedidos_on_pedido = itemPedidos
         this.pagamentos_on_pedido = pagamentos
+        this.trocas_on_pedido = trocas
         this.itens = itemPedidos
     }
 
@@ -51,6 +54,9 @@ export class Pedido {
         const pagamentos = Array.isArray(raw.pagamentos_on_pedido)
             ? raw.pagamentos_on_pedido.map((pagamento) => Pagamento.fromApi(pagamento))
             : []
+        const trocas = Array.isArray(raw.trocas_on_pedido)
+            ? raw.trocas_on_pedido.map((troca) => Troca.fromApi(troca))
+            : []
 
         return new Pedido(
             usuario,
@@ -63,7 +69,8 @@ export class Pedido {
             raw.dataExpiracaoCarrinho || null,
             raw.justificativaReprovacao || "",
             itens,
-            pagamentos
+            pagamentos,
+            trocas
         )
     }
 
@@ -83,6 +90,7 @@ export class Pedido {
             raw.dataExpiracaoCarrinho || null,
             "",
             itens,
+            [],
             []
         )
     }
@@ -109,6 +117,14 @@ export class Pedido {
 
     getItens() {
         return this.itemPedidos_on_pedido || []
+    }
+
+    getTrocas() {
+        return this.trocas_on_pedido || []
+    }
+
+    getQuantidadeTrocas() {
+        return this.getTrocas().length
     }
 
     getItensAtivos() {

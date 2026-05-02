@@ -16,6 +16,11 @@ import {
   inativarCartaoUsuario,
   definirCartaoPreferencialUsuario
 } from "../../controller/PerfilController.js";
+import {
+  carregarTrocasUsuario,
+  carregarPedidosElegiveisTrocaUsuario,
+  solicitarTrocaUsuario
+} from "../../controller/TrocaController.js";
 import { carregarCupons } from "../../controller/CupomController.js";
 import { signOut } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
 import { auth } from "../../model/firebaseApp.js";
@@ -31,10 +36,12 @@ const navDetalhes = document.getElementById("nav-detalhes");
 const navEnderecos = document.getElementById("nav-enderecos");
 const navCartoes = document.getElementById("nav-cartoes");
 const navPedidos = document.getElementById("nav-pedidos");
+const navTrocas = document.getElementById("nav-trocas");
 const sectionDetalhes = document.getElementById("section-detalhes");
 const sectionEnderecos = document.getElementById("section-enderecos");
 const sectionCartoes = document.getElementById("section-cartoes");
 const sectionPedidos = document.getElementById("section-pedidos");
+const sectionTrocas = document.getElementById("section-trocas");
 const enderecosList = document.getElementById("enderecos-list");
 const cartoesList = document.getElementById("cartoes-list");
 const cuponsAtivosList = document.getElementById("cupons-ativos-list");
@@ -47,6 +54,21 @@ const pedidoDetalheMeta = document.getElementById("pedido-detalhe-meta");
 const pedidoItensList = document.getElementById("pedido-itens-list");
 const pedidoPagamento = document.getElementById("pedido-pagamento");
 const btnVoltarPedido = document.getElementById("btn-voltar-pedido");
+const trocasList = document.getElementById("trocas-list");
+const trocasListPanel = document.getElementById("trocas-list-panel");
+const trocaFormPanel = document.getElementById("troca-form-panel");
+const trocaDetalhePanel = document.getElementById("troca-detalhe-panel");
+const trocaDetalheTitle = document.getElementById("troca-detalhe-title");
+const trocaDetalheMeta = document.getElementById("troca-detalhe-meta");
+const trocaDetalheItens = document.getElementById("troca-detalhe-itens");
+const btnSolicitarTroca = document.getElementById("btn-solicitar-troca");
+const btnCancelTroca = document.getElementById("btn-cancel-troca");
+const btnSaveTroca = document.getElementById("btn-save-troca");
+const btnVoltarTroca = document.getElementById("btn-voltar-troca");
+const trocaPedidoSelect = document.getElementById("troca-pedido");
+const trocaPedidoInfo = document.getElementById("troca-pedido-info");
+const trocaItensList = document.getElementById("troca-itens-list");
+const trocaHint = document.getElementById("troca-hint");
 const btnAddEndereco = document.getElementById("btn-add-endereco");
 const enderecoFormPanel = document.getElementById("endereco-form-panel");
 const enderecoFormTitle = document.getElementById("endereco-form-title");
@@ -82,6 +104,8 @@ const cepRegex = /^\d{5}-\d{3}$/;
 
 let isEditing = false;
 let enderecoEditId = null;
+let pedidosTrocaCache = [];
+let pedidoTrocaSelecionado = null;
 
 let metadataCache = {
   tipoTelefones: [],
@@ -275,16 +299,19 @@ function setNavActive(target) {
   const isEnderecos = target === "enderecos";
   const isCartoes = target === "cartoes";
   const isPedidos = target === "pedidos";
+  const isTrocas = target === "trocas";
 
   navDetalhes.classList.toggle("is-active", isDetalhes);
   navEnderecos.classList.toggle("is-active", isEnderecos);
   navCartoes.classList.toggle("is-active", isCartoes);
   navPedidos.classList.toggle("is-active", isPedidos);
+  navTrocas.classList.toggle("is-active", isTrocas);
 
   sectionDetalhes.classList.toggle("hidden", !isDetalhes);
   sectionEnderecos.classList.toggle("hidden", !isEnderecos);
   sectionCartoes.classList.toggle("hidden", !isCartoes);
   sectionPedidos.classList.toggle("hidden", !isPedidos);
+  sectionTrocas.classList.toggle("hidden", !isTrocas);
 
   if (!isEnderecos) {
     fecharEnderecoForm();
@@ -294,6 +321,9 @@ function setNavActive(target) {
   }
   if (!isPedidos) {
     mostrarListaPedidos();
+  }
+  if (!isTrocas) {
+    mostrarListaTrocas();
   }
 }
 
@@ -758,6 +788,58 @@ function pedidoPodeReadicionarCarrinho(pedido) {
   return pedido?.podeReadicionarCarrinho?.() || false;
 }
 
+function escapeHtml(value) {
+  return `${value ?? ""}`
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function getItensElegiveisTroca(pedido) {
+  return (pedido?.getItens?.() || []).filter((item) => {
+    const status = normalizeText(item?.getStatusNome?.());
+    const quantidadeDisponivel = item?.getQuantidadeRestante?.() ?? Number(item?.quantidade || 0);
+    return quantidadeDisponivel > 0 && status !== "EM TROCA" && status !== "TROCADO";
+  });
+}
+
+function getQuantidadeDisponivelTroca(item) {
+  return item?.getQuantidadeRestante?.() ?? Number(item?.quantidade || 0);
+}
+
+function getTotalSelecionadoTroca() {
+  return [...trocaItensList.querySelectorAll(".troca-item-card")]
+    .filter((card) => card.querySelector(".troca-item-check")?.checked)
+    .reduce((acc, card) => acc + Number(card.querySelector(".troca-item-qtd")?.value || 0), 0);
+}
+
+function atualizarTrocaHint() {
+  const total = getTotalSelecionadoTroca();
+  trocaHint.textContent = total > 1
+    ? "Como esta troca possui mais de 1 item, escreva o maximo de detalhes possivel de todos os produtos."
+    : "";
+  trocaHint.classList.toggle("hidden", total <= 1);
+}
+
+function montarResumoTrocaItemPedido(item) {
+  const quantidadeEmTroca = item?.getQuantidadeEmTroca?.() || 0;
+  const quantidadeRestante = item?.getQuantidadeRestante?.() ?? Number(item?.quantidade || 0);
+  const status = item?.getStatusNome?.() || "";
+  const linhas = [];
+
+  if (status) {
+    linhas.push(`Status do item: ${status}`);
+  }
+  if (quantidadeEmTroca > 0) {
+    linhas.push(`Quantidade em troca: ${quantidadeEmTroca}`);
+    linhas.push(`Quantidade ainda com voce: ${quantidadeRestante}`);
+  }
+
+  return linhas;
+}
+
 function mostrarListaPedidos() {
   pedidosListPanel.classList.remove("hidden");
   pedidoDetalhePanel.classList.add("hidden");
@@ -803,6 +885,14 @@ function renderPedidos(pedidos) {
     const itens = document.createElement("span");
     itens.textContent = `Quantidade de itens: ${contarItensPedido(pedido)}`;
     info.appendChild(itens);
+
+    if (pedido?.getQuantidadeTrocas?.() > 0 || normalizeText(pedido?.getStatusNome?.()).includes("TROCA")) {
+      const trocas = document.createElement("span");
+      trocas.textContent = `Situacao de troca: ${pedido?.getStatusNome?.() || "-"}${
+        pedido?.getQuantidadeTrocas?.() > 0 ? ` (${pedido.getQuantidadeTrocas()} item(ns))` : ""
+      }`;
+      info.appendChild(trocas);
+    }
 
     const actions = document.createElement("div");
     actions.className = "pedido-actions";
@@ -894,6 +984,11 @@ function renderPedidoDetalhe(pedido) {
       <span>Quantidade: ${Number(item?.quantidade || 0)}x</span>
       <span>Preco na compra: ${formatCurrency(item?.getPrecoAtual?.() ?? item?.getPrecoUnitario?.() ?? 0)}</span>
     `;
+    montarResumoTrocaItemPedido(item).forEach((linha) => {
+      const span = document.createElement("span");
+      span.textContent = linha;
+      info.appendChild(span);
+    });
 
     card.appendChild(image);
     card.appendChild(info);
@@ -955,6 +1050,294 @@ function carregarPedidosLista() {
     }
     renderPedidos(dados?.pedidos || []);
     mostrarListaPedidos();
+  });
+}
+
+function mostrarListaTrocas() {
+  trocasListPanel.classList.remove("hidden");
+  trocaFormPanel.classList.add("hidden");
+  trocaDetalhePanel.classList.add("hidden");
+}
+
+function mostrarFormularioTroca() {
+  trocasListPanel.classList.add("hidden");
+  trocaDetalhePanel.classList.add("hidden");
+  trocaFormPanel.classList.remove("hidden");
+}
+
+function mostrarDetalheTroca() {
+  trocasListPanel.classList.add("hidden");
+  trocaFormPanel.classList.add("hidden");
+  trocaDetalhePanel.classList.remove("hidden");
+}
+
+function limparTrocaForm() {
+  pedidoTrocaSelecionado = null;
+  trocaPedidoSelect.innerHTML = `<option value="">SELECIONE UM PEDIDO</option>`;
+  trocaPedidoInfo.innerHTML = "";
+  trocaItensList.innerHTML = "";
+  trocaHint.textContent = "";
+  trocaHint.classList.add("hidden");
+  setValue("troca-motivo", "");
+  setValue("troca-descricao", "");
+}
+
+function renderTrocas(trocas) {
+  trocasList.innerHTML = "";
+
+  if (!trocas.length) {
+    const empty = document.createElement("div");
+    empty.className = "troca-card";
+    empty.textContent = SYSTEM_MESSAGES.perfil.empty.noExchanges;
+    trocasList.appendChild(empty);
+    return;
+  }
+
+  trocas.forEach((trocaDescricao) => {
+    const card = document.createElement("div");
+    card.className = "troca-card";
+
+    const info = document.createElement("div");
+    info.className = "troca-info";
+
+    const title = document.createElement("strong");
+    title.textContent = `${trocaDescricao.motivo || "TROCA"} - ${trocaDescricao.getQuantidadeItens()} item(ns) - ${trocaDescricao.getStatusNome() || "-"}`;
+    info.appendChild(title);
+
+    const data = document.createElement("span");
+    data.textContent = `Solicitada em: ${formatPedidoDataCompleta(trocaDescricao.data)}`;
+    info.appendChild(data);
+
+    const actions = document.createElement("div");
+    actions.className = "pedido-actions";
+
+    const btnDetalhes = document.createElement("button");
+    btnDetalhes.className = "btn small";
+    btnDetalhes.textContent = "DETALHES";
+    btnDetalhes.addEventListener("click", () => {
+      renderTrocaDetalhe(trocaDescricao);
+      mostrarDetalheTroca();
+    });
+    actions.appendChild(btnDetalhes);
+
+    card.appendChild(info);
+    card.appendChild(actions);
+    trocasList.appendChild(card);
+  });
+}
+
+function renderTrocaDetalhe(trocaDescricao) {
+  trocaDetalheTitle.textContent = `TROCA - ${trocaDescricao?.getStatusNome?.() || "-"}`;
+  trocaDetalheMeta.innerHTML = `
+    <div>Motivo: ${escapeHtml(trocaDescricao?.motivo || "-")}</div>
+    <div>Descricao: ${escapeHtml(trocaDescricao?.descricaoUsuario || "-")}</div>
+    <div>Data: ${formatPedidoDataCompleta(trocaDescricao?.data)}</div>
+    <div>Quantidade de itens: ${trocaDescricao?.getQuantidadeItens?.() || 0}</div>
+  `;
+
+  trocaDetalheItens.innerHTML = "";
+  const trocas = trocaDescricao?.getTrocas?.() || [];
+  const trocaConcluida = normalizeText(trocaDescricao?.getStatusNome?.() || trocaDescricao?.status) === "CONCLUIDA";
+  if (!trocas.length) {
+    const empty = document.createElement("div");
+    empty.className = "troca-detalhe-item";
+    empty.textContent = "Nenhum item vinculado a esta solicitacao.";
+    trocaDetalheItens.appendChild(empty);
+    return;
+  }
+
+  trocas.forEach((troca, index) => {
+    const item = document.createElement("div");
+    item.className = "troca-detalhe-item";
+
+    const image = document.createElement("div");
+    image.className = "pedido-item-image";
+    const produto = troca.getProduto?.() || null;
+    const imageUrl = produto?.getImagemPrincipalUrl?.() || produto?.imagem || "";
+    if (imageUrl) {
+      const img = document.createElement("img");
+      img.src = imageUrl;
+      img.alt = troca.getProdutoNome?.() || "Produto";
+      image.appendChild(img);
+    } else {
+      image.textContent = "IMG";
+    }
+
+    const info = document.createElement("div");
+    info.className = "troca-detalhe-info";
+    const modelo = troca.getProdutoModelo?.() ? ` - ${troca.getProdutoModelo()}` : "";
+    const cupomCodigo = troca.getCupomCodigo?.() || "";
+    const cupomTexto = cupomCodigo
+      ? cupomCodigo
+      : trocaConcluida
+        ? "Nao sera entregue cupom de troca devido as condicoes do produto ou data da garantia"
+        : "Ainda nao gerado";
+    info.innerHTML = `
+      <strong>Unidade ${index + 1}: ${escapeHtml(troca.getProdutoNome?.() || "Produto")}${escapeHtml(modelo)}</strong>
+      <span>Classificacao tecnica: ${escapeHtml(troca.getClassificacaoTecnica?.() || "-")}</span>
+      <span>Cupom gerado: ${escapeHtml(cupomTexto)}</span>
+    `;
+
+    item.appendChild(image);
+    item.appendChild(info);
+    trocaDetalheItens.appendChild(item);
+  });
+}
+
+function renderPedidosTrocaOptions(pedidos) {
+  trocaPedidoSelect.innerHTML = `<option value="">SELECIONE UM PEDIDO</option>`;
+
+  pedidos.forEach((pedido) => {
+    const option = document.createElement("option");
+    option.value = pedido.id;
+    option.textContent = `${formatPedidoDataHora(pedido.dataCriacao)} - ${pedido.getStatusNome?.() || "-"}`;
+    trocaPedidoSelect.appendChild(option);
+  });
+}
+
+function renderPedidoTrocaSelecionado(pedido) {
+  pedidoTrocaSelecionado = pedido;
+  trocaPedidoInfo.innerHTML = "";
+  trocaItensList.innerHTML = "";
+
+  if (!pedido) {
+    return;
+  }
+
+  trocaPedidoInfo.innerHTML = `
+    <strong>${formatPedidoDataHora(pedido.dataCriacao)} - ${escapeHtml(pedido.getStatusNome?.() || "-")}</strong>
+    <span>Total: ${formatCurrency(pedido.valorTotal)}</span>
+    <span>Itens adquiridos: ${contarItensPedido(pedido)}</span>
+  `;
+
+  const itens = getItensElegiveisTroca(pedido);
+  if (!itens.length) {
+    const empty = document.createElement("div");
+    empty.className = "troca-item-card";
+    empty.textContent = SYSTEM_MESSAGES.perfil.empty.noExchangeOrders;
+    trocaItensList.appendChild(empty);
+    atualizarTrocaHint();
+    return;
+  }
+
+  itens.forEach((item, index) => {
+    const disponivel = getQuantidadeDisponivelTroca(item);
+    const card = document.createElement("div");
+    card.className = "troca-item-card";
+    card.dataset.produtoId = item.produtoId || item.produto?.id || "";
+
+    const info = document.createElement("div");
+    info.className = "troca-item-info";
+    info.innerHTML = `
+      <strong>${escapeHtml(item?.nome || item?.produto?.nome || "Produto")}</strong>
+      <span>Modelo: ${escapeHtml(item?.modelo || item?.produto?.modelo || "-")}</span>
+      <span>Comprado: ${Number(item?.quantidade || 0)}x</span>
+      <span>Disponivel para troca: ${disponivel}x</span>
+    `;
+
+    const actions = document.createElement("div");
+    actions.className = "troca-item-actions";
+
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.className = "troca-item-check";
+    checkbox.checked = true;
+    checkbox.id = `troca-item-${index}`;
+
+    const quantidade = document.createElement("input");
+    quantidade.type = "number";
+    quantidade.className = "troca-item-qtd";
+    quantidade.min = "1";
+    quantidade.max = String(disponivel);
+    quantidade.value = String(disponivel);
+
+    checkbox.addEventListener("change", () => {
+      quantidade.disabled = !checkbox.checked;
+      atualizarTrocaHint();
+    });
+    quantidade.addEventListener("input", atualizarTrocaHint);
+    quantidade.addEventListener("change", () => {
+      const value = Math.max(1, Math.min(disponivel, Number(quantidade.value || 1)));
+      quantidade.value = String(value);
+      atualizarTrocaHint();
+    });
+
+    actions.appendChild(checkbox);
+    actions.appendChild(quantidade);
+    card.appendChild(info);
+    card.appendChild(actions);
+    trocaItensList.appendChild(card);
+  });
+
+  atualizarTrocaHint();
+}
+
+async function abrirFormularioTroca() {
+  setMessage("");
+  limparTrocaForm();
+  mostrarFormularioTroca();
+
+  try {
+    const data = await carregarPedidosElegiveisTrocaUsuario();
+    pedidosTrocaCache = data?.pedidos || [];
+    renderPedidosTrocaOptions(pedidosTrocaCache);
+
+    if (!pedidosTrocaCache.length) {
+      trocaPedidoInfo.textContent = SYSTEM_MESSAGES.perfil.empty.noExchangeOrders;
+      return;
+    }
+
+    trocaPedidoSelect.value = pedidosTrocaCache[0].id;
+    renderPedidoTrocaSelecionado(pedidosTrocaCache[0]);
+  } catch (error) {
+    setMessage(getErrorMessage(error, SYSTEM_MESSAGES.perfil.errors.exchangeOrdersLoadFailed));
+    mostrarListaTrocas();
+  }
+}
+
+function getTrocaPayload() {
+  const itens = [...trocaItensList.querySelectorAll(".troca-item-card")]
+    .filter((card) => card.querySelector(".troca-item-check")?.checked)
+    .map((card) => ({
+      produtoId: card.dataset.produtoId,
+      quantidade: Number(card.querySelector(".troca-item-qtd")?.value || 0)
+    }))
+    .filter((item) => item.produtoId && item.quantidade > 0);
+
+  return {
+    pedidoId: trocaPedidoSelect.value,
+    motivo: getValue("troca-motivo"),
+    descricaoUsuario: getValue("troca-descricao"),
+    itens
+  };
+}
+
+function validarTrocaPayload(payload) {
+  if (!payload.pedidoId) {
+    return "Selecione um pedido.";
+  }
+  if (!payload.motivo || !payload.descricaoUsuario) {
+    return SYSTEM_MESSAGES.perfil.errors.exchangeReasonRequired;
+  }
+  if (!payload.itens.length) {
+    return SYSTEM_MESSAGES.perfil.errors.exchangeItemsRequired;
+  }
+
+  const invalido = payload.itens.some((item) => !Number.isInteger(item.quantidade) || item.quantidade <= 0);
+  if (invalido) {
+    return SYSTEM_MESSAGES.perfil.errors.exchangeQuantityInvalid;
+  }
+  return "";
+}
+
+function carregarTrocasLista() {
+  carregarTrocasUsuario((dados, error) => {
+    if (error) {
+      setMessage(error);
+      return;
+    }
+    renderTrocas(dados?.trocas || []);
+    mostrarListaTrocas();
   });
 }
 
@@ -1259,8 +1642,54 @@ navPedidos.addEventListener("click", () => {
   carregarPedidosLista();
 });
 
+navTrocas.addEventListener("click", () => {
+  setNavActive("trocas");
+  carregarTrocasLista();
+});
+
 btnVoltarPedido.addEventListener("click", () => {
   mostrarListaPedidos();
+});
+
+btnSolicitarTroca.addEventListener("click", () => {
+  abrirFormularioTroca();
+});
+
+btnCancelTroca.addEventListener("click", () => {
+  mostrarListaTrocas();
+});
+
+btnVoltarTroca.addEventListener("click", () => {
+  mostrarListaTrocas();
+});
+
+trocaPedidoSelect.addEventListener("change", () => {
+  const pedido = pedidosTrocaCache.find((item) => item.id === trocaPedidoSelect.value) || null;
+  renderPedidoTrocaSelecionado(pedido);
+});
+
+btnSaveTroca.addEventListener("click", async () => {
+  setMessage("");
+  const payload = getTrocaPayload();
+  const error = validarTrocaPayload(payload);
+  if (error) {
+    setMessage(error);
+    return;
+  }
+
+  btnSaveTroca.disabled = true;
+  btnSaveTroca.textContent = "SOLICITANDO...";
+
+  try {
+    await solicitarTrocaUsuario(payload);
+    setMessage(SYSTEM_MESSAGES.perfil.success.exchangeRequested);
+    carregarTrocasLista();
+  } catch (err) {
+    setMessage(getErrorMessage(err, SYSTEM_MESSAGES.perfil.errors.exchangeCreateFailed));
+  } finally {
+    btnSaveTroca.disabled = false;
+    btnSaveTroca.textContent = "SOLICITAR";
+  }
 });
 
 btnAddEndereco.addEventListener("click", () => {
@@ -1369,5 +1798,8 @@ metadataPromise.then(() => carregarDados());
 if (window.location.hash === "#pedidos") {
   setNavActive("pedidos");
   carregarPedidosLista();
+} else if (window.location.hash === "#trocas") {
+  setNavActive("trocas");
+  carregarTrocasLista();
 }
 initCartNotice();

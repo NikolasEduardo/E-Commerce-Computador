@@ -142,6 +142,12 @@ body.admin-locked {
   font-weight: bold;
 }
 
+.panel-text {
+  margin: 0;
+  background: #c9c9c9;
+  padding: 10px;
+}
+
 .form-message {
   background: #a9a9a9;
   padding: 8px 12px;
@@ -407,6 +413,94 @@ body.admin-locked {
   margin-bottom: 4px;
 }
 
+.trocas-list,
+.troca-itens-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.troca-card,
+.troca-item-card {
+  background: #bdbdbd;
+  padding: 14px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 12px;
+  align-items: center;
+}
+
+.troca-info,
+.troca-item-info {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.troca-info strong,
+.troca-item-info strong {
+  font-size: 1rem;
+}
+
+.troca-actions,
+.troca-item-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.troca-actions button,
+.troca-item-actions button {
+  background: #a9a9a9;
+  border: none;
+  padding: 8px 14px;
+  cursor: pointer;
+}
+
+.troca-actions button:disabled,
+.troca-item-actions button:disabled,
+#troca-finalizar:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.troca-detalhe-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: #bdbdbd;
+  padding: 10px;
+}
+
+.troca-item-body {
+  display: grid;
+  grid-template-columns: 70px 1fr;
+  gap: 10px;
+  align-items: center;
+}
+
+.troca-item-image {
+  width: 60px;
+  height: 60px;
+  background: #a9a9a9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.troca-item-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.troca-classificacao {
+  background: #c9c9c9;
+  padding: 8px;
+  white-space: pre-wrap;
+}
+
 .produto-card {
   background: #bdbdbd;
   padding: 14px;
@@ -586,10 +680,25 @@ body.admin-locked {
 }
 
 .modal-content input,
+.modal-content select,
 .modal-content textarea {
   padding: 8px;
   border: none;
   background: #e0e0e0;
+}
+
+.modal-alert {
+  background: #b7b7b7;
+  padding: 8px;
+  line-height: 1.4;
+}
+
+.troca-stock-choice {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: #bdbdbd;
+  padding: 10px;
 }
 
 .modal-actions {
@@ -629,6 +738,12 @@ body.admin-locked {
   }
 
   .pedido-card {
+    grid-template-columns: 1fr;
+  }
+
+  .troca-card,
+  .troca-item-card,
+  .troca-item-body {
     grid-template-columns: 1fr;
   }
 

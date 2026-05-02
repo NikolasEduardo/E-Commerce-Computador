@@ -170,11 +170,17 @@ export const SYSTEM_MESSAGES = {
       orderLoadFailed: "Erro ao carregar pedido.",
       orderDetailLoadFailed: "Erro ao carregar detalhes do pedido.",
       orderReadicionarFailed: "Erro ao readicionar itens ao carrinho.",
+      exchangesLoadFailed: "Erro ao carregar solicitacoes de troca.",
+      exchangeOrdersLoadFailed: "Erro ao carregar pedidos elegiveis para troca.",
+      exchangeCreateFailed: "Erro ao solicitar troca.",
       profileRequired: "Preencha os dados cadastrais.",
       phoneRequired: "Preencha os dados de telefone.",
       addressRequired: "Preencha todos os dados de endereco.",
       addressFormRequired: "Preencha todos os dados do endereco.",
       cardRequired: "Preencha todos os dados do cartao.",
+      exchangeReasonRequired: "Informe o motivo e a descricao da troca.",
+      exchangeItemsRequired: "Selecione pelo menos um item para devolver.",
+      exchangeQuantityInvalid: "Informe uma quantidade valida para os itens selecionados.",
       cpfInvalid: "CPF invalido. Use o formato 000.000.000-00.",
       cepInvalid: "CEP invalido. Use o formato 00000-000.",
       cardNumberInvalid: "Numero do cartao invalido. Use entre 13 e 16 digitos.",
@@ -183,7 +189,8 @@ export const SYSTEM_MESSAGES = {
     },
     success: {
       updated: "Dados atualizados com sucesso.",
-      orderReadicionado: "Itens readicionados ao carrinho."
+      orderReadicionado: "Itens readicionados ao carrinho.",
+      exchangeRequested: "Solicitacao de troca registrada com sucesso."
     },
     empty: {
       noAddresses: "Nenhum endereco cadastrado.",
@@ -191,6 +198,8 @@ export const SYSTEM_MESSAGES = {
       noActiveCoupons: "Nenhum cupom ativo.",
       noInactiveCoupons: "Nenhum cupom expirado ou usado.",
       noOrders: "Nenhum pedido encontrado.",
+      noExchanges: "Nenhuma solicitacao de troca encontrada.",
+      noExchangeOrders: "Nenhum pedido elegivel para troca.",
       noPayment: "Nenhuma forma de pagamento encontrada."
     },
     confirmations: {
@@ -209,6 +218,10 @@ export const SYSTEM_MESSAGES = {
       loadProdutoFailed: "Erro ao buscar produto.",
       loadEstoqueFailed: "Erro ao carregar estoque.",
       loadFornecedoresFailed: "Erro ao carregar fornecedores.",
+      loadTrocasFailed: "Erro ao buscar solicitacoes de troca.",
+      loadTrocaFailed: "Erro ao carregar solicitacao de troca.",
+      exchangeEvaluateFailed: "Erro ao avaliar produto devolvido.",
+      exchangeFinishFailed: "Erro ao finalizar solicitacao de troca.",
       fornecedorCreateFailed: "Erro ao cadastrar fornecedor.",
       loadEntradasFailed: "Erro ao carregar entradas.",
       entradaCreateFailed: "Erro ao registrar entrada.",
@@ -225,6 +238,8 @@ export const SYSTEM_MESSAGES = {
       noProdutos: "Nenhum produto encontrado.",
       noFornecedores: "Nenhum fornecedor cadastrado.",
       noEntradas: "Nenhuma entrada registrada.",
+      noTrocas: "Nenhuma solicitacao de troca encontrada.",
+      noExchangeItems: "Nenhum item de troca encontrado.",
       noPayment: "Nenhum pagamento encontrado."
     },
     confirmations: {

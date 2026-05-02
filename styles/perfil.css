@@ -217,6 +217,14 @@ body {
   gap: 12px;
 }
 
+.trocas-list,
+.troca-itens-list,
+.troca-detalhe-itens {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
 .cartao-card {
   background: #b0b0b0;
   padding: 12px;
@@ -264,10 +272,58 @@ body {
   gap: 12px;
 }
 
+.troca-card,
+.troca-item-card,
+.troca-detalhe-item {
+  background: #b0b0b0;
+  padding: 12px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 12px;
+}
+
+.troca-detalhe-item {
+  grid-template-columns: 72px 1fr;
+}
+
 .pedido-info {
   display: flex;
   flex-direction: column;
   gap: 6px;
+}
+
+.troca-info,
+.troca-item-info,
+.troca-detalhe-info,
+.troca-pedido-info,
+.troca-detalhe-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.troca-item-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.troca-item-actions input[type="number"] {
+  width: 72px;
+  padding: 8px;
+  border: 0;
+  background: #d9d9d9;
+  font-size: 1rem;
+}
+
+.troca-hint {
+  background: #d9d9d9;
+  padding: 10px;
+}
+
+textarea {
+  min-height: 110px;
+  resize: vertical;
 }
 
 .pedido-info strong {
@@ -381,6 +437,12 @@ body {
   }
 
   .pedido-card {
+    grid-template-columns: 1fr;
+  }
+
+  .troca-card,
+  .troca-item-card,
+  .troca-detalhe-item {
     grid-template-columns: 1fr;
   }
 

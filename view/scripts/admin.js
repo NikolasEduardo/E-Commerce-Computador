@@ -24,6 +24,12 @@ import {
   salvarEntradaEstoque,
   carregarProdutosEstoque
 } from "../../controller/AdminEstoqueController.js";
+import {
+  buscarTrocasAdmin,
+  carregarTrocaAdmin,
+  avaliarTroca,
+  finalizarTroca
+} from "../../controller/AdminTrocasController.js";
 import { uploadImagemCloudinary } from "../../controller/CloudinaryController.js";
 import { SYSTEM_MESSAGES, getErrorMessage } from "../../model/SystemMessages.js";
 
@@ -37,10 +43,13 @@ const accessAction = document.getElementById("admin-access-action");
 const navProdutos = document.getElementById("nav-produtos");
 const navClientes = document.getElementById("nav-clientes");
 const navPedidos = document.getElementById("nav-pedidos");
+const navTrocas = document.getElementById("nav-trocas");
 const navEstoque = document.getElementById("nav-estoque");
 const clientesSection = document.getElementById("clientes-section");
 const pedidosSection = document.getElementById("pedidos-section");
 const pedidoDetalheSection = document.getElementById("pedido-detalhe-section");
+const trocasSection = document.getElementById("trocas-section");
+const trocaDetalheSection = document.getElementById("troca-detalhe-section");
 const produtosSection = document.getElementById("produtos-section");
 const produtoFormSection = document.getElementById("produto-form-section");
 const estoqueSection = document.getElementById("estoque-section");
@@ -104,6 +113,20 @@ const pedidoDetalheMeta = document.getElementById("pedido-detalhe-meta");
 const pedidoItensList = document.getElementById("pedido-itens-list");
 const pedidoPagamento = document.getElementById("pedido-pagamento");
 const pedidoVoltar = document.getElementById("pedido-voltar");
+const trocasList = document.getElementById("trocasList");
+const trocaDetalheTitle = document.getElementById("troca-detalhe-title");
+const trocaDetalheMeta = document.getElementById("troca-detalhe-meta");
+const trocaItensList = document.getElementById("troca-itens-list");
+const trocaVoltar = document.getElementById("troca-voltar");
+const trocaFinalizar = document.getElementById("troca-finalizar");
+const trocaAvaliacaoModal = document.getElementById("troca-avaliacao-modal");
+const trocaAvaliacaoProduto = document.getElementById("troca-avaliacao-produto");
+const trocaAvaliacaoClassificacao = document.getElementById("troca-avaliacao-classificacao");
+const trocaAvaliacaoDescricao = document.getElementById("troca-avaliacao-descricao");
+const trocaAvaliacaoAlerta = document.getElementById("troca-avaliacao-alerta");
+const trocaAvaliacaoEstoque = document.getElementById("troca-avaliacao-estoque");
+const trocaAvaliacaoCancel = document.getElementById("troca-avaliacao-cancel");
+const trocaAvaliacaoConfirm = document.getElementById("troca-avaliacao-confirm");
 const pedidoConfirmModal = document.getElementById("pedido-confirm-modal");
 const pedidoConfirmTitle = document.getElementById("pedido-confirm-title");
 const pedidoConfirmText = document.getElementById("pedido-confirm-text");
@@ -163,6 +186,15 @@ let estoqueCache = {
 };
 let pedidoConfirmResolver = null;
 let adminAccessLiberado = false;
+let trocaDetalheAtual = null;
+let trocaAvaliacaoAtual = null;
+
+const TROCA_CLASSIFICACOES_SEM_ESTOQUE = new Set([
+  "PRODUTO DANIFICADO POR MAU USO",
+  "PRODUTO ALTERADO/MODIFICADO"
+]);
+
+const TROCA_CLASSIFICACAO_FABRICACAO = "PRODUTO COM DEFEITO DE FABRICACAO";
 
 function showAccessOverlay(title, message, actionLabel = "", actionHandler = null) {
   document.body.classList.add("admin-locked");
@@ -626,10 +658,34 @@ function renderPedidos(pedidos) {
     } else if (status === "EM TROCA") {
       const btn = document.createElement("button");
       btn.textContent = "VERIFICAR SOLICITACAO DE TROCA";
+      btn.addEventListener("click", async () => {
+        setAdminSection("trocas");
+        await carregarTrocas();
+      });
+      actions.appendChild(btn);
+    } else if (status === "POSSUI TROCAS") {
+      const btn = document.createElement("button");
+      btn.textContent = "VERIFICAR SOLICITACAO DE TROCA";
+      btn.addEventListener("click", async () => {
+        setAdminSection("trocas");
+        await carregarTrocas();
+      });
       actions.appendChild(btn);
     } else if (status === "TROCADO") {
       const btn = document.createElement("button");
       btn.textContent = "CONSULTAR TROCA AVALIADA";
+      btn.addEventListener("click", async () => {
+        setAdminSection("trocas");
+        await carregarTrocas();
+      });
+      actions.appendChild(btn);
+    } else if (status === "ITENS TROCADOS") {
+      const btn = document.createElement("button");
+      btn.textContent = "CONSULTAR TROCA AVALIADA";
+      btn.addEventListener("click", async () => {
+        setAdminSection("trocas");
+        await carregarTrocas();
+      });
       actions.appendChild(btn);
     }
 
@@ -761,6 +817,266 @@ function renderPedidoDetalhe(pedido) {
   }
 }
 
+async function carregarTrocas() {
+  const trocas = await buscarTrocasAdmin();
+  renderTrocas(trocas);
+}
+
+function renderTrocas(trocas) {
+  trocasList.innerHTML = "";
+  if (!trocas.length) {
+    const empty = document.createElement("div");
+    empty.className = "empty-state";
+    empty.textContent = SYSTEM_MESSAGES.admin.empty.noTrocas;
+    trocasList.appendChild(empty);
+    return;
+  }
+
+  trocas.forEach((descricao) => {
+    const card = document.createElement("div");
+    card.className = "troca-card";
+
+    const info = document.createElement("div");
+    info.className = "troca-info";
+    info.innerHTML = `
+      <strong>${descricao?.cliente?.nome || "CLIENTE"}</strong>
+      <span>Motivo: ${descricao.motivo || "-"}</span>
+      <span>Data da solicitacao: ${formatData(descricao.data)}</span>
+      <span>Status: ${descricao.getStatusNome?.() || descricao.status || "-"}</span>
+      <span>Itens devolvidos: ${descricao.getQuantidadeItens?.() ?? 0}</span>
+    `;
+
+    const actions = document.createElement("div");
+    actions.className = "troca-actions";
+    const detalhesBtn = document.createElement("button");
+    detalhesBtn.textContent = "DETALHES";
+    detalhesBtn.addEventListener("click", () => abrirTrocaDetalhe(descricao.id));
+    actions.appendChild(detalhesBtn);
+
+    card.appendChild(info);
+    card.appendChild(actions);
+    trocasList.appendChild(card);
+  });
+}
+
+async function abrirTrocaDetalhe(descricaoId) {
+  try {
+    const troca = await carregarTrocaAdmin(descricaoId);
+    trocaDetalheAtual = troca;
+    renderTrocaDetalhe(troca);
+    setAdminSection("troca-detalhe");
+  } catch (error) {
+    trocasList.innerHTML = `<div class="empty-state">${getErrorMessage(error, SYSTEM_MESSAGES.admin.errors.loadTrocaFailed)}</div>`;
+  }
+}
+
+function getTrocaProdutoImagem(troca) {
+  const produto = troca?.getProduto?.() || troca?.item?.produto || null;
+  return produto?.getImagemPrincipalUrl?.()
+    || produto?.imagemProdutos_on_produto?.[0]?.url
+    || "";
+}
+
+function renderTrocaDetalhe(descricao) {
+  if (!descricao) {
+    return;
+  }
+
+  const cliente = descricao?.cliente?.nome || "CLIENTE";
+  trocaDetalheTitle.textContent = `${cliente} - ${descricao.status || "-"}`;
+  trocaDetalheMeta.innerHTML = `
+    <div>Motivo: ${descricao.motivo || "-"}</div>
+    <div>Descricao do cliente: ${descricao.descricaoUsuario || "-"}</div>
+    <div>Data da solicitacao: ${formatData(descricao.data)}</div>
+    <div>Quantidade de itens: ${descricao.getQuantidadeItens?.() ?? 0}</div>
+  `;
+
+  const trocas = descricao.getTrocas?.() || [];
+  trocaItensList.innerHTML = "";
+  if (!trocas.length) {
+    trocaItensList.innerHTML = `<div class="empty-state">${SYSTEM_MESSAGES.admin.empty.noExchangeItems}</div>`;
+  }
+
+  const statusConcluido = normalizeTexto(descricao.status) === "CONCLUIDA";
+  trocas.forEach((troca, index) => {
+    const produto = troca?.getProduto?.() || troca?.item?.produto || {};
+    const imgUrl = getTrocaProdutoImagem(troca);
+    const card = document.createElement("div");
+    card.className = "troca-item-card";
+
+    const body = document.createElement("div");
+    body.className = "troca-item-body";
+
+    const image = document.createElement("div");
+    image.className = "troca-item-image";
+    if (imgUrl) {
+      const img = document.createElement("img");
+      img.src = imgUrl;
+      img.alt = produto.nome || "Produto";
+      image.appendChild(img);
+    } else {
+      image.textContent = "IMG";
+    }
+
+    const info = document.createElement("div");
+    info.className = "troca-item-info";
+    const precoAtual = Number(troca?.item?.precoAtual || 0);
+    info.innerHTML = `
+      <strong>ITEM ${index + 1} - ${produto.nome || "PRODUTO"}</strong>
+      <span>Modelo: ${produto.modelo || "-"}</span>
+      <span>Preco da compra: ${formatMoney(precoAtual)}</span>
+      <span>Garantia: ${produto.garantia || "-"}</span>
+      <span>Status do item: ${troca?.item?.status?.nome || "-"}</span>
+    `;
+
+    if (troca.classificacaoTecnica) {
+      const classificacao = document.createElement("div");
+      classificacao.className = "troca-classificacao";
+      classificacao.textContent = troca.classificacaoTecnica;
+      info.appendChild(classificacao);
+    }
+
+    if (troca.cupomGerado) {
+      const cupom = document.createElement("span");
+      cupom.textContent = `Cupom gerado: ${troca.cupomGerado.codigo} (${formatMoney(Number(troca.cupomGerado.valor || 0))})`;
+      info.appendChild(cupom);
+    }
+
+    body.appendChild(image);
+    body.appendChild(info);
+
+    const actions = document.createElement("div");
+    actions.className = "troca-item-actions";
+    const avaliarBtn = document.createElement("button");
+    avaliarBtn.textContent = troca.classificacaoTecnica ? "AVALIADO" : "AVALIAR";
+    avaliarBtn.disabled = Boolean(troca.classificacaoTecnica) || statusConcluido;
+    avaliarBtn.addEventListener("click", () => abrirModalAvaliacaoTroca(troca));
+    actions.appendChild(avaliarBtn);
+
+    card.appendChild(body);
+    card.appendChild(actions);
+    trocaItensList.appendChild(card);
+  });
+
+  const todosAvaliados = trocas.length > 0 && trocas.every((troca) => troca.classificacaoTecnica);
+  trocaFinalizar.disabled = !todosAvaliados || statusConcluido;
+  trocaFinalizar.textContent = statusConcluido ? "AVALIACAO CONCLUIDA" : "FINALIZAR AVALIACAO";
+}
+
+function limparModalAvaliacaoTroca() {
+  trocaAvaliacaoClassificacao.value = "";
+  trocaAvaliacaoDescricao.value = "";
+  trocaAvaliacaoAlerta.classList.add("hidden");
+  trocaAvaliacaoAlerta.textContent = "";
+  trocaAvaliacaoEstoque.classList.remove("hidden");
+  document
+    .querySelectorAll('input[name="troca-retorna-estoque"]')
+    .forEach((input) => {
+      input.checked = false;
+    });
+}
+
+function abrirModalAvaliacaoTroca(troca) {
+  trocaAvaliacaoAtual = troca;
+  limparModalAvaliacaoTroca();
+  const produto = troca?.getProduto?.() || troca?.item?.produto || {};
+  trocaAvaliacaoProduto.textContent = `${produto.nome || "PRODUTO"} ${produto.modelo || ""}`.trim();
+  trocaAvaliacaoModal.classList.remove("hidden");
+}
+
+function fecharModalAvaliacaoTroca() {
+  trocaAvaliacaoModal.classList.add("hidden");
+  trocaAvaliacaoAtual = null;
+}
+
+function atualizarModalAvaliacaoTroca() {
+  const classificacao = normalizeTexto(trocaAvaliacaoClassificacao.value);
+  const semRetorno = TROCA_CLASSIFICACOES_SEM_ESTOQUE.has(classificacao);
+  const fabricacao = classificacao === TROCA_CLASSIFICACAO_FABRICACAO;
+
+  trocaAvaliacaoEstoque.classList.toggle("hidden", semRetorno);
+  if (semRetorno) {
+    document
+      .querySelectorAll('input[name="troca-retorna-estoque"]')
+      .forEach((input) => {
+        input.checked = false;
+      });
+  }
+
+  if (semRetorno) {
+    trocaAvaliacaoAlerta.textContent =
+      "Esta classificacao nao permite retorno ao estoque.";
+    trocaAvaliacaoAlerta.classList.remove("hidden");
+  } else if (fabricacao) {
+    trocaAvaliacaoAlerta.textContent =
+      "Antes de decidir se volta ao estoque, confirme que o defeito de fabricacao foi reavaliado.";
+    trocaAvaliacaoAlerta.classList.remove("hidden");
+  } else {
+    trocaAvaliacaoAlerta.textContent = "";
+    trocaAvaliacaoAlerta.classList.add("hidden");
+  }
+}
+
+function getRetornaEstoqueAvaliacao() {
+  const classificacao = normalizeTexto(trocaAvaliacaoClassificacao.value);
+  if (TROCA_CLASSIFICACOES_SEM_ESTOQUE.has(classificacao)) {
+    return false;
+  }
+  const checked = document.querySelector('input[name="troca-retorna-estoque"]:checked');
+  if (!checked) {
+    return null;
+  }
+  return checked.value === "sim";
+}
+
+async function confirmarAvaliacaoTroca() {
+  const classificacao = trocaAvaliacaoClassificacao.value.trim();
+  const descricaoTecnica = trocaAvaliacaoDescricao.value.trim();
+  const retornaEstoque = getRetornaEstoqueAvaliacao();
+  const normalized = normalizeTexto(classificacao);
+
+  if (!classificacao || !descricaoTecnica || retornaEstoque === null) {
+    trocaAvaliacaoAlerta.textContent = "Informe a classificacao, a descricao e a decisao de estoque.";
+    trocaAvaliacaoAlerta.classList.remove("hidden");
+    return;
+  }
+
+  if (normalized === TROCA_CLASSIFICACAO_FABRICACAO) {
+    trocaAvaliacaoModal.classList.add("hidden");
+    const reavaliado = await abrirConfirmacaoPedido(
+      "CONFIRMAR REAVALIACAO",
+      "Produto com defeito de fabricacao foi reavaliado antes da decisao de voltar ou nao ao estoque?"
+    );
+    if (!reavaliado) {
+      trocaAvaliacaoModal.classList.remove("hidden");
+      return;
+    }
+  }
+
+  trocaAvaliacaoConfirm.disabled = true;
+  trocaAvaliacaoConfirm.textContent = "SALVANDO...";
+  try {
+    await avaliarTroca({
+      trocaId: trocaAvaliacaoAtual.id,
+      classificacao,
+      descricaoTecnica,
+      retornaEstoque
+    });
+    fecharModalAvaliacaoTroca();
+    await abrirTrocaDetalhe(trocaDetalheAtual.id);
+  } catch (error) {
+    trocaAvaliacaoAlerta.textContent = getErrorMessage(
+      error,
+      SYSTEM_MESSAGES.admin.errors.exchangeEvaluateFailed
+    );
+    trocaAvaliacaoAlerta.classList.remove("hidden");
+    trocaAvaliacaoModal.classList.remove("hidden");
+  } finally {
+    trocaAvaliacaoConfirm.disabled = false;
+    trocaAvaliacaoConfirm.textContent = "CONFIRMAR";
+  }
+}
+
 function abrirConfirmacaoPedido(titulo, texto) {
   pedidoConfirmTitle.textContent = titulo;
   pedidoConfirmText.textContent = texto;
@@ -783,6 +1099,8 @@ function setAdminSection(section) {
   const isClientes = section === "clientes";
   const isPedidos = section === "pedidos";
   const isPedidoDetalhe = section === "pedido-detalhe";
+  const isTrocas = section === "trocas";
+  const isTrocaDetalhe = section === "troca-detalhe";
   const isProdutoForm = section === "produto-form";
   const isEstoque = section === "estoque";
 
@@ -790,12 +1108,15 @@ function setAdminSection(section) {
   clientesSection.classList.toggle("hidden", !isClientes);
   pedidosSection.classList.toggle("hidden", !isPedidos);
   pedidoDetalheSection.classList.toggle("hidden", !isPedidoDetalhe);
+  trocasSection.classList.toggle("hidden", !isTrocas);
+  trocaDetalheSection.classList.toggle("hidden", !isTrocaDetalhe);
   produtoFormSection.classList.toggle("hidden", !isProdutoForm);
   estoqueSection.classList.toggle("hidden", !isEstoque);
 
   navProdutos.classList.toggle("is-active", isProdutos || isProdutoForm);
   navClientes.classList.toggle("is-active", isClientes);
   navPedidos.classList.toggle("is-active", isPedidos || isPedidoDetalhe);
+  navTrocas.classList.toggle("is-active", isTrocas || isTrocaDetalhe);
   navEstoque.classList.toggle("is-active", isEstoque);
 }
 
@@ -1624,6 +1945,15 @@ navPedidos.addEventListener("click", async () => {
   }
 });
 
+navTrocas.addEventListener("click", async () => {
+  setAdminSection("trocas");
+  try {
+    await carregarTrocas();
+  } catch (error) {
+    trocasList.innerHTML = `<div class="empty-state">${getErrorMessage(error, SYSTEM_MESSAGES.admin.errors.loadTrocasFailed)}</div>`;
+  }
+});
+
 navEstoque.addEventListener("click", async () => {
   setAdminSection("estoque");
   fecharFornecedorForm();
@@ -1657,6 +1987,53 @@ pedidoVoltar.addEventListener("click", async () => {
     await carregarPedidos();
   } catch (error) {
     pedidosList.innerHTML = `<div class="empty-state">${getErrorMessage(error, SYSTEM_MESSAGES.admin.errors.loadPedidosFailed)}</div>`;
+  }
+});
+
+trocaVoltar.addEventListener("click", async () => {
+  setAdminSection("trocas");
+  try {
+    await carregarTrocas();
+  } catch (error) {
+    trocasList.innerHTML = `<div class="empty-state">${getErrorMessage(error, SYSTEM_MESSAGES.admin.errors.loadTrocasFailed)}</div>`;
+  }
+});
+
+trocaAvaliacaoClassificacao.addEventListener("change", () => {
+  atualizarModalAvaliacaoTroca();
+});
+
+trocaAvaliacaoCancel.addEventListener("click", () => {
+  fecharModalAvaliacaoTroca();
+});
+
+trocaAvaliacaoConfirm.addEventListener("click", () => {
+  confirmarAvaliacaoTroca();
+});
+
+trocaFinalizar.addEventListener("click", async () => {
+  if (!trocaDetalheAtual?.id || trocaFinalizar.disabled) {
+    return;
+  }
+
+  const confirmou = await abrirConfirmacaoPedido(
+    "FINALIZAR TROCA",
+    "Deseja finalizar a avaliacao, gerar os cupons cabiveis e atualizar os status do pedido?"
+  );
+  if (!confirmou) {
+    return;
+  }
+
+  trocaFinalizar.disabled = true;
+  trocaFinalizar.textContent = "FINALIZANDO...";
+  try {
+    await finalizarTroca(trocaDetalheAtual.id);
+    await abrirTrocaDetalhe(trocaDetalheAtual.id);
+  } catch (error) {
+    trocaDetalheMeta.innerHTML += `<div>${getErrorMessage(error, SYSTEM_MESSAGES.admin.errors.exchangeFinishFailed)}</div>`;
+    const trocas = trocaDetalheAtual?.getTrocas?.() || [];
+    trocaFinalizar.disabled = !(trocas.length > 0 && trocas.every((troca) => troca.classificacaoTecnica));
+    trocaFinalizar.textContent = "FINALIZAR AVALIACAO";
   }
 });
 

@@ -492,6 +492,17 @@ async function getStatusPedidoId(accessToken, nome) {
   return data?.statusPedidos?.[0]?.id || null;
 }
 
+async function getStatusItemPedidoId(accessToken, nome) {
+  const query = `
+    query StatusItemPedidoPorNome($nome: String!) {
+      statusItemPedidos(where: { nome: { eq: $nome } }, limit: 1) { id }
+    }
+  `;
+
+  const data = await executeGraphql(accessToken, query, { nome });
+  return data?.statusItemPedidos?.[0]?.id || null;
+}
+
 async function getStatusCupomId(accessToken, nome) {
   const query = `
     query StatusCupomPorNome($nome: String!) {
@@ -1191,11 +1202,18 @@ async function fetchPedidoDetalhe(accessToken, pedidoId) {
           itemPedidos_on_pedido {
             quantidade
             precoAtual
+            status { nome }
             produto {
               id
               nome
               modelo
               imagemProdutos_on_produto(where: { capa: { eq: true } }, limit: 1) { url }
+            }
+            trocas_on_item {
+              id
+              classificacaoTecnica
+              cupomGerado { codigo valor tipo { nome } }
+              descricao { id motivo status data }
             }
           }
           pagamentos_on_pedido(orderBy: [{ dataPagamento: DESC }], limit: 1) {
@@ -1249,7 +1267,10 @@ async function fetchPedidosPorUsuario(accessToken, usuarioId) {
           status { nome }
           itemPedidos_on_pedido {
             quantidade
+            status { nome }
+            trocas_on_item { id descricao { id status } }
           }
+          trocas_on_pedido { id descricao { id status } }
           pagamentos_on_pedido(orderBy: [{ dataPagamento: DESC }], limit: 1) {
             cupomPromocional { codigo valor tipo { nome } }
           }
@@ -1258,6 +1279,747 @@ async function fetchPedidosPorUsuario(accessToken, usuarioId) {
     `;
   const data = await executeGraphql(accessToken, query, { usuarioId });
   return data?.pedidos || [];
+}
+
+function contarTrocasItemPedido(item) {
+  return (item?.trocas_on_item || []).length;
+}
+
+function getQuantidadeDisponivelTroca(item) {
+  const quantidadeComprada = Math.max(0, Number(item?.quantidade || 0));
+  const quantidadeJaSolicitada = contarTrocasItemPedido(item);
+  return Math.max(0, quantidadeComprada - quantidadeJaSolicitada);
+}
+
+function getItensElegiveisTroca(pedido) {
+  return (pedido?.itemPedidos_on_pedido || []).filter((item) => {
+    const status = normalizeTexto(item?.status?.nome);
+    const quantidadeDisponivel = getQuantidadeDisponivelTroca(item);
+    return (
+      quantidadeDisponivel > 0 &&
+      status !== "EM TROCA" &&
+      status !== "TROCADO"
+    );
+  });
+}
+
+function normalizarItensSolicitacaoTroca(itens = []) {
+  const agrupados = new Map();
+  for (const item of itens) {
+    const produtoId = `${item?.produtoId || ""}`.trim();
+    const quantidade = Math.floor(Number(item?.quantidade || 0));
+    if (!produtoId || quantidade <= 0) {
+      continue;
+    }
+    agrupados.set(produtoId, (agrupados.get(produtoId) || 0) + quantidade);
+  }
+  return [...agrupados.entries()].map(([produtoId, quantidade]) => ({
+    produtoId,
+    quantidade
+  }));
+}
+
+function montarPedidoTrocaResposta(pedido) {
+  const itens = pedido?.itemPedidos_on_pedido || [];
+  return {
+    ...pedido,
+    itemPedidos_on_pedido: itens.map((item) => ({
+      ...item,
+      quantidadeDisponivelTroca: getQuantidadeDisponivelTroca(item),
+      quantidadeEmTroca: contarTrocasItemPedido(item)
+    }))
+  };
+}
+
+async function fetchTrocasPorUsuario(accessToken, usuarioId) {
+  const query = `
+    query TrocasUsuario($usuarioId: UUID!) {
+      descricaoTrocas(
+        where: { clienteId: { eq: $usuarioId } }
+        orderBy: [{ data: DESC }]
+      ) {
+        id
+        motivo
+        descricaoUsuario
+        data
+        status
+        trocas_on_descricao {
+          id
+          classificacaoTecnica
+          cupomGerado { id codigo valor tipo { nome } status { nome } }
+          pedido { id dataCriacao status { nome } }
+          item {
+            pedidoId
+            produtoId
+            quantidade
+            precoAtual
+            status { nome }
+            produto {
+              id
+              nome
+              modelo
+              imagemProdutos_on_produto(where: { capa: { eq: true } }, limit: 1) { url capa }
+            }
+          }
+        }
+      }
+    }
+  `;
+  const data = await executeGraphql(accessToken, query, { usuarioId });
+  return data?.descricaoTrocas || [];
+}
+
+function getTrocaAdminSelection() {
+  return `
+    id
+    motivo
+    descricaoUsuario
+    data
+    status
+    cliente { id nome cpf email }
+    trocas_on_descricao {
+      id
+      classificacaoTecnica
+      cupomGerado { id codigo valor tipo { nome } status { nome } }
+      pedido {
+        id
+        dataCriacao
+        status { nome }
+        usuario { id nome }
+      }
+      item {
+        pedidoId
+        produtoId
+        quantidade
+        precoAtual
+        status { nome }
+        produto {
+          id
+          nome
+          modelo
+          garantia
+          estoqueFisico
+          imagemProdutos_on_produto(where: { capa: { eq: true } }, limit: 1) { url capa }
+        }
+      }
+    }
+  `;
+}
+
+async function fetchTrocasAdmin(accessToken) {
+  const query = `
+    query TrocasAdmin {
+      descricaoTrocas(orderBy: [{ data: DESC }], limit: 500) {
+        ${getTrocaAdminSelection()}
+      }
+    }
+  `;
+  const data = await executeGraphql(accessToken, query, {});
+  return data?.descricaoTrocas || [];
+}
+
+async function fetchDescricaoTrocaDetalheAdmin(accessToken, descricaoId) {
+  const query = `
+    query TrocaAdminDetalhe($id: UUID!) {
+      descricaoTroca(id: $id) {
+        ${getTrocaAdminSelection()}
+      }
+    }
+  `;
+  const data = await executeGraphql(accessToken, query, { id: descricaoId });
+  return data?.descricaoTroca || null;
+}
+
+async function fetchTrocaAdminPorId(accessToken, trocaId) {
+  const query = `
+    query TrocaAdminPorId($id: UUID!) {
+      troca(id: $id) {
+        id
+        classificacaoTecnica
+        cupomGeradoId
+        descricao { id status cliente { id nome } }
+        pedido { id dataCriacao status { nome } usuario { id nome } }
+        item {
+          pedidoId
+          produtoId
+          quantidade
+          precoAtual
+          status { nome }
+          produto {
+            id
+            nome
+            modelo
+            garantia
+            estoqueFisico
+          }
+        }
+      }
+    }
+  `;
+  const data = await executeGraphql(accessToken, query, { id: trocaId });
+  return data?.troca || null;
+}
+
+async function updateTrocaClassificacao(accessToken, data) {
+  const mutation = `
+    mutation AtualizarClassificacaoTroca($id: UUID!, $classificacaoTecnica: String!) {
+      troca_update(id: $id, data: { classificacaoTecnica: $classificacaoTecnica })
+    }
+  `;
+  await executeGraphql(accessToken, mutation, data);
+}
+
+async function updateTrocaCupomGerado(accessToken, data) {
+  const mutation = `
+    mutation AtualizarCupomTroca($id: UUID!, $cupomGeradoId: UUID!) {
+      troca_update(id: $id, data: { cupomGeradoId: $cupomGeradoId })
+    }
+  `;
+  await executeGraphql(accessToken, mutation, data);
+}
+
+async function updateDescricaoTrocaStatus(accessToken, data) {
+  const mutation = `
+    mutation AtualizarStatusDescricaoTroca($id: UUID!, $status: String!) {
+      descricaoTroca_update(id: $id, data: { status: $status })
+    }
+  `;
+  await executeGraphql(accessToken, mutation, data);
+}
+
+const CLASSIFICACOES_TROCA = [
+  "Produto sem defeito constatado",
+  "Produto com defeito de fabricacao",
+  "Produto danificado por mau uso",
+  "Produto incompativel com sistema do cliente",
+  "Produto com defeito intermitente",
+  "Produto alterado/modificado",
+  "Produto fora das condicoes de garantia"
+];
+
+const CLASSIFICACOES_TROCA_NORMALIZADAS = new Set(
+  CLASSIFICACOES_TROCA.map((item) => normalizeTexto(item))
+);
+
+const CLASSIFICACOES_SEM_RETORNO_ESTOQUE = new Set([
+  normalizeTexto("Produto danificado por mau uso"),
+  normalizeTexto("Produto alterado/modificado")
+]);
+
+function validarClassificacaoTroca(classificacao) {
+  return CLASSIFICACOES_TROCA_NORMALIZADAS.has(normalizeTexto(classificacao));
+}
+
+function deveForcarSemRetornoEstoque(classificacao) {
+  return CLASSIFICACOES_SEM_RETORNO_ESTOQUE.has(normalizeTexto(classificacao));
+}
+
+function montarClassificacaoTecnicaTroca(classificacao, descricaoTecnica, retornaEstoque) {
+  return [
+    `Classificacao: ${classificacao}`,
+    `Descricao tecnica: ${descricaoTecnica}`,
+    `Retorno ao estoque: ${retornaEstoque ? "SIM" : "NAO"}`
+  ].join("\n");
+}
+
+function extrairClassificacaoTecnicaTroca(classificacaoTecnica = "") {
+  const texto = `${classificacaoTecnica || ""}`;
+  const match = texto.match(/Classificacao:\s*(.+)/i);
+  return match?.[1]?.trim() || texto.split("\n")[0]?.trim() || "";
+}
+
+function parseGarantiaMeses(garantia) {
+  const texto = normalizeTexto(garantia);
+  const anosMatch = texto.match(/(\d+)\s+ANO/);
+  const mesesMatch = texto.match(/(\d+)\s+MES/);
+  const anos = anosMatch ? Number(anosMatch[1]) : 0;
+  const meses = mesesMatch ? Number(mesesMatch[1]) : 0;
+  return Math.max(0, anos * 12 + meses);
+}
+
+function adicionarMeses(dataBase, meses) {
+  const date = new Date(dataBase);
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+  date.setMonth(date.getMonth() + meses);
+  return date;
+}
+
+function calcularPercentualCupomTroca(classificacao, dentroGarantia) {
+  const normalized = normalizeTexto(classificacao);
+  const dentroGarantiaPercentuais = new Map([
+    [normalizeTexto("Produto sem defeito constatado"), 1],
+    [normalizeTexto("Produto com defeito de fabricacao"), 1],
+    [normalizeTexto("Produto incompativel com sistema do cliente"), 1],
+    [normalizeTexto("Produto com defeito intermitente"), 1],
+    [normalizeTexto("Produto danificado por mau uso"), 0.5],
+    [normalizeTexto("Produto alterado/modificado"), 0],
+    [normalizeTexto("Produto fora das condicoes de garantia"), 0]
+  ]);
+  const foraGarantiaPercentuais = new Map([
+    [normalizeTexto("Produto sem defeito constatado"), 0.6],
+    [normalizeTexto("Produto incompativel com sistema do cliente"), 0.6],
+    [normalizeTexto("Produto com defeito de fabricacao"), 0.4],
+    [normalizeTexto("Produto com defeito intermitente"), 0.4],
+    [normalizeTexto("Produto danificado por mau uso"), 0],
+    [normalizeTexto("Produto alterado/modificado"), 0],
+    [normalizeTexto("Produto fora das condicoes de garantia"), 0]
+  ]);
+  const percentuais = dentroGarantia ? dentroGarantiaPercentuais : foraGarantiaPercentuais;
+  return percentuais.get(normalized) || 0;
+}
+
+function trocaEstaDentroGarantia(troca, dataSolicitacao) {
+  const garantiaMeses = parseGarantiaMeses(troca?.item?.produto?.garantia);
+  if (!garantiaMeses) {
+    return false;
+  }
+  const dataCompra = troca?.pedido?.dataCriacao;
+  const fimGarantia = adicionarMeses(dataCompra, garantiaMeses);
+  const dataTroca = new Date(dataSolicitacao);
+  if (!fimGarantia || Number.isNaN(dataTroca.getTime())) {
+    return false;
+  }
+  return dataTroca.getTime() <= fimGarantia.getTime();
+}
+
+function calcularValorCupomTroca(troca, dataSolicitacao) {
+  const classificacao = extrairClassificacaoTecnicaTroca(troca?.classificacaoTecnica);
+  const dentroGarantia = trocaEstaDentroGarantia(troca, dataSolicitacao);
+  const percentual = calcularPercentualCupomTroca(classificacao, dentroGarantia);
+  const precoAtual = Number(troca?.item?.precoAtual || 0);
+  return Number((precoAtual * percentual).toFixed(2));
+}
+
+async function avaliarTrocaAdmin(accessToken, payload) {
+  const trocaId = `${payload?.trocaId || ""}`.trim();
+  const classificacao = `${payload?.classificacao || ""}`.trim();
+  const descricaoTecnica = `${payload?.descricaoTecnica || ""}`.trim();
+  let retornaEstoque = Boolean(payload?.retornaEstoque);
+
+  if (!trocaId || !validarClassificacaoTroca(classificacao) || !descricaoTecnica) {
+    throw new Error("Dados de avaliacao invalidos.");
+  }
+
+  if (deveForcarSemRetornoEstoque(classificacao)) {
+    retornaEstoque = false;
+  }
+
+  const troca = await fetchTrocaAdminPorId(accessToken, trocaId);
+  if (!troca) {
+    throw new Error("Troca nao encontrada.");
+  }
+  if (troca.classificacaoTecnica) {
+    throw new Error("Esta troca ja foi avaliada.");
+  }
+
+  if (retornaEstoque) {
+    const produto = troca?.item?.produto;
+    if (!produto?.id) {
+      throw new Error("Produto da troca nao encontrado.");
+    }
+    await updateProdutoEstoque(accessToken, {
+      id: produto.id,
+      estoqueFisico: Math.max(0, Number(produto.estoqueFisico || 0) + 1)
+    });
+  }
+
+  const classificacaoTecnica = montarClassificacaoTecnicaTroca(
+    classificacao,
+    descricaoTecnica,
+    retornaEstoque
+  );
+  await updateTrocaClassificacao(accessToken, {
+    id: trocaId,
+    classificacaoTecnica
+  });
+
+  return { ok: true };
+}
+
+async function finalizarTrocaAdmin(accessToken, descricaoId) {
+  const descricao = await fetchDescricaoTrocaDetalheAdmin(accessToken, descricaoId);
+  if (!descricao) {
+    throw new Error("Solicitacao de troca nao encontrada.");
+  }
+  if (normalizeTexto(descricao.status) === "CONCLUIDA") {
+    throw new Error("Esta solicitacao de troca ja foi finalizada.");
+  }
+
+  const trocas = descricao?.trocas_on_descricao || [];
+  if (!trocas.length) {
+    throw new Error("Nenhum item de troca encontrado.");
+  }
+  if (trocas.some((troca) => !troca?.classificacaoTecnica)) {
+    throw new Error("Classifique todos os produtos antes de finalizar.");
+  }
+
+  const valoresCupom = trocas
+    .map((troca) => ({
+      troca,
+      valor: calcularValorCupomTroca(troca, descricao.data)
+    }))
+    .filter((item) => item.valor > 0);
+
+  let cupomGerado = null;
+  const valorTotalCupom = Number(
+    valoresCupom.reduce((acc, item) => acc + item.valor, 0).toFixed(2)
+  );
+
+  if (valorTotalCupom > 0) {
+    const cupomExistente = valoresCupom
+      .map((item) => item?.troca?.cupomGerado)
+      .find((cupom) => cupom?.id);
+
+    if (cupomExistente) {
+      cupomGerado = {
+        id: cupomExistente.id,
+        codigo: cupomExistente.codigo,
+        valor: Number(cupomExistente.valor || valorTotalCupom)
+      };
+    } else {
+      const statusAtivoId = await getStatusCupomId(accessToken, "ATIVO");
+      const tipoTrocaId = await getTipoCupomId(accessToken, "TROCA");
+      if (!statusAtivoId || !tipoTrocaId) {
+        throw new Error("Status ou tipo de cupom de troca nao encontrado.");
+      }
+      if (!descricao?.cliente?.id) {
+        throw new Error("Cliente da solicitacao de troca nao encontrado.");
+      }
+
+      cupomGerado = {
+        id: crypto.randomUUID(),
+        codigo: gerarCodigoCupom(),
+        valor: valorTotalCupom
+      };
+
+      await insertCupom(accessToken, {
+        id: cupomGerado.id,
+        clienteId: descricao?.cliente?.id,
+        statusId: statusAtivoId,
+        tipoId: tipoTrocaId,
+        codigo: cupomGerado.codigo,
+        valor: cupomGerado.valor,
+        validade: adicionarAno(new Date())
+      });
+    }
+
+    for (const item of valoresCupom) {
+      if (item.troca?.cupomGerado?.id) {
+        continue;
+      }
+      await updateTrocaCupomGerado(accessToken, {
+        id: item.troca.id,
+        cupomGeradoId: cupomGerado.id
+      });
+    }
+  }
+
+  const pedidoUpdates = new Map();
+  const itemUpdates = new Map();
+  trocas.forEach((troca) => {
+    const pedido = troca?.pedido;
+    const pedidoStatus = normalizeTexto(pedido?.status?.nome);
+    if (pedido?.id && (pedidoStatus === "EM TROCA" || pedidoStatus === "POSSUI TROCAS")) {
+      pedidoUpdates.set(pedido.id, pedidoStatus === "EM TROCA" ? "TROCADO" : "ITENS TROCADOS");
+    }
+
+    const item = troca?.item;
+    const itemStatus = normalizeTexto(item?.status?.nome);
+    if (
+      item?.pedidoId &&
+      item?.produtoId &&
+      (itemStatus === "EM TROCA" || itemStatus === "QUANTIDADE EM TROCA")
+    ) {
+      const key = `${item.pedidoId}:${item.produtoId}`;
+      itemUpdates.set(key, {
+        pedidoId: item.pedidoId,
+        produtoId: item.produtoId,
+        status: itemStatus === "EM TROCA" ? "TROCADO" : "QUANTIDADE TROCADO"
+      });
+    }
+  });
+
+  for (const [pedidoId, status] of pedidoUpdates.entries()) {
+    const statusId = await getStatusPedidoId(accessToken, status);
+    if (!statusId) {
+      throw new Error(`StatusPedido ${status} nao encontrado.`);
+    }
+    await updatePedidoStatus(accessToken, { id: pedidoId, statusId });
+  }
+
+  for (const item of itemUpdates.values()) {
+    const statusId = await getStatusItemPedidoId(accessToken, item.status);
+    if (!statusId) {
+      throw new Error(`StatusItemPedido ${item.status} nao encontrado.`);
+    }
+    await updateItemPedidoStatus(accessToken, {
+      pedidoId: item.pedidoId,
+      produtoId: item.produtoId,
+      statusId
+    });
+  }
+
+  await updateDescricaoTrocaStatus(accessToken, {
+    id: descricaoId,
+    status: "CONCLUIDA"
+  });
+
+  return {
+    ok: true,
+    cupomGerado,
+    valorTotalCupom
+  };
+}
+
+async function fetchPedidosElegiveisTroca(accessToken, usuarioId) {
+  const query = `
+    query PedidosElegiveisTroca($usuarioId: UUID!, $statusNames: [String!]!) {
+      pedidos(
+        where: {
+          usuarioId: { eq: $usuarioId }
+          status: { nome: { in: $statusNames } }
+        }
+        orderBy: [{ dataCriacao: DESC }]
+      ) {
+        id
+        dataCriacao
+        valorTotal
+        valorFrete
+        status { nome }
+        usuario { id nome }
+        itemPedidos_on_pedido {
+          pedidoId
+          produtoId
+          quantidade
+          precoAtual
+          status { nome }
+          produto {
+            id
+            nome
+            modelo
+            marca { nome }
+            produtoCategorias_on_produto { categoria { id nome } }
+            imagemProdutos_on_produto(where: { capa: { eq: true } }, limit: 1) { url capa }
+          }
+          trocas_on_item {
+            id
+            classificacaoTecnica
+            cupomGerado { codigo }
+            descricao { id status }
+          }
+        }
+      }
+    }
+  `;
+  const data = await executeGraphql(accessToken, query, {
+    usuarioId,
+    statusNames: ["ENTREGUE", "ITENS TROCADOS"]
+  });
+  return (data?.pedidos || [])
+    .map(montarPedidoTrocaResposta)
+    .filter((pedido) => getItensElegiveisTroca(pedido).length > 0);
+}
+
+async function fetchPedidoParaSolicitarTroca(accessToken, pedidoId) {
+  const query = `
+    query PedidoParaSolicitarTroca($id: UUID!) {
+      pedido(id: $id) {
+        id
+        dataCriacao
+        valorTotal
+        valorFrete
+        status { nome }
+        usuario { id nome }
+        itemPedidos_on_pedido {
+          pedidoId
+          produtoId
+          quantidade
+          precoAtual
+          status { nome }
+          produto {
+            id
+            nome
+            modelo
+            imagemProdutos_on_produto(where: { capa: { eq: true } }, limit: 1) { url capa }
+          }
+          trocas_on_item {
+            id
+            classificacaoTecnica
+            cupomGerado { codigo }
+            descricao { id status }
+          }
+        }
+      }
+    }
+  `;
+  const data = await executeGraphql(accessToken, query, { id: pedidoId });
+  return data?.pedido ? montarPedidoTrocaResposta(data.pedido) : null;
+}
+
+async function insertDescricaoTroca(accessToken, data) {
+  const mutation = `
+    mutation InserirDescricaoTroca(
+      $id: UUID!,
+      $clienteId: UUID!,
+      $motivo: String!,
+      $descricaoUsuario: String!,
+      $data: Timestamp!,
+      $status: String!
+    ) {
+      descricaoTroca_insert(data: {
+        id: $id,
+        clienteId: $clienteId,
+        motivo: $motivo,
+        descricaoUsuario: $descricaoUsuario,
+        data: $data,
+        status: $status
+      })
+    }
+  `;
+  await executeGraphql(accessToken, mutation, data);
+}
+
+async function insertTroca(accessToken, data) {
+  const mutation = `
+    mutation InserirTroca(
+      $id: UUID!,
+      $pedidoId: UUID!,
+      $itemPedidoId: UUID,
+      $itemProdutoId: UUID,
+      $descricaoId: UUID!,
+      $classificacaoTecnica: String
+    ) {
+      troca_insert(data: {
+        id: $id,
+        pedidoId: $pedidoId,
+        itemPedidoId: $itemPedidoId,
+        itemProdutoId: $itemProdutoId,
+        descricaoId: $descricaoId,
+        classificacaoTecnica: $classificacaoTecnica
+      })
+    }
+  `;
+  await executeGraphql(accessToken, mutation, data);
+}
+
+async function solicitarTrocaPedido(accessToken, usuarioId, payload) {
+  const pedidoId = `${payload?.pedidoId || ""}`.trim();
+  const motivo = `${payload?.motivo || ""}`.trim();
+  const descricaoUsuario = `${payload?.descricaoUsuario || ""}`.trim();
+  const itensSolicitados = normalizarItensSolicitacaoTroca(payload?.itens || []);
+
+  if (!pedidoId) {
+    throw new Error("Pedido invalido.");
+  }
+  if (!motivo || !descricaoUsuario) {
+    throw new Error("Informe o motivo e a descricao da troca.");
+  }
+  if (!itensSolicitados.length) {
+    throw new Error("Selecione pelo menos um item para devolver.");
+  }
+
+  const pedido = await fetchPedidoParaSolicitarTroca(accessToken, pedidoId);
+  if (!pedido || pedido?.usuario?.id !== usuarioId) {
+    throw new Error("Pedido nao encontrado.");
+  }
+
+  const statusPedido = normalizeTexto(pedido?.status?.nome);
+  if (statusPedido !== "ENTREGUE" && statusPedido !== "ITENS TROCADOS") {
+    throw new Error("Este pedido nao esta disponivel para solicitacao de troca.");
+  }
+
+  const itensElegiveis = getItensElegiveisTroca(pedido);
+  if (!itensElegiveis.length) {
+    throw new Error("Nao ha itens disponiveis para troca neste pedido.");
+  }
+
+  const elegiveisMap = new Map();
+  itensElegiveis.forEach((item) => {
+    elegiveisMap.set(item.produtoId || item.produto?.id, item);
+  });
+
+  const selecionados = [];
+  for (const solicitado of itensSolicitados) {
+    const item = elegiveisMap.get(solicitado.produtoId);
+    const quantidadeDisponivel = getQuantidadeDisponivelTroca(item);
+    if (!item || solicitado.quantidade <= 0 || solicitado.quantidade > quantidadeDisponivel) {
+      throw new Error("Quantidade de troca invalida para um dos itens.");
+    }
+    selecionados.push({ item, quantidade: solicitado.quantidade });
+  }
+
+  const totalDisponivel = itensElegiveis.reduce(
+    (acc, item) => acc + getQuantidadeDisponivelTroca(item),
+    0
+  );
+  const totalSelecionado = selecionados.reduce((acc, item) => acc + item.quantidade, 0);
+  const devolucaoPedidoInteiro =
+    totalSelecionado === totalDisponivel &&
+    selecionados.length === itensElegiveis.length;
+
+  const statusPedidoNovoNome = devolucaoPedidoInteiro ? "EM TROCA" : "POSSUI TROCAS";
+  const statusPedidoNovoId = await getStatusPedidoId(accessToken, statusPedidoNovoNome);
+  const statusItemEmTrocaId = await getStatusItemPedidoId(accessToken, "EM TROCA");
+  const statusItemQuantidadeEmTrocaId = await getStatusItemPedidoId(
+    accessToken,
+    "QUANTIDADE EM TROCA"
+  );
+
+  if (!statusPedidoNovoId || !statusItemEmTrocaId || !statusItemQuantidadeEmTrocaId) {
+    throw new Error("Status de troca nao encontrado.");
+  }
+
+  const descricaoId = crypto.randomUUID();
+  await insertDescricaoTroca(accessToken, {
+    id: descricaoId,
+    clienteId: usuarioId,
+    motivo,
+    descricaoUsuario,
+    data: new Date().toISOString(),
+    status: "EM AGUARDO"
+  });
+
+  for (const selecionado of selecionados) {
+    const item = selecionado.item;
+    const produtoId = item.produtoId || item.produto?.id;
+    const quantidadeJaSolicitada = contarTrocasItemPedido(item);
+    const quantidadeTotalAposSolicitacao = quantidadeJaSolicitada + selecionado.quantidade;
+    const itemStatusId =
+      devolucaoPedidoInteiro || quantidadeTotalAposSolicitacao >= Number(item.quantidade || 0)
+        ? statusItemEmTrocaId
+        : statusItemQuantidadeEmTrocaId;
+
+    await updateItemPedidoStatus(accessToken, {
+      pedidoId,
+      produtoId,
+      statusId: itemStatusId
+    });
+
+    for (let index = 0; index < selecionado.quantidade; index += 1) {
+      await insertTroca(accessToken, {
+        id: crypto.randomUUID(),
+        pedidoId,
+        itemPedidoId: pedidoId,
+        itemProdutoId: produtoId,
+        descricaoId,
+        classificacaoTecnica: null
+      });
+    }
+  }
+
+  await updatePedidoStatus(accessToken, {
+    id: pedidoId,
+    statusId: statusPedidoNovoId
+  });
+
+  return {
+    ok: true,
+    descricaoId,
+    statusPedido: statusPedidoNovoNome,
+    quantidadeTrocas: totalSelecionado
+  };
 }
 
 async function fetchFornecedores(accessToken) {
@@ -1710,6 +2472,19 @@ async function fetchCarrinhoPedido(accessToken, usuarioId) {
   return data?.pedidos?.[0] || null;
 }
 
+async function fetchCarrinhosParaExpiracao(accessToken) {
+  const query = `
+    query CarrinhosParaExpiracao($statusId: UUID!) {
+      pedidos(where: { statusId: { eq: $statusId } }) {
+        id
+        dataExpiracaoCarrinho
+      }
+    }
+  `;
+  const data = await executeGraphql(accessToken, query, { statusId: CARRINHO_STATUS_ID });
+  return (data?.pedidos || []).filter((pedido) => pedido?.dataExpiracaoCarrinho);
+}
+
 async function fetchProdutoPorCodigo(accessToken, codigo) {
   const query = `
     query ProdutoPorCodigo($codigo: String!) {
@@ -1769,6 +2544,15 @@ async function updateItemPedidoQuantidade(accessToken, data) {
   const mutation = `
     mutation AtualizarItemPedido($pedidoId: UUID!, $produtoId: UUID!, $quantidade: Int!) {
       itemPedido_update(key: { pedidoId: $pedidoId, produtoId: $produtoId }, data: { quantidade: $quantidade })
+    }
+  `;
+  await executeGraphql(accessToken, mutation, data);
+}
+
+async function updateItemPedidoStatus(accessToken, data) {
+  const mutation = `
+    mutation AtualizarStatusItemPedido($pedidoId: UUID!, $produtoId: UUID!, $statusId: UUID!) {
+      itemPedido_update(key: { pedidoId: $pedidoId, produtoId: $produtoId }, data: { statusId: $statusId })
     }
   `;
   await executeGraphql(accessToken, mutation, data);
@@ -2102,6 +2886,29 @@ async function aplicarExpiracaoCarrinho(accessToken, pedido) {
   });
 
   return true;
+}
+
+async function limparCarrinhosExpiradosAoIniciar() {
+  try {
+    const accessToken = await getAccessToken();
+    const carrinhos = await fetchCarrinhosParaExpiracao(accessToken);
+    let expirados = 0;
+
+    for (const carrinho of carrinhos) {
+      const expirou = await aplicarExpiracaoCarrinho(accessToken, carrinho);
+      if (expirou) {
+        expirados += 1;
+      }
+    }
+
+    if (expirados > 0) {
+      console.log(`Carrinhos expirados limpos ao iniciar: ${expirados}`);
+    }
+  } catch (error) {
+    console.warn(
+      `Nao foi possivel limpar carrinhos expirados ao iniciar: ${error?.message || error}`
+    );
+  }
 }
 
 async function getMarcaId(accessToken, nome) {
@@ -3495,6 +4302,104 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
+    if (req.method === "GET" && url.pathname === "/api/usuario/trocas") {
+      try {
+        const authHeader = req.headers.authorization || "";
+        const idToken = authHeader.startsWith("Bearer ")
+          ? authHeader.slice("Bearer ".length)
+          : "";
+
+        if (!idToken) {
+          sendJson(res, 400, { error: "idToken ausente." });
+          return;
+        }
+
+        const authId = await verifyIdToken(idToken);
+        const accessToken = await getAccessToken();
+        const usuarioId = await fetchUsuarioIdByAuthId(accessToken, authId);
+        if (!usuarioId) {
+          sendJson(res, 404, { error: "Usuario nao encontrado." });
+          return;
+        }
+
+        const trocas = await fetchTrocasPorUsuario(accessToken, usuarioId);
+        sendJson(res, 200, { trocas });
+      } catch (error) {
+        sendJson(res, 500, { error: error?.message || "Erro ao buscar trocas." });
+      }
+      return;
+    }
+
+    if (req.method === "GET" && url.pathname === "/api/usuario/trocas/pedidos") {
+      try {
+        const authHeader = req.headers.authorization || "";
+        const idToken = authHeader.startsWith("Bearer ")
+          ? authHeader.slice("Bearer ".length)
+          : "";
+
+        if (!idToken) {
+          sendJson(res, 400, { error: "idToken ausente." });
+          return;
+        }
+
+        const authId = await verifyIdToken(idToken);
+        const accessToken = await getAccessToken();
+        const usuarioId = await fetchUsuarioIdByAuthId(accessToken, authId);
+        if (!usuarioId) {
+          sendJson(res, 404, { error: "Usuario nao encontrado." });
+          return;
+        }
+
+        const pedidos = await fetchPedidosElegiveisTroca(accessToken, usuarioId);
+        sendJson(res, 200, { pedidos });
+      } catch (error) {
+        sendJson(res, 500, { error: error?.message || "Erro ao buscar pedidos para troca." });
+      }
+      return;
+    }
+
+    if (req.method === "POST" && url.pathname === "/api/usuario/trocas/solicitar") {
+      try {
+        const authHeader = req.headers.authorization || "";
+        const idToken = authHeader.startsWith("Bearer ")
+          ? authHeader.slice("Bearer ".length)
+          : "";
+
+        if (!idToken) {
+          sendJson(res, 400, { error: "idToken ausente." });
+          return;
+        }
+
+        const rawBody = await readBody(req);
+        const body = rawBody ? JSON.parse(rawBody) : {};
+        const authId = await verifyIdToken(idToken);
+        const accessToken = await getAccessToken();
+        const usuarioId = await fetchUsuarioIdByAuthId(accessToken, authId);
+        if (!usuarioId) {
+          sendJson(res, 404, { error: "Usuario nao encontrado." });
+          return;
+        }
+
+        const resultado = await solicitarTrocaPedido(accessToken, usuarioId, body);
+        sendJson(res, 200, resultado);
+      } catch (error) {
+        const message = error?.message || "Erro ao solicitar troca.";
+        const statusCode =
+          message === "Pedido invalido." ||
+          message === "Informe o motivo e a descricao da troca." ||
+          message === "Selecione pelo menos um item para devolver." ||
+          message === "Pedido nao encontrado." ||
+          message === "Este pedido nao esta disponivel para solicitacao de troca." ||
+          message === "Nao ha itens disponiveis para troca neste pedido." ||
+          message === "Quantidade de troca invalida para um dos itens." ||
+          message === "Status de troca nao encontrado."
+            ? 400
+            : 500;
+        sendJson(res, statusCode, { error: message });
+      }
+      return;
+    }
+
   if (req.method === "GET" && url.pathname === "/api/cloudinary/config") {
     try {
         const authHeader = req.headers.authorization || "";
@@ -4108,6 +5013,70 @@ const server = http.createServer(async (req, res) => {
       sendJson(res, 200, { ok: true });
     } catch (error) {
       sendJson(res, 500, { error: error?.message || "Erro ao atualizar status." });
+    }
+    return;
+  }
+
+  if (req.method === "GET" && url.pathname === "/api/admin/trocas") {
+    try {
+      const accessToken = await getAccessToken();
+      const trocas = await fetchTrocasAdmin(accessToken);
+      sendJson(res, 200, { trocas });
+    } catch (error) {
+      sendJson(res, 500, { error: error?.message || "Erro ao listar trocas." });
+    }
+    return;
+  }
+
+  if (req.method === "GET" && url.pathname === "/api/admin/trocas/detalhe") {
+    try {
+      const descricaoId = url.searchParams.get("id");
+      if (!descricaoId) {
+        sendJson(res, 400, { error: "Solicitacao de troca invalida." });
+        return;
+      }
+
+      const accessToken = await getAccessToken();
+      const troca = await fetchDescricaoTrocaDetalheAdmin(accessToken, descricaoId);
+      if (!troca) {
+        sendJson(res, 404, { error: "Solicitacao de troca nao encontrada." });
+        return;
+      }
+      sendJson(res, 200, { troca });
+    } catch (error) {
+      sendJson(res, 500, { error: error?.message || "Erro ao carregar troca." });
+    }
+    return;
+  }
+
+  if (req.method === "POST" && url.pathname === "/api/admin/trocas/avaliar") {
+    try {
+      const rawBody = await readBody(req);
+      const body = rawBody ? JSON.parse(rawBody) : {};
+      const accessToken = await getAccessToken();
+      const result = await avaliarTrocaAdmin(accessToken, body);
+      sendJson(res, 200, result);
+    } catch (error) {
+      sendJson(res, 500, { error: error?.message || "Erro ao avaliar troca." });
+    }
+    return;
+  }
+
+  if (req.method === "POST" && url.pathname === "/api/admin/trocas/finalizar") {
+    try {
+      const rawBody = await readBody(req);
+      const body = rawBody ? JSON.parse(rawBody) : {};
+      const descricaoId = `${body?.descricaoId || ""}`.trim();
+      if (!descricaoId) {
+        sendJson(res, 400, { error: "Solicitacao de troca invalida." });
+        return;
+      }
+
+      const accessToken = await getAccessToken();
+      const result = await finalizarTrocaAdmin(accessToken, descricaoId);
+      sendJson(res, 200, result);
+    } catch (error) {
+      sendJson(res, 500, { error: error?.message || "Erro ao finalizar troca." });
     }
     return;
   }
@@ -5344,4 +6313,5 @@ const server = http.createServer(async (req, res) => {
 
 server.listen(PORT, () => {
   console.log(`API e front-end prontos em http://localhost:${PORT}/view/index.html`);
+  limparCarrinhosExpiradosAoIniciar();
 });

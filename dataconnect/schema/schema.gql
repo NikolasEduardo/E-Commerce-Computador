@@ -169,7 +169,7 @@ type Troca @table {
   pedido: Pedido!
   item: ItemPedido
   classificacaoTecnica: String
-  cupomGerado: Cupom @unique
+  cupomGerado: Cupom
   descricao: DescricaoTroca!
 }
 

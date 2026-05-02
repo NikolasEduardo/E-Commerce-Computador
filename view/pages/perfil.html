@@ -24,6 +24,7 @@
         <button id="nav-enderecos" class="nav-item">ENDERECOS</button>
         <button id="nav-cartoes" class="nav-item">CARTOES E CUPONS</button>
         <button id="nav-pedidos" class="nav-item">PEDIDOS</button>
+        <button id="nav-trocas" class="nav-item">TROCAS</button>
       </nav>
 
       <main class="perfil-content">
@@ -317,6 +318,63 @@
                 <div id="pedido-pagamento" class="pedido-pagamento"></div>
               </div>
             </div>
+          </div>
+        </section>
+
+        <section id="section-trocas" class="section hidden">
+          <div id="trocas-list-panel" class="panel">
+            <div class="panel-header">
+              <div class="panel-title">TROCAS SOLICITADAS</div>
+              <button id="btn-solicitar-troca" class="btn" type="button">SOLICITAR TROCA</button>
+            </div>
+            <div id="trocas-list" class="trocas-list"></div>
+          </div>
+
+          <div id="troca-form-panel" class="panel hidden">
+            <div class="panel-header">
+              <div class="panel-title">SOLICITAR TROCA</div>
+              <button id="btn-cancel-troca" class="btn" type="button">CANCELAR</button>
+            </div>
+
+            <div class="field-row">
+              <div class="field field-grow">
+                <label for="troca-pedido">PEDIDO</label>
+                <select id="troca-pedido">
+                  <option value="">SELECIONE UM PEDIDO</option>
+                </select>
+              </div>
+            </div>
+
+            <div id="troca-pedido-info" class="troca-pedido-info"></div>
+            <div id="troca-itens-list" class="troca-itens-list"></div>
+            <div id="troca-hint" class="troca-hint"></div>
+
+            <div class="field-row">
+              <div class="field field-grow">
+                <label for="troca-motivo">MOTIVO</label>
+                <input id="troca-motivo" type="text" placeholder="MOTIVO DA TROCA">
+              </div>
+            </div>
+
+            <div class="field-row">
+              <div class="field field-grow">
+                <label for="troca-descricao">DESCRICAO DETALHADA</label>
+                <textarea id="troca-descricao" placeholder="DESCREVA O PROBLEMA COM O MAXIMO DE DETALHES"></textarea>
+              </div>
+            </div>
+
+            <div class="actions">
+              <button id="btn-save-troca" class="btn" type="button">SOLICITAR</button>
+            </div>
+          </div>
+
+          <div id="troca-detalhe-panel" class="panel hidden">
+            <div class="panel-header">
+              <div id="troca-detalhe-title" class="panel-title">DETALHES DA TROCA</div>
+              <button id="btn-voltar-troca" class="btn" type="button">VOLTAR</button>
+            </div>
+            <div id="troca-detalhe-meta" class="troca-detalhe-meta"></div>
+            <div id="troca-detalhe-itens" class="troca-detalhe-itens"></div>
           </div>
         </section>
       </main>

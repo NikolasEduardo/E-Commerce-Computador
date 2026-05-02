@@ -1,5 +1,14 @@
 import { Produto } from "../produto/Produto.js";
 import { StatusItemPedido } from "./StatusItemPedido.js";
+import { Troca } from "../cupom/Troca.js";
+
+function normalizeText(value) {
+    return `${value || ""}`
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toUpperCase()
+        .trim()
+}
 
 export class ItemPedido {
     constructor(
@@ -9,7 +18,8 @@ export class ItemPedido {
         statusItemPedido,
         precoAtual = null,
         precoUnitario = null,
-        precoTotal = null
+        precoTotal = null,
+        trocas = []
     ) {
         this.pedido = pedido
         this.produto = produto instanceof Produto ? produto : Produto.fromApi(produto)
@@ -20,6 +30,8 @@ export class ItemPedido {
         this.precoAtual = precoAtual
         this.precoUnitario = Number(precoUnitario ?? precoAtual ?? this.produto?.getPreco?.() ?? this.produto?.preco ?? 0)
         this.precoTotal = Number(precoTotal ?? this.precoUnitario * this.quantidade)
+        this.trocas_on_item = trocas
+        this.trocas = trocas
         this.produtoId = this.produto?.id || ""
         this.codigoProduto = this.produto?.codigoProduto || ""
         this.nome = this.produto?.nome || ""
@@ -38,7 +50,10 @@ export class ItemPedido {
             raw.statusItemPedido || raw.status || null,
             raw.precoAtual ?? null,
             raw.precoUnitario ?? raw.precoAtual ?? produto?.getPreco?.() ?? 0,
-            raw.precoTotal ?? null
+            raw.precoTotal ?? null,
+            Array.isArray(raw.trocas_on_item)
+                ? raw.trocas_on_item.map((troca) => Troca.fromApi(troca))
+                : []
         )
     }
 
@@ -61,7 +76,8 @@ export class ItemPedido {
             raw.statusItemPedido || raw.status || "CARRINHO",
             raw.precoAtual ?? raw.precoUnitario ?? null,
             raw.precoUnitario ?? null,
-            raw.precoTotal ?? null
+            raw.precoTotal ?? null,
+            []
         )
     }
 
@@ -91,5 +107,29 @@ export class ItemPedido {
 
     isQuantidadeZero() {
         return Number(this.quantidade || 0) === 0
+    }
+
+    getTrocas() {
+        return this.trocas_on_item || []
+    }
+
+    getQuantidadeEmTroca() {
+        return this.getTrocas().length
+    }
+
+    getQuantidadeRestante() {
+        return Math.max(0, Number(this.quantidade || 0) - this.getQuantidadeEmTroca())
+    }
+
+    temTroca() {
+        return this.getQuantidadeEmTroca() > 0
+    }
+
+    isEmTroca() {
+        return normalizeText(this.getStatusNome()) === "EM TROCA"
+    }
+
+    isQuantidadeEmTroca() {
+        return normalizeText(this.getStatusNome()) === "QUANTIDADE EM TROCA"
     }
 }
