@@ -108,7 +108,7 @@ type PagamentoCupomTroca @table(key: ["pagamento", "cupomTroca"]) {
 }
 
 type StatusPedido @table {
-  nome: String! @unique # Ex: "CARRINHO", "EM PROCESSAMENTO", "APROVADA", "REPROVADA", "EM TRANSPORTE", "ENTREGUE", "EM TROCA", "TROCADO"
+  nome: String! @unique # Ex: "CARRINHO", "EM PROCESSAMENTO", "APROVADA", "REPROVADA", "EM TRANSPORTE", "ENTREGUE", "EM TROCA", "TROCADO", "POSSUI TROCAS", "ITENS TROCADOS".
 }
 
 type ItemPedido @table(key: ["pedido", "produto"]) {
@@ -120,7 +120,7 @@ type ItemPedido @table(key: ["pedido", "produto"]) {
 }
 
 type StatusItemPedido @table {
-  nome: String! @unique # Ex: "NO CARRINHO", "FORA DO CARRINHO", "SEM ESTOQUE", "INATIVO"
+  nome: String! @unique # Ex: "NO CARRINHO", "FORA DO CARRINHO", "SEM ESTOQUE", "INATIVO", "EM TROCA", "TROCADO", "QUANTIDADE EM TROCA", "QUANTIDADE TROCADO"
 }
 
 type Cupom @table {
@@ -167,11 +167,16 @@ type Fornecedor @table {
 
 type Troca @table {
   pedido: Pedido!
-  produto: Produto!
-  motivo: String!
-  descricaoUsuario: String!
+  item: ItemPedido
   classificacaoTecnica: String
   cupomGerado: Cupom
+  descricao: DescricaoTroca!
+}
+
+type DescricaoTroca @table {
+  cliente: Usuario!
+  motivo: String!
+  descricaoUsuario: String!
   data: Timestamp!
   status: String!
 }
