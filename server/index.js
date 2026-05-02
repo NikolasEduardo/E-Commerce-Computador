@@ -1183,9 +1183,182 @@ async function fetchProdutosMetadata(accessToken) {
         marcas { id nome }
         categorias { id nome }
         grupoPrecificacaos { id nome margemLucro }
+        produtos(orderBy: [{ nome: ASC }], limit: 1000) {
+          id
+          nome
+          modelo
+          status
+        }
     }
   `;
   return executeGraphql(accessToken, query, {});
+}
+
+function clampInteger(value, fallback, min, max) {
+  const parsed = Number.parseInt(value, 10);
+  if (!Number.isInteger(parsed)) {
+    return Math.min(max, Math.max(min, fallback));
+  }
+  return Math.min(max, Math.max(min, parsed));
+}
+
+function getGraficoPeriodo(tipo, filtros = {}) {
+  const now = new Date();
+  const ano = clampInteger(filtros.ano, now.getFullYear(), 2000, 2100);
+  const mes = clampInteger(filtros.mes, now.getMonth() + 1, 1, 12);
+  const diasNoMes = new Date(ano, mes, 0).getDate();
+  const dia = clampInteger(filtros.dia, now.getDate(), 1, diasNoMes);
+
+  if (tipo === "ano") {
+    return {
+      filtros: { ano },
+      inicio: new Date(ano, 0, 1),
+      fim: new Date(ano + 1, 0, 1)
+    };
+  }
+
+  if (tipo === "dia") {
+    return {
+      filtros: { ano, mes, dia },
+      inicio: new Date(ano, mes - 1, dia),
+      fim: new Date(ano, mes - 1, dia + 1)
+    };
+  }
+
+  return {
+    filtros: { ano, mes },
+    inicio: new Date(ano, mes - 1, 1),
+    fim: new Date(ano, mes, 1)
+  };
+}
+
+function criarPontosGrafico(tipo, periodo) {
+  const meses = ["JAN", "FEV", "MAR", "ABR", "MAI", "JUN", "JUL", "AGO", "SET", "OUT", "NOV", "DEZ"];
+
+  if (tipo === "ano") {
+    return meses.map((label, index) => ({
+      key: index + 1,
+      label,
+      valor: 0
+    }));
+  }
+
+  if (tipo === "dia") {
+    return Array.from({ length: 24 }, (_, hour) => ({
+      key: hour,
+      label: `${String(hour).padStart(2, "0")}h`,
+      valor: 0
+    }));
+  }
+
+  const dias = new Date(periodo.filtros.ano, periodo.filtros.mes, 0).getDate();
+  return Array.from({ length: dias }, (_, index) => ({
+    key: index + 1,
+    label: String(index + 1).padStart(2, "0"),
+    valor: 0
+  }));
+}
+
+function getGraficoBucketKey(tipo, data) {
+  if (tipo === "ano") {
+    return data.getMonth() + 1;
+  }
+  if (tipo === "dia") {
+    return data.getHours();
+  }
+  return data.getDate();
+}
+
+async function fetchVendasGrafico(accessToken, filtros = {}) {
+  const tipo = ["ano", "dia"].includes(`${filtros.tipo || ""}`.toLowerCase())
+    ? `${filtros.tipo}`.toLowerCase()
+    : "mes";
+  const periodo = getGraficoPeriodo(tipo, filtros);
+  const produtoId = `${filtros.produtoId || ""}`.trim();
+  const categoriaId = `${filtros.categoriaId || ""}`.trim();
+  const pontos = criarPontosGrafico(tipo, periodo);
+  const pontosPorKey = new Map(pontos.map((ponto) => [ponto.key, ponto]));
+
+  const query = `
+    query VendasGrafico($inicio: Timestamp!, $fim: Timestamp!) {
+      pedidos(
+        where: {
+          _and: [
+            { dataCriacao: { ge: $inicio } },
+            { dataCriacao: { lt: $fim } },
+            { status: { nome: { ne: "CARRINHO" } } },
+            { status: { nome: { ne: "REPROVADA" } } }
+          ]
+        },
+        orderBy: [{ dataCriacao: ASC }],
+        limit: 5000
+      ) {
+        id
+        dataCriacao
+        status { nome }
+        itemPedidos_on_pedido {
+          quantidade
+          produtoId
+          produto {
+            id
+            nome
+            modelo
+            produtoCategorias_on_produto {
+              categoria { id nome }
+            }
+          }
+        }
+      }
+    }
+  `;
+
+  const data = await executeGraphql(accessToken, query, {
+    inicio: periodo.inicio.toISOString(),
+    fim: periodo.fim.toISOString()
+  });
+
+  let total = 0;
+  (data?.pedidos || []).forEach((pedido) => {
+    const dataPedido = new Date(pedido?.dataCriacao || "");
+    if (Number.isNaN(dataPedido.getTime())) {
+      return;
+    }
+
+    const bucket = pontosPorKey.get(getGraficoBucketKey(tipo, dataPedido));
+    if (!bucket) {
+      return;
+    }
+
+    (pedido?.itemPedidos_on_pedido || []).forEach((item) => {
+      const produto = item?.produto || {};
+      if (produtoId && produto.id !== produtoId && item?.produtoId !== produtoId) {
+        return;
+      }
+      if (
+        categoriaId &&
+        !(produto?.produtoCategorias_on_produto || []).some(
+          (produtoCategoria) => produtoCategoria?.categoria?.id === categoriaId
+        )
+      ) {
+        return;
+      }
+
+      const quantidade = Math.max(0, Number(item?.quantidade || 0));
+      bucket.valor += quantidade;
+      total += quantidade;
+    });
+  });
+
+  return {
+    tipo,
+    filtros: {
+      ...periodo.filtros,
+      produtoId,
+      categoriaId
+    },
+    total,
+    pontos: pontos.map(({ label, valor }) => ({ label, valor }))
+  };
 }
 
 async function fetchPedidoDetalhe(accessToken, pedidoId) {
@@ -2136,6 +2309,68 @@ async function fetchProdutosPopulares(accessToken) {
   `;
   const data = await executeGraphql(accessToken, query, {});
   return data?.produtos || [];
+}
+
+async function fetchProdutosCatalogoGamzu(accessToken) {
+  const query = `
+    query ProdutosCatalogoGamzu {
+      produtos(
+        where: { _and: [
+          { status: { eq: "ATIVO" } },
+          { estoqueFisico: { gt: 0 } }
+        ] },
+        orderBy: [{ nome: ASC }],
+        limit: 200
+      ) {
+        id
+        codigoProduto
+        nome
+        modelo
+        descricaoTecnica
+        especificacoesTecnicas
+        status
+        estoqueFisico
+        estoqueReservado
+        marca { nome }
+        grupoPrecificacao { margemLucro }
+        produtoCategorias_on_produto {
+          categoria { nome }
+        }
+        imagemProdutos_on_produto(where: { capa: { eq: true } }, limit: 1) {
+          url
+        }
+        entradaEstoques_on_produto(orderBy: [{ valorCusto: DESC }], limit: 1) {
+          valorCusto
+        }
+      }
+    }
+  `;
+  const data = await executeGraphql(accessToken, query, {});
+  return data?.produtos || [];
+}
+
+function montarProdutoPublicoResumo(produto) {
+  const maxEntrada = produto?.entradaEstoques_on_produto?.[0];
+  const custo = Number(maxEntrada?.valorCusto || 0);
+  const margem = Number(produto?.grupoPrecificacao?.margemLucro || 0);
+  const preco = custo && margem ? custo * margem : 0;
+
+  return {
+    id: produto.id,
+    codigoProduto: produto.codigoProduto,
+    nome: produto.nome,
+    modelo: produto.modelo,
+    descricaoTecnica: produto.descricaoTecnica || "",
+    especificacoesTecnicas: produto.especificacoesTecnicas || "",
+    marca: produto?.marca?.nome || "",
+    categorias: (produto?.produtoCategorias_on_produto || [])
+      .map((item) => item?.categoria?.nome)
+      .filter(Boolean),
+    imagem: produto?.imagemProdutos_on_produto?.[0]?.url || "",
+    preco,
+    estoqueFisico: Number(produto?.estoqueFisico || 0),
+    estoqueReservado: Number(produto?.estoqueReservado || 0)
+  };
 }
 
 async function fetchProdutoEstoque(accessToken, produtoId) {
@@ -4477,6 +4712,24 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  if (req.method === "GET" && url.pathname === "/api/admin/graficos/vendas") {
+    try {
+      const accessToken = await getAccessToken();
+      const data = await fetchVendasGrafico(accessToken, {
+        tipo: url.searchParams.get("tipo") || "mes",
+        ano: url.searchParams.get("ano"),
+        mes: url.searchParams.get("mes"),
+        dia: url.searchParams.get("dia"),
+        produtoId: url.searchParams.get("produtoId"),
+        categoriaId: url.searchParams.get("categoriaId")
+      });
+      sendJson(res, 200, data);
+    } catch (error) {
+      sendJson(res, 500, { error: error?.message || "Erro ao carregar grafico de vendas." });
+    }
+    return;
+  }
+
   if (req.method === "GET" && url.pathname === "/api/admin/produtos") {
     try {
       const search = url.searchParams.get("q") || "";
@@ -4920,7 +5173,9 @@ const server = http.createServer(async (req, res) => {
         "EM TRANSPORTE",
         "ENTREGUE",
         "EM TROCA",
-        "TROCADO"
+        "POSSUI TROCAS",
+        "TROCADO",
+        "ITENS TROCADOS"
       ]);
       const allowedSortFields = new Set(["dataCriacao", "valorTotal", "valorFrete", "cliente"]);
       const allowedSortOrders = new Set(["ASC", "DESC"]);
@@ -5085,27 +5340,21 @@ const server = http.createServer(async (req, res) => {
     try {
       const accessToken = await getAccessToken();
       const produtos = await fetchProdutosPopulares(accessToken);
-      const formatted = produtos.map((produto) => {
-        const maxEntrada = produto?.entradaEstoques_on_produto?.[0];
-        const custo = Number(maxEntrada?.valorCusto || 0);
-        const margem = Number(produto?.grupoPrecificacao?.margemLucro || 0);
-        const preco = custo && margem ? custo * margem : 0;
-        return {
-          id: produto.id,
-          codigoProduto: produto.codigoProduto,
-          nome: produto.nome,
-          modelo: produto.modelo,
-          marca: produto?.marca?.nome || "",
-          categorias: (produto?.produtoCategorias_on_produto || [])
-            .map((item) => item?.categoria?.nome)
-            .filter(Boolean),
-          imagem: produto?.imagemProdutos_on_produto?.[0]?.url || "",
-          preco
-        };
-      });
+      const formatted = produtos.map(montarProdutoPublicoResumo);
       sendJson(res, 200, { produtos: formatted });
     } catch (error) {
       sendJson(res, 500, { error: error?.message || "Erro ao carregar produtos." });
+    }
+    return;
+  }
+
+  if (req.method === "GET" && url.pathname === "/api/ia/catalogo") {
+    try {
+      const accessToken = await getAccessToken();
+      const produtos = await fetchProdutosCatalogoGamzu(accessToken);
+      sendJson(res, 200, { produtos: produtos.map(montarProdutoPublicoResumo) });
+    } catch (error) {
+      sendJson(res, 500, { error: error?.message || "Erro ao carregar catalogo da IA." });
     }
     return;
   }

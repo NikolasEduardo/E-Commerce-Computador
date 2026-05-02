@@ -39,6 +39,9 @@ body {
   border: none;
   padding: 8px 16px;
   cursor: pointer;
+  color: inherit;
+  text-align: center;
+  text-decoration: none;
 }
 
 .perfil-body {

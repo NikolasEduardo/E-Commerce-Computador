@@ -118,6 +118,22 @@ export const SYSTEM_MESSAGES = {
     }
   },
 
+  ia: {
+    errors: {
+      loadCatalogFailed: "Erro ao carregar catalogo para a IA.",
+      sendFailed: "Erro ao enviar mensagem para a Gamzu.",
+      aiUnavailable: "A IA ainda nao esta configurada. Verifique se o Firebase AI Logic esta habilitado no projeto.",
+      blocked: "Esta conversa foi encerrada. Crie uma nova conversa para continuar."
+    },
+    empty: {
+      noMessages: "Inicie uma conversa com a Gamzu sobre pecas de computador, compatibilidade ou hardware."
+    },
+    warnings: {
+      newConversation: "A conversa antiga nunca podera ser recuperada. Deseja limpar a conversa atual e iniciar uma nova?",
+      violationClosed: "A conversa foi encerrada porque saiu do assunto permitido. Crie uma nova conversa para continuar."
+    }
+  },
+
   checkout: {
     errors: {
       finishFailed: "Erro ao finalizar compra.",
@@ -218,6 +234,7 @@ export const SYSTEM_MESSAGES = {
       loadProdutoFailed: "Erro ao buscar produto.",
       loadEstoqueFailed: "Erro ao carregar estoque.",
       loadFornecedoresFailed: "Erro ao carregar fornecedores.",
+      loadGraficosFailed: "Erro ao carregar grafico de vendas.",
       loadTrocasFailed: "Erro ao buscar solicitacoes de troca.",
       loadTrocaFailed: "Erro ao carregar solicitacao de troca.",
       exchangeEvaluateFailed: "Erro ao avaliar produto devolvido.",
@@ -238,6 +255,7 @@ export const SYSTEM_MESSAGES = {
       noProdutos: "Nenhum produto encontrado.",
       noFornecedores: "Nenhum fornecedor cadastrado.",
       noEntradas: "Nenhuma entrada registrada.",
+      noGraficos: "Nenhuma venda encontrada para os filtros selecionados.",
       noTrocas: "Nenhuma solicitacao de troca encontrada.",
       noExchangeItems: "Nenhum item de troca encontrado.",
       noPayment: "Nenhum pagamento encontrado."

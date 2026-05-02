@@ -36,6 +36,9 @@ body {
   border: none;
   padding: 10px;
   cursor: pointer;
+  color: inherit;
+  text-align: center;
+  text-decoration: none;
 }
 
 .produto-main {

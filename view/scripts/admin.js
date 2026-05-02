@@ -30,6 +30,7 @@ import {
   avaliarTroca,
   finalizarTroca
 } from "../../controller/AdminTrocasController.js";
+import { carregarVendasGrafico } from "../../controller/AdminGraficosController.js";
 import { uploadImagemCloudinary } from "../../controller/CloudinaryController.js";
 import { SYSTEM_MESSAGES, getErrorMessage } from "../../model/SystemMessages.js";
 
@@ -45,6 +46,7 @@ const navClientes = document.getElementById("nav-clientes");
 const navPedidos = document.getElementById("nav-pedidos");
 const navTrocas = document.getElementById("nav-trocas");
 const navEstoque = document.getElementById("nav-estoque");
+const navGraficos = document.getElementById("nav-graficos");
 const clientesSection = document.getElementById("clientes-section");
 const pedidosSection = document.getElementById("pedidos-section");
 const pedidoDetalheSection = document.getElementById("pedido-detalhe-section");
@@ -53,6 +55,7 @@ const trocaDetalheSection = document.getElementById("troca-detalhe-section");
 const produtosSection = document.getElementById("produtos-section");
 const produtoFormSection = document.getElementById("produto-form-section");
 const estoqueSection = document.getElementById("estoque-section");
+const graficosSection = document.getElementById("graficos-section");
 const produtosList = document.getElementById("produtosList");
 const prodSearchInput = document.getElementById("prodSearchInput");
 const prodStatusSelect = document.getElementById("prodStatusSelect");
@@ -106,6 +109,18 @@ const entradaCustoTipoSelect = document.getElementById("entrada-custo-tipo");
 const entradaFornecedorSelect = document.getElementById("entrada-fornecedor");
 const fornecedoresList = document.getElementById("fornecedoresList");
 const entradasList = document.getElementById("entradasList");
+const graficoTipoSelect = document.getElementById("grafico-tipo");
+const graficoDiaField = document.getElementById("grafico-dia-field");
+const graficoMesField = document.getElementById("grafico-mes-field");
+const graficoDiaInput = document.getElementById("grafico-dia");
+const graficoMesSelect = document.getElementById("grafico-mes");
+const graficoAnoInput = document.getElementById("grafico-ano");
+const graficoProdutoSelect = document.getElementById("grafico-produto");
+const graficoCategoriaSelect = document.getElementById("grafico-categoria");
+const btnGraficoCarregar = document.getElementById("btn-grafico-carregar");
+const graficoMessage = document.getElementById("grafico-message");
+const graficoResumo = document.getElementById("grafico-resumo");
+const graficoCanvas = document.getElementById("grafico-vendas-canvas");
 const pedidosList = document.getElementById("pedidosList");
 const pedidoSearchInput = document.getElementById("pedidoSearchInput");
 const pedidoDetalheTitle = document.getElementById("pedido-detalhe-title");
@@ -174,9 +189,11 @@ let uploadsPendentes = 0;
 let produtosMetadata = {
   marcas: [],
   categorias: [],
-  grupos: []
+  grupos: [],
+  produtos: []
 };
 let produtosMetadataLoaded = false;
+let graficoAtual = null;
 let modalResolver = null;
 let statusModalContextBase = "";
 let estoqueCache = {
@@ -1103,6 +1120,7 @@ function setAdminSection(section) {
   const isTrocaDetalhe = section === "troca-detalhe";
   const isProdutoForm = section === "produto-form";
   const isEstoque = section === "estoque";
+  const isGraficos = section === "graficos";
 
   produtosSection.classList.toggle("hidden", !isProdutos);
   clientesSection.classList.toggle("hidden", !isClientes);
@@ -1112,12 +1130,14 @@ function setAdminSection(section) {
   trocaDetalheSection.classList.toggle("hidden", !isTrocaDetalhe);
   produtoFormSection.classList.toggle("hidden", !isProdutoForm);
   estoqueSection.classList.toggle("hidden", !isEstoque);
+  graficosSection.classList.toggle("hidden", !isGraficos);
 
   navProdutos.classList.toggle("is-active", isProdutos || isProdutoForm);
   navClientes.classList.toggle("is-active", isClientes);
   navPedidos.classList.toggle("is-active", isPedidos || isPedidoDetalhe);
   navTrocas.classList.toggle("is-active", isTrocas || isTrocaDetalhe);
   navEstoque.classList.toggle("is-active", isEstoque);
+  navGraficos.classList.toggle("is-active", isGraficos);
 }
 
 function formatMargemLucro(valor) {
@@ -1128,6 +1148,9 @@ function formatMargemLucro(valor) {
 }
 
 function preencherSelect(select, items, labelFn, placeholder = "SELECIONE") {
+  if (!select) {
+    return;
+  }
   select.innerHTML = `<option value="">${placeholder}</option>`;
   items.forEach((item) => {
     const option = document.createElement("option");
@@ -1142,7 +1165,8 @@ async function carregarProdutosMetadataAdmin() {
   produtosMetadata = {
     marcas: data?.marcas || [],
     categorias: data?.categorias || [],
-    grupos: data?.grupoPrecificacaos || []
+    grupos: data?.grupoPrecificacaos || [],
+    produtos: data?.produtos || []
   };
 
   preencherSelect(prodMarcaSelect, produtosMetadata.marcas, (item) => item.nome, "TODAS");
@@ -1154,6 +1178,13 @@ async function carregarProdutosMetadataAdmin() {
     produtosMetadata.grupos,
     (item) => `${item.nome} (${formatMargemLucro(item.margemLucro)})`
   );
+  preencherSelect(
+    graficoProdutoSelect,
+    produtosMetadata.produtos,
+    (item) => `${item.nome || "PRODUTO"}${item.modelo ? ` - ${item.modelo}` : ""}`,
+    "TODOS"
+  );
+  preencherSelect(graficoCategoriaSelect, produtosMetadata.categorias, (item) => item.nome, "TODAS");
   produtosMetadataLoaded = true;
 }
 
@@ -1162,6 +1193,209 @@ async function ensureProdutosMetadata() {
     return;
   }
   await carregarProdutosMetadataAdmin();
+}
+
+function setGraficoMessage(text = "") {
+  if (!graficoMessage) {
+    return;
+  }
+  graficoMessage.textContent = text;
+  graficoMessage.classList.toggle("hidden", !text);
+}
+
+function initGraficoDefaults() {
+  if (!graficoAnoInput || !graficoMesSelect || !graficoDiaInput) {
+    return;
+  }
+
+  const hoje = new Date();
+  graficoAnoInput.value = hoje.getFullYear();
+  graficoMesSelect.value = String(hoje.getMonth() + 1);
+  graficoDiaInput.value = hoje.getDate();
+  updateGraficoDateFields();
+}
+
+function getDiasGraficoMes() {
+  const ano = Number.parseInt(graficoAnoInput?.value || new Date().getFullYear(), 10);
+  const mes = Number.parseInt(graficoMesSelect?.value || new Date().getMonth() + 1, 10);
+  return new Date(ano, mes, 0).getDate();
+}
+
+function updateGraficoDateFields() {
+  const tipo = graficoTipoSelect?.value || "mes";
+  graficoDiaField?.classList.toggle("hidden", tipo !== "dia");
+  graficoMesField?.classList.toggle("hidden", tipo === "ano");
+
+  if (graficoDiaInput) {
+    const dias = getDiasGraficoMes();
+    graficoDiaInput.max = String(dias);
+    const diaAtual = Number.parseInt(graficoDiaInput.value || "1", 10);
+    if (!Number.isInteger(diaAtual) || diaAtual < 1 || diaAtual > dias) {
+      graficoDiaInput.value = String(Math.min(dias, Math.max(1, diaAtual || 1)));
+    }
+  }
+}
+
+function getGraficoParams() {
+  const tipo = graficoTipoSelect?.value || "mes";
+  const params = {
+    tipo,
+    ano: graficoAnoInput?.value || new Date().getFullYear(),
+    produtoId: graficoProdutoSelect?.value || "",
+    categoriaId: graficoCategoriaSelect?.value || ""
+  };
+
+  if (tipo !== "ano") {
+    params.mes = graficoMesSelect?.value || new Date().getMonth() + 1;
+  }
+  if (tipo === "dia") {
+    params.dia = graficoDiaInput?.value || new Date().getDate();
+  }
+
+  return params;
+}
+
+function getGraficoPeriodoLabel(data) {
+  const filtros = data?.filtros || {};
+  const meses = [
+    "JANEIRO",
+    "FEVEREIRO",
+    "MARCO",
+    "ABRIL",
+    "MAIO",
+    "JUNHO",
+    "JULHO",
+    "AGOSTO",
+    "SETEMBRO",
+    "OUTUBRO",
+    "NOVEMBRO",
+    "DEZEMBRO"
+  ];
+
+  if (data?.tipo === "ano") {
+    return `ANO ${filtros.ano}`;
+  }
+  if (data?.tipo === "dia") {
+    return `${String(filtros.dia).padStart(2, "0")} DE ${meses[(filtros.mes || 1) - 1]} DE ${filtros.ano}`;
+  }
+  return `${meses[(filtros.mes || 1) - 1]} DE ${filtros.ano}`;
+}
+
+function desenharGraficoVendas(data) {
+  if (!graficoCanvas) {
+    return;
+  }
+
+  const ctx = graficoCanvas.getContext("2d");
+  const width = graficoCanvas.clientWidth || 900;
+  const height = graficoCanvas.clientHeight || 360;
+  const dpr = window.devicePixelRatio || 1;
+  graficoCanvas.width = Math.floor(width * dpr);
+  graficoCanvas.height = Math.floor(height * dpr);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, width, height);
+  ctx.fillStyle = "#e1e1e1";
+  ctx.fillRect(0, 0, width, height);
+
+  const pontos = data?.pontos || [];
+  const valores = pontos.map((ponto) => Number(ponto.valor || 0));
+  const maxValor = Math.max(1, ...valores);
+  const eixoMax = Math.max(1, Math.ceil(maxValor / 5) * 5);
+  const padding = { left: 54, right: 22, top: 26, bottom: 52 };
+  const chartW = width - padding.left - padding.right;
+  const chartH = height - padding.top - padding.bottom;
+  const bottom = padding.top + chartH;
+
+  ctx.strokeStyle = "#9f9f9f";
+  ctx.lineWidth = 1;
+  ctx.fillStyle = "#333333";
+  ctx.font = "12px Arial";
+  ctx.textAlign = "right";
+  ctx.textBaseline = "middle";
+
+  for (let index = 0; index <= 5; index += 1) {
+    const valor = (eixoMax / 5) * index;
+    const y = bottom - (valor / eixoMax) * chartH;
+    ctx.beginPath();
+    ctx.moveTo(padding.left, y);
+    ctx.lineTo(width - padding.right, y);
+    ctx.stroke();
+    ctx.fillText(String(Math.round(valor)), padding.left - 8, y);
+  }
+
+  ctx.strokeStyle = "#333333";
+  ctx.beginPath();
+  ctx.moveTo(padding.left, padding.top);
+  ctx.lineTo(padding.left, bottom);
+  ctx.lineTo(width - padding.right, bottom);
+  ctx.stroke();
+
+  const getX = (index) =>
+    pontos.length <= 1 ? padding.left + chartW / 2 : padding.left + (chartW / (pontos.length - 1)) * index;
+  const getY = (valor) => bottom - (valor / eixoMax) * chartH;
+
+  ctx.strokeStyle = "#222222";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  pontos.forEach((ponto, index) => {
+    const x = getX(index);
+    const y = getY(Number(ponto.valor || 0));
+    if (index === 0) {
+      ctx.moveTo(x, y);
+    } else {
+      ctx.lineTo(x, y);
+    }
+  });
+  ctx.stroke();
+
+  ctx.fillStyle = "#222222";
+  pontos.forEach((ponto, index) => {
+    const x = getX(index);
+    const y = getY(Number(ponto.valor || 0));
+    ctx.beginPath();
+    ctx.arc(x, y, 4, 0, Math.PI * 2);
+    ctx.fill();
+  });
+
+  const labelStep = Math.max(1, Math.ceil(pontos.length / 12));
+  ctx.fillStyle = "#333333";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "top";
+  pontos.forEach((ponto, index) => {
+    if (index % labelStep !== 0 && index !== pontos.length - 1) {
+      return;
+    }
+    ctx.fillText(ponto.label, getX(index), bottom + 12);
+  });
+}
+
+function renderGraficoVendas(data) {
+  graficoAtual = data;
+  const total = Number(data?.total || 0);
+  if (graficoResumo) {
+    graficoResumo.textContent = `${getGraficoPeriodoLabel(data)} - ${total} produto(s) vendido(s)`;
+  }
+  setGraficoMessage(total > 0 ? "" : SYSTEM_MESSAGES.admin.empty.noGraficos);
+  desenharGraficoVendas(data);
+}
+
+async function carregarGraficoVendasAdmin() {
+  const labelOriginal = btnGraficoCarregar?.textContent || "CARREGAR";
+  if (btnGraficoCarregar) {
+    btnGraficoCarregar.disabled = true;
+    btnGraficoCarregar.textContent = SYSTEM_MESSAGES.general.loading;
+  }
+
+  try {
+    await ensureProdutosMetadata();
+    const data = await carregarVendasGrafico(getGraficoParams());
+    renderGraficoVendas(data);
+  } finally {
+    if (btnGraficoCarregar) {
+      btnGraficoCarregar.disabled = false;
+      btnGraficoCarregar.textContent = labelOriginal;
+    }
+  }
 }
 
 async function carregarProdutos() {
@@ -1965,6 +2199,36 @@ navEstoque.addEventListener("click", async () => {
   }
 });
 
+navGraficos.addEventListener("click", async () => {
+  setAdminSection("graficos");
+  setGraficoMessage("");
+  try {
+    await carregarGraficoVendasAdmin();
+  } catch (error) {
+    setGraficoMessage(getErrorMessage(error, SYSTEM_MESSAGES.admin.errors.loadGraficosFailed));
+  }
+});
+
+graficoTipoSelect?.addEventListener("change", () => {
+  updateGraficoDateFields();
+});
+
+graficoMesSelect?.addEventListener("change", () => {
+  updateGraficoDateFields();
+});
+
+graficoAnoInput?.addEventListener("change", () => {
+  updateGraficoDateFields();
+});
+
+btnGraficoCarregar?.addEventListener("click", async () => {
+  try {
+    await carregarGraficoVendasAdmin();
+  } catch (error) {
+    setGraficoMessage(getErrorMessage(error, SYSTEM_MESSAGES.admin.errors.loadGraficosFailed));
+  }
+});
+
 btnAddFornecedor.addEventListener("click", () => {
   abrirFornecedorForm();
 });
@@ -2140,6 +2404,13 @@ updateSortUI();
 updateProdutoSortUI();
 updatePedidoSortUI();
 updateGarantiaFields();
+initGraficoDefaults();
+
+window.addEventListener("resize", () => {
+  if (graficoAtual && !graficosSection.classList.contains("hidden")) {
+    desenharGraficoVendas(graficoAtual);
+  }
+});
 
 inicializarAcessoAdmin().then((liberado) => {
   if (!liberado) {

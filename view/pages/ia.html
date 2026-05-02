@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gamzu IA</title>
+  <link rel="stylesheet" href="../../styles/ia.css">
+  <link rel="stylesheet" href="../../styles/cart-notice.css">
+</head>
+<body>
+  <div class="ia-shell">
+    <header class="ia-header">
+      <div class="logo"><a href="home.html">LOGO</a></div>
+      <div class="ia-title">
+        <strong>Gamzu</strong>
+        <span>IA para pecas de computador e hardware</span>
+      </div>
+      <button id="perfil-btn" class="btn">PERFIL</button>
+      <button id="btn-carrinho" class="btn">CARRINHO</button>
+    </header>
+
+    <main class="chat-panel">
+      <div class="chat-topbar">
+        <div>
+          <strong>Conversa com Gamzu</strong>
+          <p>Envie apenas texto. A Gamzu responde sobre hardware, pecas e compatibilidade.</p>
+        </div>
+        <button id="btn-nova-conversa" class="btn" type="button">NOVA CONVERSA</button>
+      </div>
+
+      <div id="chat-status" class="chat-status hidden"></div>
+      <section id="chat-messages" class="chat-messages" aria-live="polite"></section>
+
+      <form id="chat-form" class="chat-form">
+        <input id="chat-input" type="text" autocomplete="off" placeholder="Pergunte sobre pecas, compatibilidade ou upgrades">
+        <button id="chat-send" class="send-btn" type="submit">ENVIAR</button>
+      </form>
+    </main>
+  </div>
+
+  <script type="module" src="../scripts/ia.js"></script>
+</body>
+</html>
