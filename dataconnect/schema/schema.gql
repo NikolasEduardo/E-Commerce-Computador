@@ -11,7 +11,7 @@ type Usuario @table {
 }
 
 type StatusUsuario @table {
-  nome: String! # Ex: "ATIVO", "INATIVO", "ADMIN"
+  nome: String! @unique # Ex: "ATIVO", "INATIVO", "ADMIN"
 }
 
 type Endereco @table {
@@ -30,11 +30,11 @@ type Endereco @table {
 }
 
 type TipoResidencia @table {
-  nome: String!
+  nome: String! @unique
 }
 
 type TipoLogradouro @table {
-  nome: String!
+  nome: String! @unique
   sigla: String!
 }
 
@@ -169,7 +169,7 @@ type Troca @table {
   pedido: Pedido!
   item: ItemPedido
   classificacaoTecnica: String
-  cupomGerado: Cupom
+  cupomGerado: Cupom @unique
   descricao: DescricaoTroca!
 }
 
@@ -195,7 +195,7 @@ type BandeiraCartao @table {
 }
 
 type GrupoPrecificacao @table {
-  nome: String!
+  nome: String! @unique
   margemLucro: Float!
 }
 
