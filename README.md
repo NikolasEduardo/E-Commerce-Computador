@@ -135,14 +135,10 @@ Esse modo e util para demonstracao e testes rapidos. Nao e recomendado como hosp
 
 ## Testes automatizados com Cypress
 
-O projeto possui um teste E2E para simular uma compra com escolhas aleatorias na tela:
+O projeto possui testes E2E para simular fluxos reais no navegador:
 
-- escolhe um ou mais produtos na home
-- envia para o carrinho
-- abre a finalizacao de compra
-- escolhe endereco, cartoes, cupom promocional e cupons de troca/sobra
-- conclui a compra
-- valida se o pedido aparece na lista de pedidos do cliente
+- `checkout-random.cy.js`: faz uma compra simples com escolhas aleatorias.
+- `full-order-exchange-flow.cy.js`: faz login como cliente, compra, usa combinacoes configuraveis de pagamento, registra endereco/cartao no checkout, acompanha o pedido, faz login como admin, entrega o pedido, solicita troca como cliente, avalia a troca como admin e valida o cupom gerado.
 
 Antes de rodar pela primeira vez, instale o Cypress:
 
@@ -156,8 +152,27 @@ Depois, crie `cypress.env.json` usando `cypress.env.example.json` como base:
 {
   "USER_EMAIL": "cliente.teste@email.com",
   "USER_PASSWORD": "senha-do-cliente-ativo",
+  "ADMIN_EMAIL": "admin.teste@email.com",
+  "ADMIN_PASSWORD": "senha-do-admin",
   "MAX_RANDOM_PRODUCTS": 3,
-  "MAX_EXTRA_CARDS": 3
+  "MAX_EXTRA_CARDS": 3,
+  "FULL_FLOW_MAX_RANDOM_PRODUCTS": 2,
+  "FULL_FLOW_NEW_ADDRESS": true,
+  "FULL_FLOW_NEW_CARD_COUNT": 2,
+  "FULL_FLOW_MAX_EXTRA_CARDS": 1,
+  "FULL_FLOW_PROMO_MODE": "if_available",
+  "FULL_FLOW_EXCHANGE_COUPON_MODE": "if_available",
+  "FULL_FLOW_MAX_EXCHANGE_COUPONS": 1,
+  "FULL_FLOW_RETURN_MAX_PRODUCTS": 2,
+  "FULL_FLOW_RETURN_QUANTITY_MODE": "random",
+  "FULL_FLOW_EXCHANGE_REASON": "Teste automatizado de devolucao",
+  "FULL_FLOW_EXCHANGE_DESCRIPTION": "Descricao generica criada pelo Cypress.",
+  "FULL_FLOW_ADMIN_TECH_DESCRIPTION": "Avaliacao tecnica generica criada pelo Cypress.",
+  "FULL_FLOW_EXCHANGE_CLASSIFICATIONS": "Produto sem defeito constatado,Produto com defeito intermitente,Produto incompativel com sistema do cliente",
+  "FULL_FLOW_CARD_HOLDER": "Cliente Teste Cypress",
+  "FULL_FLOW_CARD_CVV": "123",
+  "FULL_FLOW_CARD_EXPIRY": "2032-12",
+  "FULL_FLOW_EXTRA_CARD_VALUE": 10
 }
 ```
 
@@ -165,6 +180,27 @@ Para executar:
 
 1. Em um terminal, rode `npm start`.
 2. Em outro terminal, rode `npm run cy:open` ou `npm run cy:run`.
+
+Para executar somente o fluxo completo de compra, entrega e troca:
+
+```bash
+npm run cy:full-flow
+```
+
+### Variaveis principais do fluxo completo
+
+- `FULL_FLOW_NEW_ADDRESS`: se `true`, cadastra um novo endereco durante o checkout.
+- `FULL_FLOW_REQUIRE_NEW_ADDRESS`: se `true`, falha caso o endereco recem-criado nao apareca no seletor; por padrao fica `false` para permitir fallback em bancos com retorno mais lento.
+- `FULL_FLOW_NEW_CARD_COUNT`: quantidade de cartoes validos criados durante o checkout. Use `2` ou mais para testar cartoes adicionais.
+- `FULL_FLOW_MAX_EXTRA_CARDS`: quantidade maxima de cartoes adicionais usados no pagamento. A tela pode remover cartoes extras automaticamente se cupons cobrirem a compra ou se o restante ficar abaixo de R$ 20.
+- `FULL_FLOW_PROMO_MODE`: use `if_available`, `random` ou `none`.
+- `FULL_FLOW_EXCHANGE_COUPON_MODE`: use `if_available`, `random` ou `none`.
+- `FULL_FLOW_MAX_EXCHANGE_COUPONS`: limite de cupons TROCA/SOBRA selecionados.
+- `FULL_FLOW_RETURN_MAX_PRODUCTS`: quantidade maxima de produtos diferentes selecionados para devolucao.
+- `FULL_FLOW_RETURN_QUANTITY_MODE`: use `random` ou `max`.
+- `FULL_FLOW_EXCHANGE_CLASSIFICATIONS`: lista separada por virgula com as classificacoes tecnicas que o admin pode sortear.
+
+Para o fluxo completo validar cupom gerado, mantenha pelo menos uma classificacao que gere valor de cupom, como `Produto sem defeito constatado` ou `Produto com defeito intermitente`.
 
 Observacao importante: esse teste usa o banco real configurado no `.env`. Ele pode criar pedidos, consumir cupons, alterar estoque reservado/fisico e atualizar ranking do cliente.
 

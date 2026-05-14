@@ -36,6 +36,20 @@ Cypress.Commands.add("loginCliente", () => {
   cy.waitForAppIdle();
 });
 
+Cypress.Commands.add("loginAdmin", () => {
+  const email = requireEnv("ADMIN_EMAIL");
+  const password = requireEnv("ADMIN_PASSWORD");
+
+  cy.visit("/view/index.html");
+  cy.waitForAppIdle();
+  cy.get("#email").clear().type(email, { log: false });
+  cy.get("#senha").clear().type(password, { log: false });
+  cy.get("#login-button").click();
+  cy.location("pathname", { timeout: 60000 }).should("include", "/view/admpages/homeadm.html");
+  cy.get("#admin-access-overlay", { timeout: 90000 }).should("have.class", "hidden");
+  cy.waitForAppIdle();
+});
+
 Cypress.Commands.add("selectRandomOption", (selector, options = {}) => {
   const includeEmpty = Boolean(options.includeEmpty);
 

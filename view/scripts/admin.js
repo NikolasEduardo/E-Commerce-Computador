@@ -597,6 +597,9 @@ function renderPedidos(pedidos) {
   pedidos.forEach((pedido) => {
     const card = document.createElement("div");
     card.className = "pedido-card";
+    if (pedido?.id) {
+      card.dataset.pedidoId = pedido.id;
+    }
 
     const info = document.createElement("div");
     info.className = "pedido-info";
@@ -852,6 +855,9 @@ function renderTrocas(trocas) {
   trocas.forEach((descricao) => {
     const card = document.createElement("div");
     card.className = "troca-card";
+    if (descricao?.id) {
+      card.dataset.descricaoId = descricao.id;
+    }
 
     const info = document.createElement("div");
     info.className = "troca-info";

@@ -827,6 +827,19 @@ function montarResumoTrocaItemPedido(item) {
   const quantidadeEmTroca = item?.getQuantidadeEmTroca?.() || 0;
   const quantidadeRestante = item?.getQuantidadeRestante?.() ?? Number(item?.quantidade || 0);
   const status = item?.getStatusNome?.() || "";
+  const cuponsGerados = [...new Set(
+    (item?.getTrocas?.() || [])
+      .map((troca) => {
+        const cupom = troca?.cupomGerado || null;
+        const codigo = troca?.getCupomCodigo?.() || cupom?.codigo || "";
+        if (!codigo) {
+          return "";
+        }
+        const valor = Number(cupom?.valor || 0);
+        return valor > 0 ? `${codigo} (${formatCurrency(valor)})` : codigo;
+      })
+      .filter(Boolean)
+  )];
   const linhas = [];
 
   if (status) {
@@ -835,6 +848,9 @@ function montarResumoTrocaItemPedido(item) {
   if (quantidadeEmTroca > 0) {
     linhas.push(`Quantidade em troca: ${quantidadeEmTroca}`);
     linhas.push(`Quantidade ainda com voce: ${quantidadeRestante}`);
+  }
+  if (cuponsGerados.length) {
+    linhas.push(`Cupom de troca gerado: ${cuponsGerados.join(", ")}`);
   }
 
   return linhas;
@@ -864,6 +880,9 @@ function renderPedidos(pedidos) {
   pedidos.forEach((pedido) => {
     const card = document.createElement("div");
     card.className = "pedido-card";
+    if (pedido?.id) {
+      card.dataset.pedidoId = pedido.id;
+    }
 
     const info = document.createElement("div");
     info.className = "pedido-info";
@@ -1096,6 +1115,9 @@ function renderTrocas(trocas) {
   trocas.forEach((trocaDescricao) => {
     const card = document.createElement("div");
     card.className = "troca-card";
+    if (trocaDescricao?.id) {
+      card.dataset.descricaoId = trocaDescricao.id;
+    }
 
     const info = document.createElement("div");
     info.className = "troca-info";

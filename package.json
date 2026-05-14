@@ -5,6 +5,7 @@
     "backend": "node server/index.js",
     "cy:open": "cypress open",
     "cy:run": "cypress run",
+    "cy:full-flow": "cypress run --spec cypress/e2e/full-order-exchange-flow.cy.js",
     "test:e2e": "cypress run",
     "seed:export": "node scripts/seed/export-catalog.js",
     "seed:import": "node scripts/seed/import-catalog.js"
