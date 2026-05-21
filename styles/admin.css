@@ -583,19 +583,39 @@ body.admin-locked {
 }
 
 .fornecedores-list,
-.entradas-list {
+.entradas-list,
+.metas-list {
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
 
 .fornecedor-card,
-.entrada-card {
+.entrada-card,
+.meta-card {
   background: #bdbdbd;
   padding: 12px;
   display: flex;
   flex-direction: column;
   gap: 6px;
+}
+
+.meta-card {
+  display: grid;
+  grid-template-columns: 1fr 220px;
+  align-items: center;
+}
+
+.meta-card label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.meta-card input {
+  padding: 8px;
+  border: none;
+  background: #d7d7d7;
 }
 
 .field-row {
@@ -775,7 +795,8 @@ body.admin-locked {
 
   .troca-card,
   .troca-item-card,
-  .troca-item-body {
+  .troca-item-body,
+  .meta-card {
     grid-template-columns: 1fr;
   }
 

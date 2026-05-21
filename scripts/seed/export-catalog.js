@@ -37,7 +37,11 @@ function mapProduto(produto) {
     categoriaAtivacao: produto.categoriaAtivacao,
     estoqueFisico: Number(produto.estoqueFisico || 0),
     estoqueReservado: 0,
-    quantidadeVendida: 0,
+    quantidadeVendida: Number(produto.quantidadeVendida || 0),
+    vendaNoMes: Number(produto.vendaNoMes || 0),
+    bateuMeta: Boolean(produto.bateuMeta),
+    dataRestoque: produto.dataRestoque || null,
+    quantidadeRestoqueMeta: Number(produto.quantidadeRestoqueMeta || 0),
     marca: produto.marca?.nome || "",
     grupoPrecificacao: produto.grupoPrecificacao
       ? {
@@ -106,6 +110,10 @@ async function exportCatalog() {
         estoqueFisico
         estoqueReservado
         quantidadeVendida
+        vendaNoMes
+        bateuMeta
+        dataRestoque
+        quantidadeRestoqueMeta
         marca { nome }
         grupoPrecificacao { nome margemLucro }
         produtoCategorias_on_produto {

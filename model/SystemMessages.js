@@ -235,6 +235,8 @@ export const SYSTEM_MESSAGES = {
       loadEstoqueFailed: "Erro ao carregar estoque.",
       loadFornecedoresFailed: "Erro ao carregar fornecedores.",
       loadGraficosFailed: "Erro ao carregar grafico de vendas.",
+      loadMetasFailed: "Erro ao carregar metas.",
+      saveMetasFailed: "Erro ao salvar metas.",
       loadTrocasFailed: "Erro ao buscar solicitacoes de troca.",
       loadTrocaFailed: "Erro ao carregar solicitacao de troca.",
       exchangeEvaluateFailed: "Erro ao avaliar produto devolvido.",
@@ -256,6 +258,7 @@ export const SYSTEM_MESSAGES = {
       noFornecedores: "Nenhum fornecedor cadastrado.",
       noEntradas: "Nenhuma entrada registrada.",
       noGraficos: "Nenhuma venda encontrada para os filtros selecionados.",
+      noMetas: "Nenhuma meta encontrada.",
       noTrocas: "Nenhuma solicitacao de troca encontrada.",
       noExchangeItems: "Nenhum item de troca encontrado.",
       noPayment: "Nenhum pagamento encontrado."

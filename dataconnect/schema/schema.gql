@@ -55,7 +55,11 @@ type Produto @table {
   categoriaAtivacao: String
   estoqueFisico: Int!
   estoqueReservado: Int!
-  quantidadeVendida: Int! # Valor deve ser reiniciado quando o estoqueFisico for zerado
+  quantidadeVendida: Int! 
+  vendaNoMes: Int # Vendas do ciclo atual de meta
+  bateuMeta: Boolean # Inicia False
+  dataRestoque: Timestamp # Inicio do ciclo atual de 30 dias apos entrada de estoque
+  quantidadeRestoqueMeta: Int # Quantidade usada para calcular a meta da re-estocagem atual
 }
 
 type ImagemProduto @table {

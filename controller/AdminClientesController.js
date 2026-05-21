@@ -4,6 +4,6 @@ export function buscarClientes(params) {
   return listarClientes(params);
 }
 
-export function atualizarStatus(usuarioId, status) {
-  return atualizarStatusCliente(usuarioId, status);
+export function atualizarStatus(usuarioId, status, justificativa) {
+  return atualizarStatusCliente(usuarioId, status, justificativa);
 }

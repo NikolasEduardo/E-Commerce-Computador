@@ -32,6 +32,10 @@ export class Produto {
         estoqueFisico,
         estoqueReservado,
         quantidadeVendida,
+        vendaNoMes,
+        bateuMeta,
+        dataRestoque,
+        quantidadeRestoqueMeta,
         categorias = [],
         produtoCategorias = [],
         imagemProdutos = [],
@@ -55,6 +59,10 @@ export class Produto {
         this.estoqueFisico = estoqueFisico
         this.estoqueReservado = estoqueReservado
         this.quantidadeVendida = quantidadeVendida
+        this.vendaNoMes = vendaNoMes
+        this.bateuMeta = bateuMeta
+        this.dataRestoque = dataRestoque
+        this.quantidadeRestoqueMeta = quantidadeRestoqueMeta
         this.categorias = categorias
         this.produtoCategorias_on_produto = produtoCategorias.length
             ? produtoCategorias
@@ -124,6 +132,10 @@ export class Produto {
             Number(raw.estoqueFisico || 0),
             Number(raw.estoqueReservado || 0),
             Number(raw.quantidadeVendida || 0),
+            Number(raw.vendaNoMes || 0),
+            Boolean(raw.bateuMeta),
+            raw.dataRestoque || "",
+            Number(raw.quantidadeRestoqueMeta || 0),
             categorias,
             produtoCategorias,
             imagens,

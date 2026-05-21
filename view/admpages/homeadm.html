@@ -30,6 +30,7 @@
         <button id="nav-pedidos" class="nav-item">PEDIDOS</button>
         <button id="nav-trocas" class="nav-item">TROCAS</button>
         <button id="nav-estoque" class="nav-item">ESTOQUE</button>
+        <button id="nav-metas" class="nav-item">METAS</button>
         <button id="nav-graficos" class="nav-item">GRAFICO</button>
       </aside>
 
@@ -350,6 +351,23 @@
           <section class="panel">
             <div class="panel-title">ENTRADA ESTOQUE</div>
             <div id="entradasList" class="entradas-list"></div>
+          </section>
+        </section>
+
+        <section id="metas-section" class="admin-section hidden">
+          <section class="panel">
+            <div class="panel-title">METAS DE VENDA POR CATEGORIA</div>
+            <p class="panel-text">
+              Configure a porcentagem minima de venda para evitar inativacao automatica por baixo giro ao zerar o estoque.
+            </p>
+            <div id="metas-message" class="form-message hidden"></div>
+          </section>
+
+          <section class="panel">
+            <div id="metasList" class="metas-list"></div>
+            <div class="actions">
+              <button id="btn-save-metas" type="button">SALVAR METAS</button>
+            </div>
           </section>
         </section>
 

@@ -54,11 +54,16 @@ export async function listarClientes(params = {}) {
   return ordenarClientes(filtrados, params.sortField || "", params.sortOrder || "");
 }
 
-export async function atualizarStatusCliente(usuarioId, status) {
+export async function atualizarStatusCliente(usuarioId, status, justificativa = {}) {
   const response = await adminRequest("/api/admin/clientes/status", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ usuarioId, status })
+    body: JSON.stringify({
+      usuarioId,
+      status,
+      titulo: justificativa.titulo,
+      descricao: justificativa.descricao
+    })
   });
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) {

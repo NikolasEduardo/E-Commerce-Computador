@@ -296,7 +296,11 @@ async function upsertProduto(accessToken, produto, marcaId, grupoPrecificacaoId)
     categoriaAtivacao: produto.categoriaAtivacao || null,
     estoqueFisico: Number(produto.estoqueFisico || 0),
     estoqueReservado: 0,
-    quantidadeVendida: Number(produto.quantidadeVendida || 0)
+    quantidadeVendida: Number(produto.quantidadeVendida || 0),
+    vendaNoMes: Number(produto.vendaNoMes || 0),
+    bateuMeta: Boolean(produto.bateuMeta),
+    dataRestoque: produto.dataRestoque || null,
+    quantidadeRestoqueMeta: Number(produto.quantidadeRestoqueMeta || 0)
   };
 
   if (existing?.id) {
@@ -319,7 +323,11 @@ async function upsertProduto(accessToken, produto, marcaId, grupoPrecificacaoId)
         $categoriaAtivacao: String,
         $estoqueFisico: Int!,
         $estoqueReservado: Int!,
-        $quantidadeVendida: Int!
+        $quantidadeVendida: Int!,
+        $vendaNoMes: Int!,
+        $bateuMeta: Boolean!,
+        $dataRestoque: Timestamp,
+        $quantidadeRestoqueMeta: Int
       ) {
         produto_update(id: $id, data: {
           nome: $nome,
@@ -338,7 +346,11 @@ async function upsertProduto(accessToken, produto, marcaId, grupoPrecificacaoId)
           categoriaAtivacao: $categoriaAtivacao,
           estoqueFisico: $estoqueFisico,
           estoqueReservado: $estoqueReservado,
-          quantidadeVendida: $quantidadeVendida
+          quantidadeVendida: $quantidadeVendida,
+          vendaNoMes: $vendaNoMes,
+          bateuMeta: $bateuMeta,
+          dataRestoque: $dataRestoque,
+          quantidadeRestoqueMeta: $quantidadeRestoqueMeta
         })
       }
     `;
@@ -365,7 +377,11 @@ async function upsertProduto(accessToken, produto, marcaId, grupoPrecificacaoId)
       $categoriaAtivacao: String,
       $estoqueFisico: Int!,
       $estoqueReservado: Int!,
-      $quantidadeVendida: Int!
+      $quantidadeVendida: Int!,
+      $vendaNoMes: Int!,
+      $bateuMeta: Boolean!,
+      $dataRestoque: Timestamp,
+      $quantidadeRestoqueMeta: Int
     ) {
       produto_insert(data: {
         id: $id,
@@ -385,7 +401,11 @@ async function upsertProduto(accessToken, produto, marcaId, grupoPrecificacaoId)
         categoriaAtivacao: $categoriaAtivacao,
         estoqueFisico: $estoqueFisico,
         estoqueReservado: $estoqueReservado,
-        quantidadeVendida: $quantidadeVendida
+        quantidadeVendida: $quantidadeVendida,
+        vendaNoMes: $vendaNoMes,
+        bateuMeta: $bateuMeta,
+        dataRestoque: $dataRestoque,
+        quantidadeRestoqueMeta: $quantidadeRestoqueMeta
       })
     }
   `;

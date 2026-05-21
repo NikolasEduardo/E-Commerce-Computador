@@ -50,6 +50,21 @@ const CARRINHO_EXPIRACAO_MIN = 30; //30 min
 const CARRINHO_AVISO_MIN = 5; //5 min
 const CARRINHO_ESTENDER_MIN = 10; //10 min
 const CARRINHO_MAX_QTD = 99;
+const META_CICLO_DIAS = 30;
+const META_VERIFICACAO_INTERVALO_MS = 60 * 60 * 1000;
+const META_INATIVACAO_CATEGORIA = "AUTOM\u00C1TICA";
+const META_INATIVACAO_MOTIVO =
+  "Baixo giro de estoque: o produto n\u00E3o atingiu a meta percentual de vendas em nenhum ciclo mensal.";
+const META_CATEGORIAS_PADRAO = [
+  "PLACA DE V\u00CDDEO",
+  "PROCESSADOR",
+  "PLACA-M\u00C3E",
+  "MEM\u00D3RIA RAM",
+  "ARMAZENAMENTO",
+  "FONTE"
+].map((nome) => ({ nome, vendaMinimaInativacao: 0 }));
+
+let metasEstoqueVerificacaoEmAndamento = false;
 
 function loadEnvFile(filePath) {
   if (!fs.existsSync(filePath)) {
@@ -337,6 +352,61 @@ async function executeGraphql(accessToken, query, variables) {
   return payload?.data || {};
 }
 
+function getAdminAuditLabel(adminContext) {
+  const usuario = adminContext?.usuario || {};
+  if (!usuario.id) {
+    return "SISTEMA";
+  }
+  return usuario.codigoUser
+    ? `${usuario.nome || "Administrador"} (${usuario.codigoUser})`
+    : usuario.nome || "Administrador";
+}
+
+function safeAuditStringify(payload) {
+  return JSON.stringify(payload, null, 2);
+}
+
+async function insertLogAuditoria(accessToken, data) {
+  const mutation = `
+    mutation InserirLogAuditoria(
+      $id: UUID!,
+      $dataHora: Timestamp!,
+      $usuarioResponsavelId: UUID,
+      $operacao: String!,
+      $tipoEntidade: String!,
+      $idEntidade: UUID!,
+      $mudancas: String
+    ) {
+      logAuditoria_insert(data: {
+        id: $id,
+        dataHora: $dataHora,
+        usuarioResponsavelId: $usuarioResponsavelId,
+        operacao: $operacao,
+        tipoEntidade: $tipoEntidade,
+        idEntidade: $idEntidade,
+        mudancas: $mudancas
+      })
+    }
+  `;
+  await executeGraphql(accessToken, mutation, data);
+}
+
+async function registrarAuditoria(accessToken, adminContext, payload) {
+  await insertLogAuditoria(accessToken, {
+    id: crypto.randomUUID(),
+    dataHora: new Date().toISOString(),
+    usuarioResponsavelId: adminContext?.usuario?.id || null,
+    operacao: payload.operacao,
+    tipoEntidade: payload.tipoEntidade,
+    idEntidade: payload.idEntidade,
+    mudancas: safeAuditStringify({
+      responsavel: getAdminAuditLabel(adminContext),
+      responsavelId: adminContext?.usuario?.id || null,
+      ...payload.mudancas
+    })
+  });
+}
+
 async function queryUsuarioStatus(authId, accessToken) {
   const query = `
     query UsuarioPorAuthId($authId: String!) {
@@ -352,6 +422,22 @@ async function queryUsuarioStatus(authId, accessToken) {
   const data = await executeGraphql(accessToken, query, { authId });
   const usuario = data?.usuarios?.[0] || null;
   return usuario?.status?.nome || null;
+}
+
+async function queryUsuarioAuthContext(authId, accessToken) {
+  const query = `
+    query UsuarioAuthContext($authId: String!) {
+      usuarios(where: { authId: { eq: $authId } }, limit: 1) {
+        id
+        authId
+        codigoUser
+        nome
+        status { nome }
+      }
+    }
+  `;
+  const data = await executeGraphql(accessToken, query, { authId });
+  return data?.usuarios?.[0] || null;
 }
 
 function createHttpError(statusCode, message) {
@@ -389,13 +475,15 @@ async function requireAuthenticatedContext(req) {
   }
 
   const accessToken = await getAccessToken();
-  const status = await queryUsuarioStatus(authId, accessToken);
+  const usuario = await queryUsuarioAuthContext(authId, accessToken);
+  const status = usuario?.status?.nome || null;
 
   return {
     idToken,
     authId,
     accessToken,
-    status
+    status,
+    usuario
   };
 }
 
@@ -1181,7 +1269,7 @@ async function fetchProdutosMetadata(accessToken) {
   const query = `
       query ProdutosMetadata {
         marcas { id nome }
-        categorias { id nome }
+        categorias { id nome vendaMinimaInativacao }
         grupoPrecificacaos { id nome margemLucro }
         produtos(orderBy: [{ nome: ASC }], limit: 1000) {
           id
@@ -2381,7 +2469,16 @@ async function fetchProdutoEstoque(accessToken, produtoId) {
           estoqueFisico
           estoqueReservado
           quantidadeVendida
+          vendaNoMes
+          bateuMeta
+          dataRestoque
+          quantidadeRestoqueMeta
           status
+          motivoInativacao
+          categoriaInativacao
+          produtoCategorias_on_produto {
+            categoria { id nome vendaMinimaInativacao }
+          }
         }
       }
     `;
@@ -2397,7 +2494,16 @@ async function fetchProdutosInventario(accessToken, ids) {
           estoqueFisico
           estoqueReservado
           quantidadeVendida
+          vendaNoMes
+          bateuMeta
+          dataRestoque
+          quantidadeRestoqueMeta
           status
+          motivoInativacao
+          categoriaInativacao
+          produtoCategorias_on_produto {
+            categoria { id nome vendaMinimaInativacao }
+          }
         }
       }
     `;
@@ -2409,6 +2515,26 @@ async function updateProdutoEstoque(accessToken, data) {
   const mutation = `
       mutation AtualizarEstoqueProduto($id: UUID!, $estoqueFisico: Int!) {
         produto_update(id: $id, data: { estoqueFisico: $estoqueFisico })
+      }
+    `;
+  await executeGraphql(accessToken, mutation, data);
+}
+
+async function updateProdutoEntradaEstoque(accessToken, data) {
+  const mutation = `
+      mutation AtualizarEntradaEstoqueProduto(
+        $id: UUID!,
+        $estoqueFisico: Int!,
+        $dataRestoque: Timestamp!,
+        $quantidadeRestoqueMeta: Int!
+      ) {
+        produto_update(id: $id, data: {
+          estoqueFisico: $estoqueFisico,
+          vendaNoMes: 0,
+          bateuMeta: false,
+          dataRestoque: $dataRestoque,
+          quantidadeRestoqueMeta: $quantidadeRestoqueMeta
+        })
       }
     `;
   await executeGraphql(accessToken, mutation, data);
@@ -2429,16 +2555,98 @@ async function updateProdutoInventario(accessToken, data) {
         $id: UUID!,
         $estoqueFisico: Int!,
         $estoqueReservado: Int!,
-        $quantidadeVendida: Int!
+        $quantidadeVendida: Int!,
+        $vendaNoMes: Int!,
+        $bateuMeta: Boolean!
       ) {
         produto_update(id: $id, data: {
           estoqueFisico: $estoqueFisico,
           estoqueReservado: $estoqueReservado,
-          quantidadeVendida: $quantidadeVendida
+          quantidadeVendida: $quantidadeVendida,
+          vendaNoMes: $vendaNoMes,
+          bateuMeta: $bateuMeta
         })
       }
     `;
   await executeGraphql(accessToken, mutation, data);
+}
+
+async function updateProdutoCicloMeta(accessToken, data) {
+  const mutation = `
+      mutation AtualizarCicloMetaProduto(
+        $id: UUID!,
+        $vendaNoMes: Int!,
+        $bateuMeta: Boolean!,
+        $dataRestoque: Timestamp!
+      ) {
+        produto_update(id: $id, data: {
+          vendaNoMes: $vendaNoMes,
+          bateuMeta: $bateuMeta,
+          dataRestoque: $dataRestoque
+        })
+      }
+    `;
+  await executeGraphql(accessToken, mutation, data);
+}
+
+function getProdutoMetaInfo(produto) {
+  const categoriasProduto = produto?.produtoCategorias_on_produto || [];
+  const metas = categoriasProduto
+    .map((item) => {
+      const categoria = item?.categoria || {};
+      const nome = categoria?.nome || "";
+      const controlada = META_CATEGORIAS_PADRAO.some((padrao) => padrao.nome === nome);
+      const percentual = clampPercentualMeta(categoria?.vendaMinimaInativacao);
+      return controlada ? percentual : 0;
+    })
+    .filter((percentual) => percentual > 0);
+
+  const percentual = metas.length ? Math.max(...metas) : 0;
+  const quantidadeBase = Number(produto?.quantidadeRestoqueMeta || 0);
+  const metaQuantidade = percentual > 0 && quantidadeBase > 0
+    ? Math.ceil(quantidadeBase * percentual)
+    : 0;
+
+  return {
+    percentual,
+    quantidadeBase,
+    metaQuantidade,
+    configurada: metaQuantidade > 0
+  };
+}
+
+function produtoAtingiuMeta(produto, vendaNoMes) {
+  const metaInfo = getProdutoMetaInfo(produto);
+  if (!metaInfo.configurada) {
+    return Boolean(produto?.bateuMeta);
+  }
+  return Number(vendaNoMes || 0) >= metaInfo.metaQuantidade;
+}
+
+async function inativarProdutoBaixoGiro(accessToken, produtoId, adminContext = null) {
+  await updateProdutoStatus(accessToken, {
+    id: produtoId,
+    status: "INATIVO",
+    motivoInativacao: META_INATIVACAO_MOTIVO,
+    categoriaInativacao: META_INATIVACAO_CATEGORIA,
+    justificativaAtivacao: null,
+    categoriaAtivacao: null
+  });
+  await registrarAuditoria(accessToken, adminContext, {
+    operacao: "INATIVA\u00C7\u00C3O AUTOM\u00C1TICA",
+    tipoEntidade: "Produto",
+    idEntidade: produtoId,
+    mudancas: {
+      resumo: "Produto inativado automaticamente por baixo giro de estoque.",
+      categoria: META_INATIVACAO_CATEGORIA,
+      justificativa: META_INATIVACAO_MOTIVO,
+      alteracoes: {
+        status: { antes: "ATIVO", depois: "INATIVO" },
+        categoriaInativacao: { antes: null, depois: META_INATIVACAO_CATEGORIA },
+        motivoInativacao: { antes: null, depois: META_INATIVACAO_MOTIVO }
+      }
+    }
+  });
 }
 
 function calcularNovaExpiracao(minutos) {
@@ -2679,6 +2887,23 @@ async function fetchUsuarioRanking(accessToken, usuarioId) {
   `;
   const data = await executeGraphql(accessToken, query, { id: usuarioId });
   return Number(data?.usuario?.ranking || 0);
+}
+
+async function fetchUsuarioAuditoria(accessToken, usuarioId) {
+  const query = `
+    query UsuarioAuditoria($id: UUID!) {
+      usuario(id: $id) {
+        id
+        codigoUser
+        nome
+        cpf
+        email
+        status { nome }
+      }
+    }
+  `;
+  const data = await executeGraphql(accessToken, query, { id: usuarioId });
+  return data?.usuario || null;
 }
 
 async function updateUsuarioRanking(accessToken, data) {
@@ -3146,6 +3371,89 @@ async function limparCarrinhosExpiradosAoIniciar() {
   }
 }
 
+async function fetchProdutosParaVerificacaoMetas(accessToken) {
+  const query = `
+    query ProdutosParaVerificacaoMetas {
+      produtos(orderBy: [{ nome: ASC }], limit: 1000) {
+        id
+        codigoProduto
+        nome
+        status
+        estoqueFisico
+        vendaNoMes
+        bateuMeta
+        dataRestoque
+        quantidadeRestoqueMeta
+        produtoCategorias_on_produto {
+          categoria { id nome vendaMinimaInativacao }
+        }
+      }
+    }
+  `;
+  const data = await executeGraphql(accessToken, query, {});
+  return data?.produtos || [];
+}
+
+function cicloMetaVencido(produto) {
+  if (!produto?.dataRestoque || produto?.bateuMeta) {
+    return false;
+  }
+  const inicio = new Date(produto.dataRestoque).getTime();
+  if (!inicio || Number.isNaN(inicio)) {
+    return false;
+  }
+  const duracao = META_CICLO_DIAS * 24 * 60 * 60 * 1000;
+  return Date.now() - inicio >= duracao;
+}
+
+async function verificarMetasEstoqueVencidas() {
+  if (metasEstoqueVerificacaoEmAndamento) {
+    return;
+  }
+
+  metasEstoqueVerificacaoEmAndamento = true;
+  try {
+    const accessToken = await getAccessToken();
+    await ensureCategoriasMetaPadrao(accessToken);
+    const produtos = await fetchProdutosParaVerificacaoMetas(accessToken);
+    let avaliados = 0;
+    let inativados = 0;
+
+    for (const produto of produtos) {
+      if (produto?.status !== "ATIVO" || !cicloMetaVencido(produto)) {
+        continue;
+      }
+
+      const metaInfo = getProdutoMetaInfo(produto);
+      if (!metaInfo.configurada) {
+        continue;
+      }
+
+      const bateuMeta = Number(produto.vendaNoMes || 0) >= metaInfo.metaQuantidade;
+      await updateProdutoCicloMeta(accessToken, {
+        id: produto.id,
+        vendaNoMes: 0,
+        bateuMeta,
+        dataRestoque: new Date().toISOString()
+      });
+      avaliados += 1;
+
+      if (Number(produto.estoqueFisico || 0) <= 0 && !bateuMeta) {
+        await inativarProdutoBaixoGiro(accessToken, produto.id);
+        inativados += 1;
+      }
+    }
+
+    if (avaliados > 0) {
+      console.log(`Metas de estoque avaliadas: ${avaliados}. Produtos inativados: ${inativados}.`);
+    }
+  } catch (error) {
+    console.warn(`Nao foi possivel verificar metas de estoque: ${error?.message || error}`);
+  } finally {
+    metasEstoqueVerificacaoEmAndamento = false;
+  }
+}
+
 async function getMarcaId(accessToken, nome) {
   const query = `
     query MarcaPorNome($nome: String!) {
@@ -3181,6 +3489,41 @@ async function getCategoriaId(accessToken, nome) {
   return data?.categorias?.[0]?.id || null;
 }
 
+async function fetchCategoriaPorNome(accessToken, nome) {
+  const query = `
+    query CategoriaMetaPorNome($nome: String!) {
+      categorias(where: { nome: { eq: $nome } }, limit: 1) {
+        id
+        nome
+        vendaMinimaInativacao
+      }
+    }
+  `;
+  const data = await executeGraphql(accessToken, query, { nome });
+  return data?.categorias?.[0] || null;
+}
+
+async function insertCategoriaComMeta(accessToken, data) {
+  const mutation = `
+    mutation InserirCategoriaMeta($nome: String!, $vendaMinimaInativacao: Float) {
+      categoria_insert(data: {
+        nome: $nome,
+        vendaMinimaInativacao: $vendaMinimaInativacao
+      })
+    }
+  `;
+  await executeGraphql(accessToken, mutation, data);
+}
+
+async function updateCategoriaMeta(accessToken, data) {
+  const mutation = `
+    mutation AtualizarMetaCategoria($id: UUID!, $vendaMinimaInativacao: Float) {
+      categoria_update(id: $id, data: { vendaMinimaInativacao: $vendaMinimaInativacao })
+    }
+  `;
+  await executeGraphql(accessToken, mutation, data);
+}
+
 async function ensureCategoria(accessToken, nome) {
   const existing = await getCategoriaId(accessToken, nome);
   if (existing) {
@@ -3194,6 +3537,67 @@ async function ensureCategoria(accessToken, nome) {
   `;
   await executeGraphql(accessToken, mutation, { nome });
   return getCategoriaId(accessToken, nome);
+}
+
+function clampPercentualMeta(value) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) {
+    return 0;
+  }
+  return Math.min(1, Math.max(0, number));
+}
+
+async function ensureCategoriasMetaPadrao(accessToken) {
+  const categorias = [];
+
+  for (const padrao of META_CATEGORIAS_PADRAO) {
+    let categoria = await fetchCategoriaPorNome(accessToken, padrao.nome);
+    if (!categoria) {
+      await insertCategoriaComMeta(accessToken, padrao);
+      categoria = await fetchCategoriaPorNome(accessToken, padrao.nome);
+    } else if (categoria.vendaMinimaInativacao === null || categoria.vendaMinimaInativacao === undefined) {
+      await updateCategoriaMeta(accessToken, {
+        id: categoria.id,
+        vendaMinimaInativacao: padrao.vendaMinimaInativacao
+      });
+      categoria = await fetchCategoriaPorNome(accessToken, padrao.nome);
+    }
+
+    if (categoria) {
+      categorias.push(categoria);
+    }
+  }
+
+  return categorias;
+}
+
+async function updateCategoriasMetaPadrao(accessToken, metas = []) {
+  const categorias = await ensureCategoriasMetaPadrao(accessToken);
+  const metasPorId = new Map(
+    metas
+      .filter((item) => item?.id)
+      .map((item) => [item.id, clampPercentualMeta(item.vendaMinimaInativacao)])
+  );
+  const metasPorNome = new Map(
+    metas
+      .filter((item) => item?.nome)
+      .map((item) => [item.nome, clampPercentualMeta(item.vendaMinimaInativacao)])
+  );
+
+  for (const categoria of categorias) {
+    const valor = metasPorId.has(categoria.id)
+      ? metasPorId.get(categoria.id)
+      : metasPorNome.has(categoria.nome)
+        ? metasPorNome.get(categoria.nome)
+        : clampPercentualMeta(categoria.vendaMinimaInativacao);
+
+    await updateCategoriaMeta(accessToken, {
+      id: categoria.id,
+      vendaMinimaInativacao: valor
+    });
+  }
+
+  return ensureCategoriasMetaPadrao(accessToken);
 }
 
 async function insertProduto(accessToken, data) {
@@ -3216,7 +3620,11 @@ async function insertProduto(accessToken, data) {
       $categoriaAtivacao: String,
       $estoqueFisico: Int!,
       $estoqueReservado: Int!,
-      $quantidadeVendida: Int!
+      $quantidadeVendida: Int!,
+      $vendaNoMes: Int!,
+      $bateuMeta: Boolean!,
+      $dataRestoque: Timestamp,
+      $quantidadeRestoqueMeta: Int
     ) {
       produto_insert(data: {
         id: $id,
@@ -3236,7 +3644,11 @@ async function insertProduto(accessToken, data) {
         categoriaAtivacao: $categoriaAtivacao,
         estoqueFisico: $estoqueFisico,
         estoqueReservado: $estoqueReservado,
-        quantidadeVendida: $quantidadeVendida
+        quantidadeVendida: $quantidadeVendida,
+        vendaNoMes: $vendaNoMes,
+        bateuMeta: $bateuMeta,
+        dataRestoque: $dataRestoque,
+        quantidadeRestoqueMeta: $quantidadeRestoqueMeta
       })
     }
   `;
@@ -3407,13 +3819,17 @@ function buildProdutosQuery({ search, status, marcaId, sortField, sortOrder }) {
         estoqueFisico
         estoqueReservado
         quantidadeVendida
+        vendaNoMes
+        bateuMeta
+        dataRestoque
+        quantidadeRestoqueMeta
         motivoInativacao
         categoriaInativacao
         justificativaAtivacao
         categoriaAtivacao
         marca { id nome }
         produtoCategorias_on_produto {
-          categoria { id nome }
+          categoria { id nome vendaMinimaInativacao }
         }
         imagemProdutos_on_produto(where: { capa: { eq: true } }, limit: 1) {
           url
@@ -3444,10 +3860,14 @@ async function fetchProdutoDetalhe(accessToken, produtoId) {
         estoqueFisico
         estoqueReservado
         quantidadeVendida
+        vendaNoMes
+        bateuMeta
+        dataRestoque
+        quantidadeRestoqueMeta
         marca { id nome }
         grupoPrecificacao { id nome margemLucro }
         produtoCategorias_on_produto {
-          categoria { id nome }
+          categoria { id nome vendaMinimaInativacao }
         }
         imagemProdutos_on_produto(orderBy: [{ capa: DESC }]) {
           id
@@ -3460,6 +3880,66 @@ async function fetchProdutoDetalhe(accessToken, produtoId) {
 
   const data = await executeGraphql(accessToken, query, { id: produtoId });
   return data?.produto || null;
+}
+
+function produtoAuditSnapshot(produto) {
+  if (!produto) {
+    return null;
+  }
+
+  return {
+    nome: produto.nome || "",
+    modelo: produto.modelo || "",
+    garantia: produto.garantia || "",
+    descricaoTecnica: produto.descricaoTecnica || "",
+    especificacoesTecnicas: produto.especificacoesTecnicas || "",
+    marca: produto?.marca?.nome || "",
+    grupoPrecificacao: produto?.grupoPrecificacao?.nome || "",
+    status: produto.status || "",
+    categorias: (produto?.produtoCategorias_on_produto || [])
+      .map((item) => item?.categoria?.nome)
+      .filter(Boolean)
+      .sort(),
+    imagens: (produto?.imagemProdutos_on_produto || [])
+      .map((imagem) => ({
+        url: imagem?.url || "",
+        capa: Boolean(imagem?.capa)
+      }))
+      .filter((imagem) => imagem.url)
+      .sort((a, b) => `${a.url}:${a.capa}`.localeCompare(`${b.url}:${b.capa}`))
+  };
+}
+
+function valuesEqualForAudit(before, after) {
+  return JSON.stringify(before) === JSON.stringify(after);
+}
+
+function buildAuditChanges(before, after) {
+  const changes = {};
+  const fields = new Set([...Object.keys(before || {}), ...Object.keys(after || {})]);
+  fields.forEach((field) => {
+    const previous = before?.[field];
+    const next = after?.[field];
+    if (!valuesEqualForAudit(previous, next)) {
+      changes[field] = {
+        antes: previous ?? null,
+        depois: next ?? null
+      };
+    }
+  });
+  return changes;
+}
+
+function buildChangesSummary(changes) {
+  const entries = Object.entries(changes || {});
+  if (!entries.length) {
+    return "Nenhuma alteracao detectada nos campos auditados.";
+  }
+  return entries
+    .map(([field, change]) =>
+      `${field}: ${JSON.stringify(change.antes)} -> ${JSON.stringify(change.depois)}`
+    )
+    .join("; ");
 }
 
 function generateCodigoUser() {
@@ -3619,7 +4099,7 @@ const server = http.createServer(async (req, res) => {
     url.pathname === "/api/cloudinary/signature"
   ) {
     try {
-      await requireAdminContext(req);
+      req.adminContext = await requireAdminContext(req);
     } catch (error) {
       sendJson(res, error?.statusCode || 500, {
         error: error?.message || "Erro ao validar acesso administrativo."
@@ -4704,10 +5184,36 @@ const server = http.createServer(async (req, res) => {
   if (req.method === "GET" && url.pathname === "/api/admin/produtos/metadata") {
     try {
       const accessToken = await getAccessToken();
+      await ensureCategoriasMetaPadrao(accessToken);
       const data = await fetchProdutosMetadata(accessToken);
       sendJson(res, 200, data);
     } catch (error) {
       sendJson(res, 500, { error: error?.message || "Erro ao carregar metadata." });
+    }
+    return;
+  }
+
+  if (req.method === "GET" && url.pathname === "/api/admin/metas") {
+    try {
+      const accessToken = await getAccessToken();
+      const categorias = await ensureCategoriasMetaPadrao(accessToken);
+      sendJson(res, 200, { categorias });
+    } catch (error) {
+      sendJson(res, 500, { error: error?.message || "Erro ao carregar metas." });
+    }
+    return;
+  }
+
+  if (req.method === "POST" && url.pathname === "/api/admin/metas") {
+    try {
+      const rawBody = await readBody(req);
+      const body = rawBody ? JSON.parse(rawBody) : {};
+      const metas = Array.isArray(body.metas) ? body.metas : [];
+      const accessToken = await getAccessToken();
+      const categorias = await updateCategoriasMetaPadrao(accessToken, metas);
+      sendJson(res, 200, { categorias });
+    } catch (error) {
+      sendJson(res, 500, { error: error?.message || "Erro ao salvar metas." });
     }
     return;
   }
@@ -4824,7 +5330,7 @@ const server = http.createServer(async (req, res) => {
         return;
       }
 
-      const accessToken = await getAccessToken();
+      const accessToken = req.adminContext?.accessToken || await getAccessToken();
 
       const marcaNome = (produto.marcaNome || "").trim();
       const marcaId = marcaNome
@@ -4878,7 +5384,11 @@ const server = http.createServer(async (req, res) => {
         categoriaAtivacao: null,
         estoqueFisico: 0,
         estoqueReservado: 0,
-        quantidadeVendida: 0
+        quantidadeVendida: 0,
+        vendaNoMes: 0,
+        bateuMeta: false,
+        dataRestoque: null,
+        quantidadeRestoqueMeta: 0
       });
 
       for (const categoriaId of categoriasIds) {
@@ -4942,7 +5452,12 @@ const server = http.createServer(async (req, res) => {
         return;
       }
 
-      const accessToken = await getAccessToken();
+      const accessToken = req.adminContext?.accessToken || await getAccessToken();
+      const produtoAntes = await fetchProdutoDetalhe(accessToken, produtoId);
+      if (!produtoAntes) {
+        sendJson(res, 404, { error: "Produto nao encontrado." });
+        return;
+      }
 
       const marcaNome = (produto.marcaNome || "").trim();
       const marcaId = marcaNome
@@ -5005,6 +5520,22 @@ const server = http.createServer(async (req, res) => {
         }
       }
 
+      const produtoDepois = await fetchProdutoDetalhe(accessToken, produtoId);
+      const alteracoes = buildAuditChanges(
+        produtoAuditSnapshot(produtoAntes),
+        produtoAuditSnapshot(produtoDepois)
+      );
+      await registrarAuditoria(accessToken, req.adminContext, {
+        operacao: "EDI\u00C7\u00C3O",
+        tipoEntidade: "Produto",
+        idEntidade: produtoId,
+        mudancas: {
+          resumo: `Produto editado: ${buildChangesSummary(alteracoes)}`,
+          codigoProduto: produtoDepois?.codigoProduto || produtoAntes?.codigoProduto || "",
+          alteracoes
+        }
+      });
+
       sendJson(res, 200, { ok: true });
     } catch (error) {
       sendJson(res, 500, { error: error?.message || "Erro ao editar produto." });
@@ -5031,7 +5562,12 @@ const server = http.createServer(async (req, res) => {
         return;
       }
 
-      const accessToken = await getAccessToken();
+      const accessToken = req.adminContext?.accessToken || await getAccessToken();
+      const produtoAntes = await fetchProdutoDetalhe(accessToken, produtoId);
+      if (!produtoAntes) {
+        sendJson(res, 404, { error: "Produto nao encontrado." });
+        return;
+      }
       const data = {
         id: produtoId,
         status,
@@ -5050,6 +5586,36 @@ const server = http.createServer(async (req, res) => {
       }
 
       await updateProdutoStatus(accessToken, data);
+      await registrarAuditoria(accessToken, req.adminContext, {
+        operacao: status === "ATIVO" ? "ATIVA\u00C7\u00C3O" : "INATIVA\u00C7\u00C3O",
+        tipoEntidade: "Produto",
+        idEntidade: produtoId,
+        mudancas: {
+          resumo: `Produto ${status === "ATIVO" ? "ativado" : "inativado"} pelo administrador.`,
+          codigoProduto: produtoAntes.codigoProduto || "",
+          categoria: titulo,
+          justificativa: descricao,
+          alteracoes: {
+            status: { antes: produtoAntes.status || "", depois: status },
+            categoriaInativacao: {
+              antes: produtoAntes.categoriaInativacao || null,
+              depois: data.categoriaInativacao
+            },
+            motivoInativacao: {
+              antes: produtoAntes.motivoInativacao || null,
+              depois: data.motivoInativacao
+            },
+            categoriaAtivacao: {
+              antes: produtoAntes.categoriaAtivacao || null,
+              depois: data.categoriaAtivacao
+            },
+            justificativaAtivacao: {
+              antes: produtoAntes.justificativaAtivacao || null,
+              depois: data.justificativaAtivacao
+            }
+          }
+        }
+      });
       sendJson(res, 200, { ok: true });
     } catch (error) {
       sendJson(res, 500, { error: error?.message || "Erro ao atualizar status." });
@@ -5127,7 +5693,9 @@ const server = http.createServer(async (req, res) => {
         return;
       }
 
-      const dataEntrada = new Date().toISOString().split("T")[0];
+      const agora = new Date();
+      const dataEntrada = agora.toISOString().split("T")[0];
+      const dataRestoque = agora.toISOString();
       const quantidadeFinal = Math.round(quantidade);
 
       await insertEntradaEstoque(accessToken, {
@@ -5139,7 +5707,12 @@ const server = http.createServer(async (req, res) => {
       });
 
       const novoEstoque = (produto.estoqueFisico || 0) + quantidadeFinal;
-      await updateProdutoEstoque(accessToken, { id: produtoId, estoqueFisico: novoEstoque });
+      await updateProdutoEntradaEstoque(accessToken, {
+        id: produtoId,
+        estoqueFisico: novoEstoque,
+        dataRestoque,
+        quantidadeRestoqueMeta: quantidadeFinal
+      });
 
       sendJson(res, 201, { ok: true });
     } catch (error) {
@@ -6238,12 +6811,21 @@ const server = http.createServer(async (req, res) => {
         const estoqueAtual = Number(produto.estoqueFisico || 0);
         const vendidoAtual = Number(produto.quantidadeVendida || 0);
         if (statusFinal === "APROVADA") {
+          const novoEstoque = Math.max(0, estoqueAtual - quantidade);
+          const novaVendaNoMes = Math.max(0, Number(produto.vendaNoMes || 0) + quantidade);
+          const bateuMeta = Boolean(produto.bateuMeta) || produtoAtingiuMeta(produto, novaVendaNoMes);
           await updateProdutoInventario(accessToken, {
             id: produto.id,
-            estoqueFisico: Math.max(0, estoqueAtual - quantidade),
+            estoqueFisico: novoEstoque,
             estoqueReservado: Math.max(0, reservadoAtual - quantidade),
-            quantidadeVendida: Math.max(0, vendidoAtual + quantidade)
+            quantidadeVendida: Math.max(0, vendidoAtual + quantidade),
+            vendaNoMes: novaVendaNoMes,
+            bateuMeta
           });
+
+          if (novoEstoque === 0 && !bateuMeta && getProdutoMetaInfo(produto).configurada) {
+            await inativarProdutoBaixoGiro(accessToken, produto.id);
+          }
         } else if (statusFinal === "REPROVADA") {
           await updateProdutoReservado(accessToken, {
             id: produto.id,
@@ -6361,13 +6943,25 @@ const server = http.createServer(async (req, res) => {
       const body = rawBody ? JSON.parse(rawBody) : {};
       const usuarioId = body.usuarioId;
       const statusNome = (body.status || "").toUpperCase();
+      const titulo = (body.titulo || "").trim();
+      const descricao = (body.descricao || "").trim();
 
       if (!usuarioId || (statusNome !== "ATIVO" && statusNome !== "INATIVO")) {
         sendJson(res, 400, { error: "Dados invalidos." });
         return;
       }
 
-      const accessToken = await getAccessToken();
+      if (!titulo || !descricao) {
+        sendJson(res, 400, { error: "Informe titulo e descricao da justificativa." });
+        return;
+      }
+
+      const accessToken = req.adminContext?.accessToken || await getAccessToken();
+      const usuarioAntes = await fetchUsuarioAuditoria(accessToken, usuarioId);
+      if (!usuarioAntes) {
+        sendJson(res, 404, { error: "Usuario nao encontrado." });
+        return;
+      }
       const statusId = await ensureStatusUsuario(accessToken, statusNome);
       if (!statusId) {
         sendJson(res, 500, { error: "StatusUsuario nao encontrado." });
@@ -6381,6 +6975,24 @@ const server = http.createServer(async (req, res) => {
       `;
 
       await executeGraphql(accessToken, mutation, { id: usuarioId, statusId });
+      await registrarAuditoria(accessToken, req.adminContext, {
+        operacao: statusNome === "ATIVO" ? "ATIVA\u00C7\u00C3O" : "INATIVA\u00C7\u00C3O",
+        tipoEntidade: "Usuario",
+        idEntidade: usuarioId,
+        mudancas: {
+          resumo: `Cliente ${statusNome === "ATIVO" ? "ativado" : "inativado"} pelo administrador.`,
+          codigoUser: usuarioAntes.codigoUser || "",
+          cliente: usuarioAntes.nome || "",
+          categoria: titulo,
+          justificativa: descricao,
+          alteracoes: {
+            status: {
+              antes: usuarioAntes?.status?.nome || "",
+              depois: statusNome
+            }
+          }
+        }
+      });
       sendJson(res, 200, { ok: true });
     } catch (error) {
       sendJson(res, 500, { error: error?.message || "Erro ao atualizar status." });
@@ -6563,4 +7175,9 @@ const server = http.createServer(async (req, res) => {
 server.listen(PORT, () => {
   console.log(`API e front-end prontos em http://localhost:${PORT}/view/index.html`);
   limparCarrinhosExpiradosAoIniciar();
+  verificarMetasEstoqueVencidas();
+  const metasInterval = setInterval(verificarMetasEstoqueVencidas, META_VERIFICACAO_INTERVALO_MS);
+  if (typeof metasInterval.unref === "function") {
+    metasInterval.unref();
+  }
 });

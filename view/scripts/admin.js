@@ -31,6 +31,10 @@ import {
   finalizarTroca
 } from "../../controller/AdminTrocasController.js";
 import { carregarVendasGrafico } from "../../controller/AdminGraficosController.js";
+import {
+  carregarMetasCategorias,
+  atualizarMetasCategorias
+} from "../../controller/AdminMetasController.js";
 import { uploadImagemCloudinary } from "../../controller/CloudinaryController.js";
 import { SYSTEM_MESSAGES, getErrorMessage } from "../../model/SystemMessages.js";
 
@@ -46,6 +50,7 @@ const navClientes = document.getElementById("nav-clientes");
 const navPedidos = document.getElementById("nav-pedidos");
 const navTrocas = document.getElementById("nav-trocas");
 const navEstoque = document.getElementById("nav-estoque");
+const navMetas = document.getElementById("nav-metas");
 const navGraficos = document.getElementById("nav-graficos");
 const clientesSection = document.getElementById("clientes-section");
 const pedidosSection = document.getElementById("pedidos-section");
@@ -55,6 +60,7 @@ const trocaDetalheSection = document.getElementById("troca-detalhe-section");
 const produtosSection = document.getElementById("produtos-section");
 const produtoFormSection = document.getElementById("produto-form-section");
 const estoqueSection = document.getElementById("estoque-section");
+const metasSection = document.getElementById("metas-section");
 const graficosSection = document.getElementById("graficos-section");
 const produtosList = document.getElementById("produtosList");
 const prodSearchInput = document.getElementById("prodSearchInput");
@@ -109,6 +115,9 @@ const entradaCustoTipoSelect = document.getElementById("entrada-custo-tipo");
 const entradaFornecedorSelect = document.getElementById("entrada-fornecedor");
 const fornecedoresList = document.getElementById("fornecedoresList");
 const entradasList = document.getElementById("entradasList");
+const metasMessage = document.getElementById("metas-message");
+const metasList = document.getElementById("metasList");
+const btnSaveMetas = document.getElementById("btn-save-metas");
 const graficoTipoSelect = document.getElementById("grafico-tipo");
 const graficoDiaField = document.getElementById("grafico-dia-field");
 const graficoMesField = document.getElementById("grafico-mes-field");
@@ -193,6 +202,7 @@ let produtosMetadata = {
   produtos: []
 };
 let produtosMetadataLoaded = false;
+let metasCategorias = [];
 let graficoAtual = null;
 let modalResolver = null;
 let statusModalContextBase = "";
@@ -521,10 +531,15 @@ function renderClientes(clientes) {
 
     const toggleButton = actions.querySelector(".toggle-status");
     toggleButton.addEventListener("click", async () => {
+      const nextStatus = isInativo ? "ATIVO" : "INATIVO";
+      const justificativa = await abrirModalStatusCliente(cliente, nextStatus);
+      if (!justificativa) {
+        return;
+      }
+
       toggleButton.disabled = true;
       try {
-        const nextStatus = isInativo ? "ATIVO" : "INATIVO";
-        await atualizarStatus(cliente.id, nextStatus);
+        await atualizarStatus(cliente.id, nextStatus, justificativa);
         await carregarClientes();
       } catch (error) {
         clientesList.innerHTML = `<div class="empty-state">${getErrorMessage(error, SYSTEM_MESSAGES.admin.errors.updateStatusFailed)}</div>`;
@@ -1126,6 +1141,7 @@ function setAdminSection(section) {
   const isTrocaDetalhe = section === "troca-detalhe";
   const isProdutoForm = section === "produto-form";
   const isEstoque = section === "estoque";
+  const isMetas = section === "metas";
   const isGraficos = section === "graficos";
 
   produtosSection.classList.toggle("hidden", !isProdutos);
@@ -1136,6 +1152,7 @@ function setAdminSection(section) {
   trocaDetalheSection.classList.toggle("hidden", !isTrocaDetalhe);
   produtoFormSection.classList.toggle("hidden", !isProdutoForm);
   estoqueSection.classList.toggle("hidden", !isEstoque);
+  metasSection.classList.toggle("hidden", !isMetas);
   graficosSection.classList.toggle("hidden", !isGraficos);
 
   navProdutos.classList.toggle("is-active", isProdutos || isProdutoForm);
@@ -1143,6 +1160,7 @@ function setAdminSection(section) {
   navPedidos.classList.toggle("is-active", isPedidos || isPedidoDetalhe);
   navTrocas.classList.toggle("is-active", isTrocas || isTrocaDetalhe);
   navEstoque.classList.toggle("is-active", isEstoque);
+  navMetas.classList.toggle("is-active", isMetas);
   navGraficos.classList.toggle("is-active", isGraficos);
 }
 
@@ -1712,6 +1730,22 @@ function abrirModalStatus(produto, proximoStatus) {
   });
 }
 
+function abrirModalStatusCliente(cliente, proximoStatus) {
+  return new Promise((resolve) => {
+    modalResolver = resolve;
+    statusModalTitle.textContent = proximoStatus === "ATIVO"
+      ? "ATIVAR CLIENTE"
+      : "INATIVAR CLIENTE";
+
+    statusModalContextBase =
+      `Informe a categoria e a justificativa para ${proximoStatus === "ATIVO" ? "ativar" : "inativar"} o cliente ${cliente.nome || cliente.codigoUser || cliente.id}.`;
+    statusModalContext.textContent = statusModalContextBase;
+    statusModalTitulo.value = "";
+    statusModalDescricao.value = "";
+    statusModal.classList.remove("hidden");
+  });
+}
+
 function fecharModalStatus(result) {
   statusModal.classList.add("hidden");
   if (modalResolver) {
@@ -1848,6 +1882,81 @@ async function carregarEstoqueDados() {
   renderEntradas(entradas);
   preencherSelect(entradaFornecedorSelect, fornecedores, (item) => item.nome);
   preencherSelectProdutosEstoque(produtos);
+}
+
+function setMetasMessage(text = "") {
+  if (!metasMessage) {
+    return;
+  }
+  metasMessage.textContent = text;
+  metasMessage.classList.toggle("hidden", !text);
+}
+
+function formatMetaPercentual(valor) {
+  const numero = Number(valor || 0);
+  return Number.isFinite(numero) ? Number((numero * 100).toFixed(2)) : 0;
+}
+
+function renderMetasCategorias(categorias) {
+  metasList.innerHTML = "";
+  metasCategorias = categorias || [];
+
+  if (!metasCategorias.length) {
+    const empty = document.createElement("div");
+    empty.className = "empty-state";
+    empty.textContent = SYSTEM_MESSAGES.admin.empty.noMetas;
+    metasList.appendChild(empty);
+    return;
+  }
+
+  metasCategorias.forEach((categoria) => {
+    const card = document.createElement("article");
+    card.className = "meta-card";
+    card.dataset.id = categoria.id;
+    card.innerHTML = `
+      <div>
+        <strong>${categoria.nome}</strong>
+        <span>Meta atual: ${formatMetaPercentual(categoria.vendaMinimaInativacao)}%</span>
+      </div>
+      <label>
+        Porcentagem de venda minima
+        <input class="meta-input" type="number" min="0" max="100" step="0.01" value="${formatMetaPercentual(categoria.vendaMinimaInativacao)}">
+      </label>
+    `;
+    metasList.appendChild(card);
+  });
+}
+
+async function carregarMetasAdmin() {
+  setMetasMessage("");
+  const categorias = await carregarMetasCategorias();
+  renderMetasCategorias(categorias);
+}
+
+async function salvarMetasAdmin() {
+  setMetasMessage("");
+  const metas = Array.from(metasList.querySelectorAll(".meta-card")).map((card) => {
+    const input = card.querySelector(".meta-input");
+    const percentualTela = Number(input?.value || 0);
+    return {
+      id: card.dataset.id,
+      vendaMinimaInativacao: Math.min(1, Math.max(0, percentualTela / 100))
+    };
+  });
+
+  btnSaveMetas.disabled = true;
+  btnSaveMetas.textContent = "SALVANDO...";
+  try {
+    const categorias = await atualizarMetasCategorias(metas);
+    renderMetasCategorias(categorias);
+    produtosMetadataLoaded = false;
+    setMetasMessage("Metas salvas com sucesso.");
+  } catch (error) {
+    setMetasMessage(getErrorMessage(error, SYSTEM_MESSAGES.admin.errors.saveMetasFailed));
+  } finally {
+    btnSaveMetas.disabled = false;
+    btnSaveMetas.textContent = "SALVAR METAS";
+  }
 }
 
 function scheduleSearch() {
@@ -2205,6 +2314,15 @@ navEstoque.addEventListener("click", async () => {
   }
 });
 
+navMetas.addEventListener("click", async () => {
+  setAdminSection("metas");
+  try {
+    await carregarMetasAdmin();
+  } catch (error) {
+    setMetasMessage(getErrorMessage(error, SYSTEM_MESSAGES.admin.errors.loadMetasFailed));
+  }
+});
+
 navGraficos.addEventListener("click", async () => {
   setAdminSection("graficos");
   setGraficoMessage("");
@@ -2233,6 +2351,10 @@ btnGraficoCarregar?.addEventListener("click", async () => {
   } catch (error) {
     setGraficoMessage(getErrorMessage(error, SYSTEM_MESSAGES.admin.errors.loadGraficosFailed));
   }
+});
+
+btnSaveMetas?.addEventListener("click", () => {
+  salvarMetasAdmin();
 });
 
 btnAddFornecedor.addEventListener("click", () => {
