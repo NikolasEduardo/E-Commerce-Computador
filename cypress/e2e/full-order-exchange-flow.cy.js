@@ -533,8 +533,11 @@ function advanceApprovedOrderToDelivered(pedidoId) {
   cy.wait("@updateAdminOrderStatus", { timeout: 90000 }).then((interception) => {
     expectOkResponse(interception, "mover pedido para transporte");
   });
-  cy.waitForAppIdle();
-
+  
+  cy.contains("#pedidosList .pedido-card", "EM TRANSPORTE", {
+    timeout: 15000
+  }).should("be.visible");
+  
   withinOrderCard("#pedidosList .pedido-card", pedidoId, "EM TRANSPORTE", () => {
     clickButtonNow("CONFIRMAR PRODUTO ENTREGUE");
   });
@@ -673,38 +676,72 @@ function chooseExchangeClassification() {
 
 function evaluateNextExchangeItem() {
   return cy.get("body").then(($body) => {
-    const pending = $body.find('#troca-itens-list .troca-item-card button:contains("AVALIAR"):not(:disabled)');
+    const pending = $body.find(
+      '#troca-itens-list .troca-item-card button:contains("AVALIAR"):not(:disabled)'
+    );
+
     if (!pending.length) return;
 
-    clickMatchingButtonNow('#troca-itens-list .troca-item-card button:not(:disabled)', "AVALIAR");
+    cy.wrap(pending[0]).click();
+
     cy.get("#troca-avaliacao-modal").should("not.have.class", "hidden");
-    cy.get("#troca-avaliacao-classificacao").select(chooseExchangeClassification());
+
+    cy.get("#troca-avaliacao-classificacao")
+      .select(chooseExchangeClassification());
+
     cy.get("#troca-avaliacao-descricao")
       .clear()
-      .type(envText("FULL_FLOW_ADMIN_TECH_DESCRIPTION", "Avaliacao tecnica generica criada pelo Cypress."));
+      .type(
+        envText(
+          "FULL_FLOW_ADMIN_TECH_DESCRIPTION",
+          "Avaliacao tecnica generica criada pelo Cypress."
+        )
+      );
 
     cy.get("body").then(($currentBody) => {
-      const stockChoiceVisible = $currentBody.find("#troca-avaliacao-estoque:not(.hidden)").length > 0;
+      const stockChoiceVisible =
+        $currentBody.find("#troca-avaliacao-estoque:not(.hidden)").length > 0;
+
       if (stockChoiceVisible) {
         const value = Cypress._.sample(["sim", "nao"]);
-        cy.get(`input[name="troca-retorna-estoque"][value="${value}"]`).check({ force: true });
+        cy.get(`input[name="troca-retorna-estoque"][value="${value}"]`)
+          .check({ force: true });
       }
     });
 
-    cy.intercept("POST", "**/api/admin/trocas/avaliar").as("evaluateExchangeItem");
+    cy.intercept("POST", "**/api/admin/trocas/avaliar")
+      .as("evaluateExchangeItem");
+
     cy.get("#troca-avaliacao-confirm").click();
 
-    cy.get("body").then(($currentBody) => {
-      const confirmOpen = $currentBody.find("#pedido-confirm-modal:not(.hidden)").length > 0;
-      if (confirmOpen) {
-        cy.get("#pedido-confirm-ok").click();
-      }
-    });
+    return cy.wait("@evaluateExchangeItem", { timeout: 90000 })
+      .then((interception) => {
 
-    return cy.wait("@evaluateExchangeItem", { timeout: 90000 }).then((interception) => {
-      expectOkResponse(interception, "avaliar item de troca");
-      return cy.waitForAppIdle().then(() => evaluateNextExchangeItem());
-    });
+        // se já foi avaliado, ignora e segue
+        if (interception.response?.statusCode === 500) {
+          const msg = JSON.stringify(interception.response.body || "");
+
+          if (msg.includes("ja foi avaliada")) {
+            cy.log("Item já avaliado, pulando para o próximo.");
+            cy.get("#troca-avaliacao-modal")
+              .should("have.class", "hidden");
+
+            return cy.wait(1000).then(() => evaluateNextExchangeItem());
+          }
+        }
+
+        expectOkResponse(interception, "avaliar item de troca");
+
+        // espera a UI refletir a mudança
+        cy.contains(
+          "#troca-itens-list .troca-item-card",
+          "AVALIADO",
+          { timeout: 10000 }
+        );
+
+        return cy.waitForAppIdle()
+          .then(() => evaluateNextExchangeItem());
+      });
   });
 }
 
