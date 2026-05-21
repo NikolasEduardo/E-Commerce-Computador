@@ -371,7 +371,6 @@ async function insertLogAuditoria(accessToken, data) {
     mutation InserirLogAuditoria(
       $id: UUID!,
       $dataHora: Timestamp!,
-      $usuarioResponsavelId: UUID,
       $operacao: String!,
       $tipoEntidade: String!,
       $idEntidade: UUID!,
@@ -380,7 +379,6 @@ async function insertLogAuditoria(accessToken, data) {
       logAuditoria_insert(data: {
         id: $id,
         dataHora: $dataHora,
-        usuarioResponsavelId: $usuarioResponsavelId,
         operacao: $operacao,
         tipoEntidade: $tipoEntidade,
         idEntidade: $idEntidade,
@@ -395,7 +393,6 @@ async function registrarAuditoria(accessToken, adminContext, payload) {
   await insertLogAuditoria(accessToken, {
     id: crypto.randomUUID(),
     dataHora: new Date().toISOString(),
-    usuarioResponsavelId: adminContext?.usuario?.id || null,
     operacao: payload.operacao,
     tipoEntidade: payload.tipoEntidade,
     idEntidade: payload.idEntidade,
