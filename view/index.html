@@ -29,7 +29,7 @@
 
                     <button id="login-button" type="button">ACESSAR</button>
 
-                    <a href="#">ESQUECEU SENHA</a>
+                    <button id="forgot-password-button" class="link-button" type="button">ESQUECEU SENHA</button>
 
                 </div>
 
@@ -41,6 +41,33 @@
 
         </div>
 
+    </div>
+
+    <div id="forgot-password-modal" class="auth-modal hidden" role="dialog" aria-modal="true" aria-labelledby="forgot-password-title">
+        <div class="auth-modal-content">
+            <button id="forgot-password-close" class="modal-close" type="button" aria-label="Fechar">X</button>
+
+            <div id="forgot-password-request">
+                <h2 id="forgot-password-title">REDEFINIR SENHA</h2>
+                <p>Informe o email da sua conta para receber o link de redefinicao.</p>
+                <input type="email" id="forgot-password-email" placeholder="EMAIL">
+                <div id="forgot-password-message" class="message is-visible" role="alert"></div>
+                <div class="modal-actions">
+                    <button id="forgot-password-cancel" type="button">CANCELAR</button>
+                    <button id="forgot-password-submit" type="button">SOLICITAR ALTERACAO</button>
+                </div>
+            </div>
+
+            <div id="forgot-password-confirm" class="hidden">
+                <h2>EMAIL ENVIADO</h2>
+                <p id="forgot-password-confirm-message"></p>
+                <div id="forgot-password-confirm-alert" class="message is-visible" role="alert"></div>
+                <div class="modal-actions">
+                    <button id="forgot-password-yes" type="button">SIM</button>
+                    <button id="forgot-password-no" type="button">NAO, REENVIAR</button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script type="module" src="scripts/login.js"></script>

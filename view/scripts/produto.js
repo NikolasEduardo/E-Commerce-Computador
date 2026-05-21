@@ -6,6 +6,7 @@ import { initCartNotice, refreshCartNotice, showCartPopup } from "./cart-notice.
 
 const perfilButton = document.getElementById("perfil-btn");
 const carrinhoButton = document.getElementById("btn-carrinho");
+const searchInput = document.getElementById("produto-search");
 const messageBox = document.getElementById("produto-message");
 const mainImage = document.getElementById("main-image");
 const thumbs = document.getElementById("thumbs");
@@ -145,6 +146,20 @@ perfilButton.addEventListener("click", () => {
 
 carrinhoButton.addEventListener("click", () => {
   window.location.href = "./carrinho.html";
+});
+
+searchInput.addEventListener("keydown", (event) => {
+  if (event.key !== "Enter") {
+    return;
+  }
+
+  const params = new URLSearchParams();
+  const q = searchInput.value.trim();
+  if (q) {
+    params.set("q", q);
+  }
+  const query = params.toString();
+  window.location.href = `./busca.html${query ? `?${query}` : ""}`;
 });
 
 addCarrinhoButton.addEventListener("click", async () => {

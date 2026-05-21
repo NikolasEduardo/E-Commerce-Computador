@@ -381,6 +381,36 @@
     </div>
   </div>
 
+  <div id="password-modal" class="perfil-modal hidden" role="dialog" aria-modal="true" aria-labelledby="password-modal-title">
+    <div class="perfil-modal-content">
+      <button id="btn-close-password-modal" class="modal-close" type="button" aria-label="Fechar">X</button>
+      <h2 id="password-modal-title">ALTERAR SENHA</h2>
+      <p>Informe sua senha atual para confirmar a alteracao.</p>
+
+      <div class="field">
+        <label for="password-current">SENHA ATUAL</label>
+        <input id="password-current" type="password" placeholder="SENHA ATUAL">
+      </div>
+
+      <div class="field">
+        <label for="password-new">NOVA SENHA</label>
+        <input id="password-new" type="password" placeholder="NOVA SENHA">
+      </div>
+
+      <div class="field">
+        <label for="password-confirm">CONFIRMAR NOVA SENHA</label>
+        <input id="password-confirm" type="password" placeholder="CONFIRMAR NOVA SENHA">
+      </div>
+
+      <div id="password-modal-message" class="message" role="alert"></div>
+
+      <div class="actions">
+        <button id="btn-cancel-password" class="btn" type="button">CANCELAR</button>
+        <button id="btn-save-password" class="btn" type="button">SALVAR</button>
+      </div>
+    </div>
+  </div>
+
   <script type="module" src="../scripts/perfil.js"></script>
 </body>
 </html>

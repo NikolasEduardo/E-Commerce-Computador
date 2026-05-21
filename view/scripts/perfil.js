@@ -21,6 +21,7 @@ import {
   carregarPedidosElegiveisTrocaUsuario,
   solicitarTrocaUsuario
 } from "../../controller/TrocaController.js";
+import { alterarSenhaUsuario } from "../../controller/AuthController.js";
 import { carregarCupons } from "../../controller/CupomController.js";
 import { signOut } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
 import { auth } from "../../model/firebaseApp.js";
@@ -29,6 +30,7 @@ import { initCartNotice, refreshCartNotice } from "./cart-notice.js";
 
 const messageBox = document.getElementById("perfil-message");
 const editButton = document.getElementById("btn-edit");
+const passwordButton = document.getElementById("btn-password");
 const perfilButton = document.getElementById("perfil-btn");
 const logoutButton = document.getElementById("btn-logout");
 const carrinhoButton = document.getElementById("btn-carrinho");
@@ -79,6 +81,14 @@ const cartaoFormPanel = document.getElementById("cartao-form-panel");
 const cartaoFormTitle = document.getElementById("cartao-form-title");
 const btnSaveCartao = document.getElementById("btn-save-cartao");
 const btnCancelCartao = document.getElementById("btn-cancel-cartao");
+const passwordModal = document.getElementById("password-modal");
+const closePasswordModalButton = document.getElementById("btn-close-password-modal");
+const cancelPasswordButton = document.getElementById("btn-cancel-password");
+const savePasswordButton = document.getElementById("btn-save-password");
+const passwordCurrentInput = document.getElementById("password-current");
+const passwordNewInput = document.getElementById("password-new");
+const passwordConfirmInput = document.getElementById("password-confirm");
+const passwordModalMessage = document.getElementById("password-modal-message");
 
 const editableFields = [
   "nome",
@@ -101,6 +111,7 @@ const editableFields = [
 
 const cpfRegex = /^\d{3}\.\d{3}\.\d{3}-\d{2}$/;
 const cepRegex = /^\d{5}-\d{3}$/;
+const senhaRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[^A-Za-z0-9]).{8,}$/;
 
 let isEditing = false;
 let enderecoEditId = null;
@@ -121,6 +132,55 @@ const bandeiraMap = new Map();
 function setMessage(text) {
   messageBox.textContent = text;
   messageBox.classList.toggle("is-visible", Boolean(text));
+}
+
+function setPasswordModalMessage(text) {
+  passwordModalMessage.textContent = text || "";
+  passwordModalMessage.classList.toggle("is-visible", Boolean(text));
+}
+
+function limparPasswordModal() {
+  passwordCurrentInput.value = "";
+  passwordNewInput.value = "";
+  passwordConfirmInput.value = "";
+  setPasswordModalMessage("");
+  savePasswordButton.disabled = false;
+  savePasswordButton.textContent = "SALVAR";
+}
+
+function abrirPasswordModal() {
+  limparPasswordModal();
+  passwordModal.classList.remove("hidden");
+  passwordCurrentInput.focus();
+}
+
+function fecharPasswordModal() {
+  passwordModal.classList.add("hidden");
+  limparPasswordModal();
+}
+
+function validarPasswordModal() {
+  const senhaAtual = passwordCurrentInput.value;
+  const novaSenha = passwordNewInput.value;
+  const confirmarSenha = passwordConfirmInput.value;
+
+  if (!senhaAtual) {
+    return SYSTEM_MESSAGES.auth.password.currentPasswordRequired;
+  }
+
+  if (!novaSenha || !confirmarSenha) {
+    return SYSTEM_MESSAGES.auth.password.newPasswordRequired;
+  }
+
+  if (!senhaRegex.test(novaSenha)) {
+    return SYSTEM_MESSAGES.auth.password.passwordWeak;
+  }
+
+  if (novaSenha !== confirmarSenha) {
+    return SYSTEM_MESSAGES.auth.password.passwordMismatch;
+  }
+
+  return "";
 }
 
 function getValue(id) {
@@ -1617,6 +1677,49 @@ editButton.addEventListener("click", async () => {
     editButton.textContent = "SALVAR";
   } finally {
     editButton.disabled = false;
+  }
+});
+
+passwordButton.addEventListener("click", () => {
+  setMessage("");
+  abrirPasswordModal();
+});
+
+closePasswordModalButton.addEventListener("click", fecharPasswordModal);
+cancelPasswordButton.addEventListener("click", fecharPasswordModal);
+
+passwordModal.addEventListener("click", (event) => {
+  if (event.target === passwordModal) {
+    fecharPasswordModal();
+  }
+});
+
+savePasswordButton.addEventListener("click", async () => {
+  setPasswordModalMessage("");
+  const validationError = validarPasswordModal();
+  if (validationError) {
+    setPasswordModalMessage(validationError);
+    return;
+  }
+
+  savePasswordButton.disabled = true;
+  savePasswordButton.textContent = SYSTEM_MESSAGES.general.saving;
+
+  try {
+    await alterarSenhaUsuario(passwordCurrentInput.value, passwordNewInput.value);
+    fecharPasswordModal();
+    setMessage(SYSTEM_MESSAGES.auth.password.changeSuccess);
+  } catch (error) {
+    setPasswordModalMessage(getErrorMessage(error, SYSTEM_MESSAGES.auth.password.changeFailed));
+  } finally {
+    savePasswordButton.disabled = false;
+    savePasswordButton.textContent = "SALVAR";
+  }
+});
+
+passwordConfirmInput.addEventListener("keydown", (event) => {
+  if (event.key === "Enter") {
+    savePasswordButton.click();
   }
 });
 

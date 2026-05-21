@@ -40,6 +40,24 @@ export const SYSTEM_MESSAGES = {
         "auth/operation-not-allowed": "Este metodo de autenticacao nao esta habilitado no Firebase.",
         "auth/requires-recent-login": "Por seguranca, faca login novamente para continuar."
       }
+    },
+    password: {
+      emailRequired: "Informe o email para solicitar a redefinicao de senha.",
+      emailMissing: "Nao foi possivel identificar o email da conta autenticada.",
+      resetSent: "Email de redefinicao enviado. Verifique sua caixa de entrada e spam.",
+      resetResent: "Email de redefinicao reenviado.",
+      resetFailed: "Erro ao solicitar redefinicao de senha.",
+      resetQuestion: "Voce recebeu o email e ja alterou a senha?",
+      resetCooldown: "Aguarde {time} para reenviar o email.",
+      resetLimitReached: "Limite de envios atingido para este email neste computador.",
+      changeRequired: "Informe a senha atual e a nova senha.",
+      changeSuccess: "Senha alterada com sucesso.",
+      changeFailed: "Erro ao alterar senha.",
+      passwordWeak: "Senha fraca. Minimo 8 caracteres, 1 maiusculo, 1 minusculo e 1 especial.",
+      passwordMismatch: "As senhas nao conferem.",
+      currentPasswordRequired: "Informe a senha atual.",
+      currentPasswordInvalid: "Senha atual invalida.",
+      newPasswordRequired: "Informe e confirme a nova senha."
     }
   },
 

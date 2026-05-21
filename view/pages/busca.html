@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Busca de Produtos</title>
+  <link rel="stylesheet" href="../../styles/busca.css">
+  <link rel="stylesheet" href="../../styles/cart-notice.css">
+</head>
+<body>
+  <div class="busca-shell">
+    <header class="busca-header">
+      <a class="logo" href="./home.html">LOGO</a>
+      <a class="btn" href="ia.html">IA</a>
+      <button id="perfil-btn" class="btn">PERFIL</button>
+      <button id="btn-carrinho" class="btn">CARRINHO</button>
+    </header>
+
+    <main class="busca-main">
+      <section class="busca-toolbar">
+        <input id="busca-input" class="busca-input" type="text" placeholder="PESQUISA RESULTANTE">
+        <div class="sort-panel" aria-label="Classificar produtos">
+          <span>CLASSIFICAR POR</span>
+          <button class="sort-button" type="button" data-sort-field="popularidade">POPULARIDADE</button>
+          <button class="sort-button" type="button" data-sort-field="preco">PRECO</button>
+          <button class="sort-button" type="button" data-sort-field="nome">NOME</button>
+        </div>
+      </section>
+
+      <section class="busca-content">
+        <aside class="filters-panel">
+          <h2>FILTRAR POR</h2>
+
+          <div class="filter-group">
+            <h3>CATEGORIAS PRINCIPAIS</h3>
+            <div id="main-categories" class="filter-options"></div>
+          </div>
+
+          <div class="filter-group">
+            <h3>OUTRAS CATEGORIAS</h3>
+            <div id="other-categories" class="filter-options"></div>
+          </div>
+
+          <div class="filter-group">
+            <h3>MARCA</h3>
+            <select id="marca-filter">
+              <option value="">TODAS</option>
+            </select>
+          </div>
+
+          <div class="filter-group">
+            <h3>FAIXA DE PRECO</h3>
+            <input id="preco-min" type="number" min="0" step="0.01" placeholder="MIN">
+            <input id="preco-max" type="number" min="0" step="0.01" placeholder="MAX">
+            <button id="apply-price" class="btn filter-action" type="button">APLICAR PRECO</button>
+          </div>
+
+          <button id="clear-filters" class="btn filter-action" type="button">LIMPAR FILTROS</button>
+        </aside>
+
+        <section id="resultados-list" class="products-grid"></section>
+      </section>
+    </main>
+  </div>
+
+  <script type="module" src="../scripts/busca.js"></script>
+</body>
+</html>

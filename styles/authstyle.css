@@ -46,6 +46,13 @@ input{
     gap:10px;
 }
 
+.link-button{
+    background:none;
+    padding:0;
+    text-decoration:underline;
+    color:inherit;
+}
+
 button{
     padding:10px 20px;
     background:#a6a6a6;
@@ -69,4 +76,73 @@ button{
 
 .message.is-visible{
     opacity:1;
+}
+
+.hidden{
+    display:none !important;
+}
+
+.auth-modal{
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,0.35);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:20px;
+    box-sizing:border-box;
+}
+
+.auth-modal-content{
+    width:min(440px,100%);
+    background:#e6e6e6;
+    padding:24px;
+    position:relative;
+    box-sizing:border-box;
+}
+
+.auth-modal-content h2{
+    margin:0 0 12px;
+}
+
+.auth-modal-content p{
+    margin:0 0 14px;
+}
+
+.modal-close{
+    position:absolute;
+    top:8px;
+    right:8px;
+    padding:6px 10px;
+}
+
+.modal-actions{
+    display:flex;
+    justify-content:flex-end;
+    gap:10px;
+    margin-top:12px;
+}
+
+button:disabled{
+    opacity:0.6;
+    cursor:not-allowed;
+}
+
+@media (max-width:800px){
+    .container{
+        flex-direction:column;
+    }
+
+    .left,
+    .right{
+        width:100%;
+    }
+
+    .left{
+        height:28vh;
+    }
+
+    .right{
+        min-height:72vh;
+    }
 }

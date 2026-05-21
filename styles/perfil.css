@@ -44,6 +44,12 @@ body {
   text-decoration: none;
 }
 
+.btn:disabled,
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .perfil-body {
   margin-top: 12px;
   display: grid;
@@ -108,6 +114,44 @@ body {
 
 .hidden {
   display: none !important;
+}
+
+.perfil-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  box-sizing: border-box;
+  z-index: 1000;
+}
+
+.perfil-modal-content {
+  width: min(460px, 100%);
+  background: #cfcfcf;
+  padding: 22px;
+  position: relative;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.perfil-modal-content h2,
+.perfil-modal-content p {
+  margin: 0;
+}
+
+.modal-close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: #9e9e9e;
+  border: none;
+  padding: 6px 10px;
+  cursor: pointer;
 }
 
 .panel-header {

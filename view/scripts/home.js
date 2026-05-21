@@ -7,6 +7,8 @@ import { initCartNotice, refreshCartNotice, showCartPopup } from "./cart-notice.
 const perfilButton = document.getElementById("perfil-btn");
 const carrinhoButton = document.getElementById("btn-carrinho");
 const productsList = document.getElementById("productsList");
+const searchInput = document.getElementById("home-search");
+const categoryButtons = document.querySelectorAll(".cat-btn");
 
 carregarPerfil((perfil, error) => {
   if (perfil && perfil.nome) {
@@ -22,6 +24,31 @@ perfilButton.addEventListener("click", () => {
 
 carrinhoButton.addEventListener("click", () => {
   window.location.href = "./carrinho.html";
+});
+
+function abrirBusca({ q = "", categoria = "" } = {}) {
+  const params = new URLSearchParams();
+  if (q.trim()) {
+    params.set("q", q.trim());
+  }
+  if (categoria.trim()) {
+    params.set("categoria", categoria.trim());
+  }
+  const query = params.toString();
+  window.location.href = `./busca.html${query ? `?${query}` : ""}`;
+}
+
+searchInput.addEventListener("keydown", (event) => {
+  if (event.key !== "Enter") {
+    return;
+  }
+  abrirBusca({ q: searchInput.value });
+});
+
+categoryButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    abrirBusca({ categoria: button.textContent || "" });
+  });
 });
 
 function formatCurrency(value) {

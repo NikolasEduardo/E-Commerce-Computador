@@ -63,6 +63,7 @@ const META_CATEGORIAS_PADRAO = [
   "ARMAZENAMENTO",
   "FONTE"
 ].map((nome) => ({ nome, vendaMinimaInativacao: 0 }));
+const CATEGORIAS_PRINCIPAIS_CLIENTE = META_CATEGORIAS_PADRAO.map((categoria) => categoria.nome);
 
 let metasEstoqueVerificacaoEmAndamento = false;
 
@@ -2396,6 +2397,45 @@ async function fetchProdutosPopulares(accessToken) {
   return data?.produtos || [];
 }
 
+async function fetchProdutosBuscaPublica(accessToken) {
+  const query = `
+    query ProdutosBuscaPublica {
+      produtos(
+        where: { _and: [
+          { status: { eq: "ATIVO" } },
+          { estoqueFisico: { gt: 0 } }
+        ] },
+        orderBy: [{ nome: ASC }],
+        limit: 500
+      ) {
+        id
+        codigoProduto
+        nome
+        modelo
+        descricaoTecnica
+        especificacoesTecnicas
+        estoqueFisico
+        estoqueReservado
+        quantidadeVendida
+        marca { nome }
+        grupoPrecificacao { margemLucro }
+        produtoCategorias_on_produto {
+          categoria { nome }
+        }
+        imagemProdutos_on_produto(where: { capa: { eq: true } }, limit: 1) {
+          url
+          capa
+        }
+        entradaEstoques_on_produto(orderBy: [{ valorCusto: DESC }], limit: 1) {
+          valorCusto
+        }
+      }
+    }
+  `;
+  const data = await executeGraphql(accessToken, query, {});
+  return data?.produtos || [];
+}
+
 async function fetchProdutosCatalogoGamzu(accessToken) {
   const query = `
     query ProdutosCatalogoGamzu {
@@ -2454,7 +2494,8 @@ function montarProdutoPublicoResumo(produto) {
     imagem: produto?.imagemProdutos_on_produto?.[0]?.url || "",
     preco,
     estoqueFisico: Number(produto?.estoqueFisico || 0),
-    estoqueReservado: Number(produto?.estoqueReservado || 0)
+    estoqueReservado: Number(produto?.estoqueReservado || 0),
+    quantidadeVendida: Number(produto?.quantidadeVendida || 0)
   };
 }
 
@@ -2662,6 +2703,150 @@ function normalizeTexto(valor) {
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .toUpperCase();
+}
+
+function normalizeFiltroTexto(valor) {
+  return normalizeTexto(valor).replace(/[^A-Z0-9]/g, "");
+}
+
+function getCategoriaBuscaKey(nome) {
+  const key = normalizeFiltroTexto(nome);
+  return key === "FONTES" ? "FONTE" : key;
+}
+
+function parseFiltroLista(valor) {
+  return `${valor || ""}`
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function ordenarTextoBusca(a, b) {
+  return normalizeTexto(a).localeCompare(normalizeTexto(b), "pt-BR");
+}
+
+function extrairMetadataProdutosBusca(produtos) {
+  const marcas = new Map();
+  const categorias = new Map();
+  const principaisKeys = new Set(CATEGORIAS_PRINCIPAIS_CLIENTE.map(getCategoriaBuscaKey));
+
+  for (const produto of produtos) {
+    const marca = `${produto?.marca || ""}`.trim();
+    const marcaKey = normalizeFiltroTexto(marca);
+    if (marca && !marcas.has(marcaKey)) {
+      marcas.set(marcaKey, marca);
+    }
+
+    for (const categoria of produto?.categorias || []) {
+      const categoriaKey = getCategoriaBuscaKey(categoria);
+      if (!categoriaKey || principaisKeys.has(categoriaKey) || categorias.has(categoriaKey)) {
+        continue;
+      }
+      categorias.set(categoriaKey, categoria);
+    }
+  }
+
+  return {
+    categoriasPrincipais: CATEGORIAS_PRINCIPAIS_CLIENTE,
+    categorias: Array.from(categorias.values()).sort(ordenarTextoBusca),
+    marcas: Array.from(marcas.values()).sort(ordenarTextoBusca)
+  };
+}
+
+function produtoMatchesBusca(produto, busca) {
+  const termo = `${busca || ""}`.trim();
+  if (!termo) {
+    return true;
+  }
+
+  const textoBusca = normalizeTexto(termo);
+  const textoBuscaCompacto = normalizeFiltroTexto(termo);
+  const origem = [
+    produto?.nome,
+    produto?.modelo,
+    produto?.marca,
+    ...(produto?.categorias || [])
+  ].join(" ");
+  const origemNormalizada = normalizeTexto(origem);
+  const origemCompacta = normalizeFiltroTexto(origem);
+
+  return (
+    origemNormalizada.includes(textoBusca) ||
+    (textoBuscaCompacto && origemCompacta.includes(textoBuscaCompacto))
+  );
+}
+
+function produtoMatchesCategorias(produto, categoriasSelecionadas) {
+  if (!categoriasSelecionadas.size) {
+    return true;
+  }
+
+  return (produto?.categorias || []).some((categoria) =>
+    categoriasSelecionadas.has(getCategoriaBuscaKey(categoria))
+  );
+}
+
+function produtoMatchesMarca(produto, marca) {
+  const marcaKey = normalizeFiltroTexto(marca);
+  if (!marcaKey) {
+    return true;
+  }
+
+  return normalizeFiltroTexto(produto?.marca) === marcaKey;
+}
+
+function produtoMatchesFaixaPreco(produto, precoMin, precoMax) {
+  const preco = Number(produto?.preco || 0);
+  const minRaw = `${precoMin ?? ""}`.trim();
+  const maxRaw = `${precoMax ?? ""}`.trim();
+  const min = minRaw ? Number(minRaw) : Number.NaN;
+  const max = maxRaw ? Number(maxRaw) : Number.NaN;
+
+  if (Number.isFinite(min) && min >= 0 && preco < min) {
+    return false;
+  }
+
+  if (Number.isFinite(max) && max >= 0 && preco > max) {
+    return false;
+  }
+
+  return true;
+}
+
+function ordenarProdutosBusca(produtos, sortField, sortOrder) {
+  const field = ["popularidade", "preco", "nome"].includes(sortField) ? sortField : "";
+  if (!field) {
+    return produtos;
+  }
+
+  const multiplier = sortOrder === "ASC" ? 1 : -1;
+  return [...produtos].sort((a, b) => {
+    if (field === "popularidade") {
+      return (Number(a?.quantidadeVendida || 0) - Number(b?.quantidadeVendida || 0)) * multiplier;
+    }
+
+    if (field === "preco") {
+      return (Number(a?.preco || 0) - Number(b?.preco || 0)) * multiplier;
+    }
+
+    return ordenarTextoBusca(a?.nome || "", b?.nome || "") * multiplier;
+  });
+}
+
+function filtrarProdutosBuscaPublica(produtos, filtros) {
+  const categoriasSelecionadas = new Set(
+    parseFiltroLista(filtros?.categorias).map(getCategoriaBuscaKey).filter(Boolean)
+  );
+
+  const filtrados = produtos.filter(
+    (produto) =>
+      produtoMatchesBusca(produto, filtros?.q) &&
+      produtoMatchesCategorias(produto, categoriasSelecionadas) &&
+      produtoMatchesMarca(produto, filtros?.marca) &&
+      produtoMatchesFaixaPreco(produto, filtros?.precoMin, filtros?.precoMax)
+  );
+
+  return ordenarProdutosBusca(filtrados, filtros?.sortField, filtros?.sortOrder);
 }
 
 function calcularFretePorCep(cep) {
@@ -5914,6 +6099,38 @@ const server = http.createServer(async (req, res) => {
       sendJson(res, 200, { produtos: formatted });
     } catch (error) {
       sendJson(res, 500, { error: error?.message || "Erro ao carregar produtos." });
+    }
+    return;
+  }
+
+  if (req.method === "GET" && url.pathname === "/api/home/produtos") {
+    try {
+      const accessToken = await getAccessToken();
+      const produtos = await fetchProdutosBuscaPublica(accessToken);
+      const formatted = produtos.map(montarProdutoPublicoResumo);
+      const categoriasParams = [
+        ...url.searchParams.getAll("categoria"),
+        ...url.searchParams.getAll("categorias")
+      ]
+        .filter(Boolean)
+        .join(",");
+      const metadata = extrairMetadataProdutosBusca(formatted);
+      const filtrados = filtrarProdutosBuscaPublica(formatted, {
+        q: url.searchParams.get("q") || "",
+        categorias: categoriasParams,
+        marca: url.searchParams.get("marca") || "",
+        precoMin: url.searchParams.get("precoMin") || "",
+        precoMax: url.searchParams.get("precoMax") || "",
+        sortField: url.searchParams.get("sortField") || "",
+        sortOrder: url.searchParams.get("sortOrder") || ""
+      });
+
+      sendJson(res, 200, {
+        produtos: filtrados,
+        ...metadata
+      });
+    } catch (error) {
+      sendJson(res, 500, { error: error?.message || "Erro ao buscar produtos." });
     }
     return;
   }
