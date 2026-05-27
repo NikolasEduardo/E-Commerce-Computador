@@ -1,12 +1,12 @@
 .cart-popup {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.4);
+  z-index: 2000;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 20px;
-  z-index: 2000;
+  background: rgba(0, 0, 0, 0.64);
 }
 
 .cart-popup.hidden {
@@ -14,33 +14,46 @@
 }
 
 .cart-popup-content {
-  background: #cfcfcf;
-  padding: 16px;
+  display: flex;
   width: 100%;
   max-width: 420px;
-  display: flex;
   flex-direction: column;
   gap: 12px;
+  padding: 18px;
+  border: 1px solid rgba(226, 232, 240, 0.14);
+  border-radius: 8px;
+  color: #f8fafc;
+  background: #0b2138;
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.34);
 }
 
-.cart-popup-content h3 {
-  margin: 0;
-}
-
+.cart-popup-content h3,
 .cart-popup-content p {
   margin: 0;
 }
 
+.cart-popup-content p {
+  color: #b8c7d9;
+}
+
 .cart-popup-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 10px;
   justify-content: flex-end;
-  flex-wrap: wrap;
 }
 
 .cart-popup-actions button {
-  background: #a9a9a9;
-  border: none;
+  min-height: 40px;
   padding: 8px 14px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  color: #111827;
+  background: #f97316;
   cursor: pointer;
+}
+
+.cart-popup-actions button:hover,
+.cart-popup-actions button:focus-visible {
+  background: #fb923c;
 }

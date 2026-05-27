@@ -5,10 +5,10 @@ import { SYSTEM_MESSAGES, getErrorMessage } from "../../model/SystemMessages.js"
 import { initCartNotice, refreshCartNotice, showCartPopup } from "./cart-notice.js";
 
 const MAIN_CATEGORIES = [
-  "PLACA DE VÍDEO",
+  "PLACA DE VIDEO",
   "PROCESSADOR",
-  "PLACA-MÃE",
-  "MEMÓRIA RAM",
+  "PLACA-MAE",
+  "MEMORIA RAM",
   "ARMAZENAMENTO",
   "FONTE"
 ];
@@ -35,6 +35,28 @@ const state = {
   sortField: "",
   sortDirection: ""
 };
+
+function setIconContent(element, iconClass, label) {
+  const icon = document.createElement("i");
+  icon.className = `bi ${iconClass}`;
+  icon.setAttribute("aria-hidden", "true");
+  const text = document.createElement("span");
+  text.textContent = label;
+  element.replaceChildren(icon, text);
+}
+
+function createDetailLine(iconClass, textValue) {
+  const line = document.createElement("span");
+  line.className = "detail-line";
+  const icon = document.createElement("i");
+  icon.className = `bi ${iconClass}`;
+  icon.setAttribute("aria-hidden", "true");
+  const text = document.createElement("span");
+  text.textContent = textValue;
+  line.appendChild(icon);
+  line.appendChild(text);
+  return line;
+}
 
 function normalizeText(value) {
   return `${value || ""}`
@@ -186,13 +208,15 @@ function closeCartPopup() {
 function renderSortButtons() {
   sortButtons.forEach((button) => {
     const field = button.dataset.sortField || "";
-    const label = button.dataset.baseLabel || button.textContent;
+    const label = button.dataset.label || button.dataset.baseLabel || button.textContent.trim();
     button.dataset.baseLabel = label;
     const active = state.sortField === field && state.sortDirection;
     button.classList.toggle("is-active", Boolean(active));
-    button.textContent = active
-      ? `${label} ${state.sortDirection === "down" ? "↓" : "↑"}`
-      : label;
+    button.setAttribute("aria-pressed", active ? "true" : "false");
+    const iconClass = active
+      ? (state.sortDirection === "down" ? "bi-sort-down" : "bi-sort-up")
+      : (button.dataset.icon || "bi-arrow-down-up");
+    setIconContent(button, iconClass, label);
   });
 }
 
@@ -202,6 +226,7 @@ function renderCategoriaOption(container, nome) {
 
   const input = document.createElement("input");
   input.type = "checkbox";
+  input.className = "form-check-input";
   input.checked = categoriaSelecionada(nome);
   input.addEventListener("change", async () => {
     setCategoriaSelecionada(nome, input.checked);
@@ -246,7 +271,7 @@ function renderCategorias(categoriasPrincipais = [], categorias = []) {
 }
 
 function renderMarcaOptions(marcas = []) {
-  marcaFilter.innerHTML = '<option value="">TODAS</option>';
+  marcaFilter.innerHTML = '<option value="">Todas</option>';
   const marcasVisiveis = state.marca && !marcas.includes(state.marca)
     ? [...marcas, state.marca]
     : marcas;
@@ -272,7 +297,7 @@ function renderProdutos(produtos) {
   if (!produtos.length) {
     const empty = document.createElement("div");
     empty.className = "empty-results";
-    empty.textContent = SYSTEM_MESSAGES.produto.empty.noProducts;
+    setIconContent(empty, "bi-search", SYSTEM_MESSAGES.produto.empty.noProducts);
     resultadosList.appendChild(empty);
     return;
   }
@@ -290,19 +315,16 @@ function renderProdutos(produtos) {
       img.alt = produto.nome || "Produto";
       imageBox.appendChild(img);
     } else {
-      imageBox.textContent = "IMAGEM";
+      setIconContent(imageBox, "bi-image", "Imagem indisponivel");
     }
 
     const details = document.createElement("div");
     details.className = "product-details";
     const nome = document.createElement("strong");
     nome.textContent = produto.nome || "SEM NOME";
-    const modelo = document.createElement("span");
-    modelo.textContent = `Modelo: ${produto.modelo || "-"}`;
-    const marca = document.createElement("span");
-    marca.textContent = `Marca: ${getProdutoMarca(produto)}`;
-    const categorias = document.createElement("span");
-    categorias.textContent = `Categoria(s): ${getProdutoCategorias(produto)}`;
+    const modelo = createDetailLine("bi-cpu", `Modelo: ${produto.modelo || "-"}`);
+    const marca = createDetailLine("bi-award", `Marca: ${getProdutoMarca(produto)}`);
+    const categorias = createDetailLine("bi-tags", `Categoria(s): ${getProdutoCategorias(produto)}`);
     details.appendChild(nome);
     details.appendChild(modelo);
     details.appendChild(marca);
@@ -314,13 +336,13 @@ function renderProdutos(produtos) {
     const priceButton = document.createElement("button");
     priceButton.className = "btn";
     const priceLabel = formatCurrency(getProdutoPreco(produto));
-    priceButton.textContent = priceLabel;
+    setIconContent(priceButton, "bi-cash-coin", priceLabel);
     priceButton.dataset.price = priceLabel;
     priceButton.addEventListener("mouseenter", () => {
-      priceButton.textContent = "ADICIONAR AO CARRINHO";
+      setIconContent(priceButton, "bi-cart-plus", "Adicionar");
     });
     priceButton.addEventListener("mouseleave", () => {
-      priceButton.textContent = priceButton.dataset.price;
+      setIconContent(priceButton, "bi-cash-coin", priceButton.dataset.price);
     });
     priceButton.addEventListener("click", async () => {
       if (!produto.codigoProduto) {
@@ -348,7 +370,7 @@ function renderProdutos(produtos) {
 
     const infoButton = document.createElement("button");
     infoButton.className = "btn";
-    infoButton.textContent = "INFO";
+    setIconContent(infoButton, "bi-info-circle", "Info");
     infoButton.addEventListener("click", () => {
       if (produto.codigoProduto) {
         window.location.href = `./produto.html?codigo=${encodeURIComponent(produto.codigoProduto)}`;
@@ -373,16 +395,16 @@ async function carregarResultados() {
     resultadosList.innerHTML = "";
     const empty = document.createElement("div");
     empty.className = "empty-results";
-    empty.textContent = getErrorMessage(error, SYSTEM_MESSAGES.produto.errors.loadListFailed);
+    setIconContent(empty, "bi-exclamation-triangle", getErrorMessage(error, SYSTEM_MESSAGES.produto.errors.loadListFailed));
     resultadosList.appendChild(empty);
   }
 }
 
 carregarPerfil((perfil, error) => {
   if (perfil && perfil.nome) {
-    perfilButton.textContent = `PERFIL: ${perfil.nome.split(" ")[0].toUpperCase()}`;
+    setIconContent(perfilButton, "bi-person-circle", `Perfil: ${perfil.nome.split(" ")[0]}`);
   } else if (error) {
-    perfilButton.textContent = "PERFIL";
+    setIconContent(perfilButton, "bi-person-circle", "Perfil");
   }
 });
 

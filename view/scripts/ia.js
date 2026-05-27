@@ -24,6 +24,28 @@ const chatSend = document.getElementById("chat-send");
 let produtosCatalogo = [];
 let produtosPorCodigo = new Map();
 
+function setIconContent(element, iconClass, label) {
+  const icon = document.createElement("i");
+  icon.className = `bi ${iconClass}`;
+  icon.setAttribute("aria-hidden", "true");
+  const text = document.createElement("span");
+  text.textContent = label;
+  element.replaceChildren(icon, text);
+}
+
+function createDetailLine(iconClass, textValue) {
+  const line = document.createElement("span");
+  line.className = "detail-line";
+  const icon = document.createElement("i");
+  icon.className = `bi ${iconClass}`;
+  icon.setAttribute("aria-hidden", "true");
+  const text = document.createElement("span");
+  text.textContent = textValue;
+  line.appendChild(icon);
+  line.appendChild(text);
+  return line;
+}
+
 function formatCurrency(value) {
   const numero = Number(value || 0);
   if (!Number.isFinite(numero) || numero <= 0) {
@@ -53,7 +75,10 @@ function getProdutoPreco(produto) {
 }
 
 function setStatus(text = "") {
-  chatStatus.textContent = text;
+  chatStatus.innerHTML = "";
+  if (text) {
+    setIconContent(chatStatus, "bi-info-circle", text);
+  }
   chatStatus.classList.toggle("hidden", !text);
 }
 
@@ -100,9 +125,9 @@ async function addProdutoCarrinho(codigoProduto, button) {
     return;
   }
 
-  const label = button.textContent;
+  const label = button.dataset.label || button.textContent;
   button.disabled = true;
-  button.textContent = "INSERINDO...";
+  setIconContent(button, "bi-hourglass-split", "Inserindo...");
   try {
     const resp = await adicionarAoCarrinho(codigoProduto);
     showCartPopup({
@@ -119,7 +144,7 @@ async function addProdutoCarrinho(codigoProduto, button) {
     });
   } finally {
     button.disabled = false;
-    button.textContent = label;
+    setIconContent(button, "bi-cart-plus", label);
   }
 }
 
@@ -136,21 +161,17 @@ function renderProductCard(produto) {
     img.alt = produto.nome || "Produto";
     imageBox.appendChild(img);
   } else {
-    imageBox.textContent = "IMAGEM";
+    setIconContent(imageBox, "bi-image", "Imagem indisponivel");
   }
 
   const info = document.createElement("div");
   info.className = "ia-product-info";
   const title = document.createElement("strong");
   title.textContent = produto.nome || "Produto";
-  const modelo = document.createElement("span");
-  modelo.textContent = `Modelo: ${produto.modelo || "-"}`;
-  const marca = document.createElement("span");
-  marca.textContent = `Marca: ${getProdutoMarca(produto)}`;
-  const categorias = document.createElement("span");
-  categorias.textContent = `Categoria(s): ${getProdutoCategorias(produto)}`;
-  const preco = document.createElement("span");
-  preco.textContent = `Preco: ${formatCurrency(getProdutoPreco(produto))}`;
+  const modelo = createDetailLine("bi-cpu", `Modelo: ${produto.modelo || "-"}`);
+  const marca = createDetailLine("bi-award", `Marca: ${getProdutoMarca(produto)}`);
+  const categorias = createDetailLine("bi-tags", `Categoria(s): ${getProdutoCategorias(produto)}`);
+  const preco = createDetailLine("bi-cash-coin", `Preco: ${formatCurrency(getProdutoPreco(produto))}`);
 
   const actions = document.createElement("div");
   actions.className = "ia-product-actions";
@@ -158,10 +179,11 @@ function renderProductCard(produto) {
   abrir.href = produtoLink(produto.codigoProduto);
   abrir.target = "_blank";
   abrir.rel = "noopener noreferrer";
-  abrir.textContent = "ABRIR PRODUTO";
+  setIconContent(abrir, "bi-box-arrow-up-right", "Abrir produto");
   const add = document.createElement("button");
   add.type = "button";
-  add.textContent = "INSERIR NO CARRINHO";
+  add.dataset.label = "Inserir no carrinho";
+  setIconContent(add, "bi-cart-plus", "Inserir no carrinho");
   add.addEventListener("click", () => addProdutoCarrinho(produto.codigoProduto, add));
 
   actions.appendChild(abrir);
@@ -237,9 +259,9 @@ async function inicializar() {
 
   carregarPerfil((perfil, error) => {
     if (perfil && perfil.nome) {
-      perfilButton.textContent = `PERFIL: ${perfil.nome.split(" ")[0].toUpperCase()}`;
+      setIconContent(perfilButton, "bi-person-circle", `Perfil: ${perfil.nome.split(" ")[0]}`);
     } else if (error) {
-      perfilButton.textContent = "PERFIL";
+      setIconContent(perfilButton, "bi-person-circle", "Perfil");
     }
   });
 
@@ -281,7 +303,7 @@ chatForm.addEventListener("submit", async (event) => {
 
   chatInput.value = "";
   chatSend.disabled = true;
-  chatSend.textContent = "ENVIANDO...";
+  setIconContent(chatSend, "bi-hourglass-split", "Enviando...");
   setStatus("");
 
   const pending = [
@@ -308,7 +330,7 @@ chatForm.addEventListener("submit", async (event) => {
     renderMessages(carregarConversaGamzu());
   } finally {
     chatSend.disabled = conversaGamzuBloqueada();
-    chatSend.textContent = "ENVIAR";
+    setIconContent(chatSend, "bi-send", "Enviar");
     if (!conversaGamzuBloqueada()) {
       chatInput.focus();
     }

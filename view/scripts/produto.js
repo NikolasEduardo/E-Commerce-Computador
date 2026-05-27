@@ -19,6 +19,15 @@ const especificacoesEl = document.getElementById("produto-especificacoes");
 const addCarrinhoButton = document.getElementById("btn-add-carrinho");
 let codigoProdutoAtual = "";
 
+function setIconContent(element, iconClass, label) {
+  const icon = document.createElement("i");
+  icon.className = `bi ${iconClass}`;
+  icon.setAttribute("aria-hidden", "true");
+  const text = document.createElement("span");
+  text.textContent = label;
+  element.replaceChildren(icon, text);
+}
+
 function setMessage(text) {
   messageBox.textContent = text || "";
   messageBox.classList.toggle("hidden", !text);
@@ -50,7 +59,7 @@ function getProdutoPreco(produto) {
 function setMainImage(url) {
   mainImage.innerHTML = "";
   if (!url) {
-    mainImage.textContent = "IMAGEM";
+    setIconContent(mainImage, "bi-image", "Imagem do produto");
     return;
   }
   const img = document.createElement("img");
@@ -76,7 +85,7 @@ function renderThumbs(imagens) {
       img.alt = "Miniatura";
       btn.appendChild(img);
     } else {
-      btn.textContent = "IMG";
+      setIconContent(btn, "bi-image", "IMG");
     }
 
     btn.addEventListener("click", () => {
@@ -113,7 +122,7 @@ function renderProduto(produto) {
   renderThumbs(imagens);
 
   const priceLabel = formatCurrency(getProdutoPreco(produto));
-  addCarrinhoButton.textContent = `${priceLabel} - ADICIONAR AO CARRINHO`;
+  setIconContent(addCarrinhoButton, "bi-cart-plus", `${priceLabel} - Adicionar ao carrinho`);
 }
 
 async function carregarProduto() {
@@ -134,9 +143,9 @@ async function carregarProduto() {
 
 carregarPerfil((perfil, error) => {
   if (perfil && perfil.nome) {
-    perfilButton.textContent = `PERFIL: ${perfil.nome.split(" ")[0].toUpperCase()}`;
+    setIconContent(perfilButton, "bi-person-circle", `Perfil: ${perfil.nome.split(" ")[0]}`);
   } else if (error) {
-    perfilButton.textContent = "PERFIL";
+    setIconContent(perfilButton, "bi-person-circle", "Perfil");
   }
 });
 

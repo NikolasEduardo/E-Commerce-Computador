@@ -10,11 +10,33 @@ const productsList = document.getElementById("productsList");
 const searchInput = document.getElementById("home-search");
 const categoryButtons = document.querySelectorAll(".cat-btn");
 
+function setIconContent(element, iconClass, label) {
+  const icon = document.createElement("i");
+  icon.className = `bi ${iconClass}`;
+  icon.setAttribute("aria-hidden", "true");
+  const text = document.createElement("span");
+  text.textContent = label;
+  element.replaceChildren(icon, text);
+}
+
+function createDetailLine(iconClass, textValue) {
+  const line = document.createElement("span");
+  line.className = "detail-line";
+  const icon = document.createElement("i");
+  icon.className = `bi ${iconClass}`;
+  icon.setAttribute("aria-hidden", "true");
+  const text = document.createElement("span");
+  text.textContent = textValue;
+  line.appendChild(icon);
+  line.appendChild(text);
+  return line;
+}
+
 carregarPerfil((perfil, error) => {
   if (perfil && perfil.nome) {
-    perfilButton.textContent = `PERFIL: ${perfil.nome.split(" ")[0].toUpperCase()}`;
+    setIconContent(perfilButton, "bi-person-circle", `Perfil: ${perfil.nome.split(" ")[0]}`);
   } else if (error) {
-    perfilButton.textContent = "PERFIL";
+    setIconContent(perfilButton, "bi-person-circle", "Perfil");
   }
 });
 
@@ -47,7 +69,7 @@ searchInput.addEventListener("keydown", (event) => {
 
 categoryButtons.forEach((button) => {
   button.addEventListener("click", () => {
-    abrirBusca({ categoria: button.textContent || "" });
+    abrirBusca({ categoria: button.dataset.category || button.textContent || "" });
   });
 });
 
@@ -78,8 +100,8 @@ function renderProdutos(produtos) {
   productsList.innerHTML = "";
   if (!produtos.length) {
     const empty = document.createElement("div");
-    empty.className = "product-card";
-    empty.textContent = SYSTEM_MESSAGES.produto.empty.noAvailableProducts;
+    empty.className = "product-card empty-card";
+    setIconContent(empty, "bi-box", SYSTEM_MESSAGES.produto.empty.noAvailableProducts);
     productsList.appendChild(empty);
     return;
   }
@@ -97,19 +119,16 @@ function renderProdutos(produtos) {
       img.alt = produto.nome || "Produto";
       imageBox.appendChild(img);
     } else {
-      imageBox.textContent = "IMAGEM";
+      setIconContent(imageBox, "bi-image", "Imagem indisponivel");
     }
 
     const details = document.createElement("div");
     details.className = "product-details";
     const nome = document.createElement("strong");
     nome.textContent = produto.nome || "SEM NOME";
-    const modelo = document.createElement("span");
-    modelo.textContent = `Modelo: ${produto.modelo || "-"}`;
-    const marca = document.createElement("span");
-    marca.textContent = `Marca: ${getProdutoMarca(produto)}`;
-    const categorias = document.createElement("span");
-    categorias.textContent = `Categoria(s): ${getProdutoCategorias(produto)}`;
+    const modelo = createDetailLine("bi-cpu", `Modelo: ${produto.modelo || "-"}`);
+    const marca = createDetailLine("bi-award", `Marca: ${getProdutoMarca(produto)}`);
+    const categorias = createDetailLine("bi-tags", `Categoria(s): ${getProdutoCategorias(produto)}`);
     details.appendChild(nome);
     details.appendChild(modelo);
     details.appendChild(marca);
@@ -120,13 +139,13 @@ function renderProdutos(produtos) {
     const priceButton = document.createElement("button");
     priceButton.className = "btn";
     const priceLabel = formatCurrency(getProdutoPreco(produto));
-    priceButton.textContent = priceLabel;
+    setIconContent(priceButton, "bi-cash-coin", priceLabel);
     priceButton.dataset.price = priceLabel;
     priceButton.addEventListener("mouseenter", () => {
-      priceButton.textContent = "ADICIONAR AO CARRINHO";
+      setIconContent(priceButton, "bi-cart-plus", "Adicionar");
     });
     priceButton.addEventListener("mouseleave", () => {
-      priceButton.textContent = priceButton.dataset.price;
+      setIconContent(priceButton, "bi-cash-coin", priceButton.dataset.price);
     });
     priceButton.addEventListener("click", async () => {
       if (!produto.codigoProduto) {
@@ -169,7 +188,7 @@ function renderProdutos(produtos) {
 
     const infoButton = document.createElement("button");
     infoButton.className = "btn";
-    infoButton.textContent = "INFORMACOES";
+    setIconContent(infoButton, "bi-info-circle", "Informacoes");
     infoButton.addEventListener("click", () => {
       if (produto.codigoProduto) {
         window.location.href = `./produto.html?codigo=${encodeURIComponent(produto.codigoProduto)}`;

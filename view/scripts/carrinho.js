@@ -14,6 +14,28 @@ const summaryDetails = document.getElementById("cart-summary-details");
 const btnContinuar = document.getElementById("btn-continuar");
 const btnFinalizar = document.getElementById("btn-finalizar");
 
+function setIconContent(element, iconClass, label) {
+  const icon = document.createElement("i");
+  icon.className = `bi ${iconClass}`;
+  icon.setAttribute("aria-hidden", "true");
+  const text = document.createElement("span");
+  text.textContent = label;
+  element.replaceChildren(icon, text);
+}
+
+function createDetailLine(iconClass, textValue) {
+  const line = document.createElement("span");
+  line.className = "detail-line";
+  const icon = document.createElement("i");
+  icon.className = `bi ${iconClass}`;
+  icon.setAttribute("aria-hidden", "true");
+  const text = document.createElement("span");
+  text.textContent = textValue;
+  line.appendChild(icon);
+  line.appendChild(text);
+  return line;
+}
+
 function formatCurrency(value) {
   if (!Number.isFinite(value)) {
     return "R$ 0,00";
@@ -50,9 +72,16 @@ function getItemPrecoTotal(item) {
 }
 
 function renderSummary(valorTotal) {
-  summaryDetails.innerHTML = `
-    <div>Total: ${formatCurrency(Number(valorTotal || 0))}</div>
-  `;
+  summaryDetails.innerHTML = "";
+  const totalLine = document.createElement("div");
+  totalLine.className = "summary-line";
+  const label = document.createElement("span");
+  label.textContent = "Total";
+  const value = document.createElement("strong");
+  value.textContent = formatCurrency(Number(valorTotal || 0));
+  totalLine.appendChild(label);
+  totalLine.appendChild(value);
+  summaryDetails.appendChild(totalLine);
 }
 
 function showWarning(message) {
@@ -75,8 +104,8 @@ function renderItems(itens) {
   itemsList.innerHTML = "";
   if (!itens.length) {
     const empty = document.createElement("div");
-    empty.className = "cart-item";
-    empty.textContent = SYSTEM_MESSAGES.carrinho.empty.noItems;
+    empty.className = "cart-item empty-card";
+    setIconContent(empty, "bi-cart-x", SYSTEM_MESSAGES.carrinho.empty.noItems);
     itemsList.appendChild(empty);
     return;
   }
@@ -97,25 +126,24 @@ function renderItems(itens) {
       img.alt = getItemNome(item) || "Produto";
       imageBox.appendChild(img);
     } else {
-      imageBox.textContent = "IMAGEM";
+      setIconContent(imageBox, "bi-image", "Imagem indisponivel");
     }
 
     const details = document.createElement("div");
     details.className = "cart-item-details";
     const title = document.createElement("strong");
     title.textContent = getItemNome(item);
-    const modelo = document.createElement("span");
     const modeloTexto = getItemModelo(item);
-    modelo.textContent = modeloTexto ? `Modelo: ${modeloTexto}` : "Modelo: -";
-    const precoUnit = document.createElement("span");
-    precoUnit.textContent = `Preco p/unidade: ${formatCurrency(getItemPrecoUnitario(item))}`;
-    const precoTotal = document.createElement("span");
-    precoTotal.textContent = `Preco total: ${formatCurrency(getItemPrecoTotal(item))}`;
+    const modelo = createDetailLine("bi-cpu", modeloTexto ? `Modelo: ${modeloTexto}` : "Modelo: -");
+    const precoUnit = createDetailLine("bi-cash-coin", `Preco p/unidade: ${formatCurrency(getItemPrecoUnitario(item))}`);
+    const precoTotal = createDetailLine("bi-receipt", `Preco total: ${formatCurrency(getItemPrecoTotal(item))}`);
 
     const actions = document.createElement("div");
     actions.className = "cart-item-actions";
     const btnRemover = document.createElement("button");
-    btnRemover.textContent = "RETIRAR";
+    btnRemover.className = "remove-btn";
+    btnRemover.type = "button";
+    setIconContent(btnRemover, "bi-trash3", "Retirar");
     btnRemover.addEventListener("click", async () => {
       try {
         await removerItem(item.codigoProduto);
@@ -127,7 +155,9 @@ function renderItems(itens) {
     });
 
     const btnMinus = document.createElement("button");
-    btnMinus.textContent = "-";
+    btnMinus.type = "button";
+    btnMinus.setAttribute("aria-label", "Diminuir quantidade");
+    setIconContent(btnMinus, "bi-dash", "");
     btnMinus.addEventListener("click", async () => {
       const novaQtd = Math.max(Number(item.quantidade || 0) - 1, 0);
       try {
@@ -187,7 +217,9 @@ function renderItems(itens) {
     });
 
     const btnPlus = document.createElement("button");
-    btnPlus.textContent = "+";
+    btnPlus.type = "button";
+    btnPlus.setAttribute("aria-label", "Aumentar quantidade");
+    setIconContent(btnPlus, "bi-plus", "");
     btnPlus.addEventListener("click", async () => {
       const novaQtd = Math.min(Number(item.quantidade || 0) + 1, 99);
       try {
@@ -227,9 +259,9 @@ async function carregarCarrinhoPagina() {
 
 carregarPerfil((perfil, error) => {
   if (perfil && perfil.nome) {
-    perfilButton.textContent = `PERFIL: ${perfil.nome.split(" ")[0].toUpperCase()}`;
+    setIconContent(perfilButton, "bi-person-circle", `Perfil: ${perfil.nome.split(" ")[0]}`);
   } else if (error) {
-    perfilButton.textContent = "PERFIL";
+    setIconContent(perfilButton, "bi-person-circle", "Perfil");
   }
 });
 

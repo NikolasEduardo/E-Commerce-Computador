@@ -129,6 +129,15 @@ const tipoLogradouroMap = new Map();
 const tipoResidenciaMap = new Map();
 const bandeiraMap = new Map();
 
+function setIconContent(element, iconClass, label) {
+  const icon = document.createElement("i");
+  icon.className = `bi ${iconClass}`;
+  icon.setAttribute("aria-hidden", "true");
+  const text = document.createElement("span");
+  text.textContent = label;
+  element.replaceChildren(icon, text);
+}
+
 function setMessage(text) {
   messageBox.textContent = text;
   messageBox.classList.toggle("is-visible", Boolean(text));
@@ -145,7 +154,7 @@ function limparPasswordModal() {
   passwordConfirmInput.value = "";
   setPasswordModalMessage("");
   savePasswordButton.disabled = false;
-  savePasswordButton.textContent = "SALVAR";
+  setIconContent(savePasswordButton, "bi-check2-circle", "Salvar");
 }
 
 function abrirPasswordModal() {
@@ -412,7 +421,7 @@ function setEnderecoValue(id, value) {
 
 function limparEnderecoForm() {
   enderecoEditId = null;
-  enderecoFormTitle.textContent = "NOVO ENDERECO";
+  setIconContent(enderecoFormTitle, "bi-geo-alt", "Novo endereco");
   setEnderecoValue("end-tipoLogradouro", "");
   setEnderecoValue("end-tipoResidencia", "");
   setEnderecoValue("end-logradouro", "");
@@ -429,7 +438,7 @@ function limparEnderecoForm() {
 function abrirEnderecoForm(endereco) {
   if (endereco) {
     enderecoEditId = endereco.id;
-    enderecoFormTitle.textContent = "EDITAR ENDERECO";
+    setIconContent(enderecoFormTitle, "bi-pencil-square", "Editar endereco");
     setEnderecoValue("end-tipoLogradouro", endereco.tipoLogradouroId);
     setEnderecoValue("end-tipoResidencia", endereco.tipoResidenciaId);
     setEnderecoValue("end-logradouro", endereco.logradouro);
@@ -502,7 +511,7 @@ function renderEnderecos(enderecos) {
   if (!enderecos.length) {
     const empty = document.createElement("div");
     empty.className = "endereco-card";
-    empty.textContent = SYSTEM_MESSAGES.perfil.empty.noAddresses;
+    setIconContent(empty, "bi-geo-alt", SYSTEM_MESSAGES.perfil.empty.noAddresses);
     enderecosList.appendChild(empty);
     return;
   }
@@ -541,14 +550,14 @@ function renderEnderecos(enderecos) {
 
     const btnEditar = document.createElement("button");
     btnEditar.className = "btn small";
-    btnEditar.textContent = "EDITAR";
+    setIconContent(btnEditar, "bi-pencil-square", "Editar");
     btnEditar.addEventListener("click", () => abrirEnderecoForm(endereco));
     actions.appendChild(btnEditar);
 
     if (!endereco.isPrincipal?.()) {
       const btnPrincipal = document.createElement("button");
       btnPrincipal.className = "btn small";
-      btnPrincipal.textContent = "DEFINIR RESIDENCIAL";
+      setIconContent(btnPrincipal, "bi-house-check", "Definir residencial");
       btnPrincipal.addEventListener("click", async () => {
         try {
           await definirEnderecoResidencial(endereco.id);
@@ -563,7 +572,7 @@ function renderEnderecos(enderecos) {
 
     const btnExcluir = document.createElement("button");
     btnExcluir.className = "btn small";
-    btnExcluir.textContent = "EXCLUIR";
+    setIconContent(btnExcluir, "bi-trash3", "Excluir");
     btnExcluir.disabled = endereco.isPrincipal?.();
     btnExcluir.addEventListener("click", async () => {
       const confirmacao = window.confirm(SYSTEM_MESSAGES.perfil.confirmations.deleteAddress);
@@ -609,7 +618,7 @@ function setCartaoValue(id, value) {
 }
 
 function limparCartaoForm() {
-  cartaoFormTitle.textContent = "NOVO CARTAO";
+  setIconContent(cartaoFormTitle, "bi-credit-card", "Novo cartao");
   setCartaoValue("cartao-bandeira", "");
   setCartaoValue("cartao-numero", "");
   setCartaoValue("cartao-nome", "");
@@ -932,7 +941,7 @@ function renderPedidos(pedidos) {
   if (!pedidos.length) {
     const empty = document.createElement("div");
     empty.className = "pedido-card";
-    empty.textContent = SYSTEM_MESSAGES.perfil.empty.noOrders;
+    setIconContent(empty, "bi-box-seam", SYSTEM_MESSAGES.perfil.empty.noOrders);
     pedidosList.appendChild(empty);
     return;
   }
@@ -978,7 +987,7 @@ function renderPedidos(pedidos) {
 
     const btnDetalhes = document.createElement("button");
     btnDetalhes.className = "btn small";
-    btnDetalhes.textContent = "VER DETALHES";
+    setIconContent(btnDetalhes, "bi-eye", "Ver detalhes");
     btnDetalhes.addEventListener("click", async () => {
       try {
         const data = await carregarPedidoDetalheUsuario(pedido.id);
@@ -993,10 +1002,10 @@ function renderPedidos(pedidos) {
     if (pedidoPodeReadicionarCarrinho(pedido)) {
       const btnReadicionar = document.createElement("button");
       btnReadicionar.className = "btn small";
-      btnReadicionar.textContent = "RECOLOCAR NO CARRINHO";
+      setIconContent(btnReadicionar, "bi-cart-plus", "Recolocar no carrinho");
       btnReadicionar.addEventListener("click", async () => {
         btnReadicionar.disabled = true;
-        btnReadicionar.textContent = "RECOLOCANDO...";
+        setIconContent(btnReadicionar, "bi-hourglass-split", "Recolocando...");
         try {
           const resultado = await readicionarPedidoAoCarrinhoUsuario(pedido.id);
           setMessage(resultado?.message || SYSTEM_MESSAGES.perfil.success.orderReadicionado);
@@ -1006,7 +1015,7 @@ function renderPedidos(pedidos) {
           setMessage(getErrorMessage(error, SYSTEM_MESSAGES.perfil.errors.orderReadicionarFailed));
         } finally {
           btnReadicionar.disabled = false;
-          btnReadicionar.textContent = "RECOLOCAR NO CARRINHO";
+          setIconContent(btnReadicionar, "bi-cart-plus", "Recolocar no carrinho");
         }
       });
       actions.appendChild(btnReadicionar);
@@ -1052,7 +1061,7 @@ function renderPedidoDetalhe(pedido) {
       img.alt = item?.nome || item?.produto?.nome || "Produto";
       image.appendChild(img);
     } else {
-      image.textContent = "IMG";
+      setIconContent(image, "bi-image", "IMG");
     }
 
     const info = document.createElement("div");
@@ -1167,7 +1176,7 @@ function renderTrocas(trocas) {
   if (!trocas.length) {
     const empty = document.createElement("div");
     empty.className = "troca-card";
-    empty.textContent = SYSTEM_MESSAGES.perfil.empty.noExchanges;
+    setIconContent(empty, "bi-arrow-repeat", SYSTEM_MESSAGES.perfil.empty.noExchanges);
     trocasList.appendChild(empty);
     return;
   }
@@ -1195,7 +1204,7 @@ function renderTrocas(trocas) {
 
     const btnDetalhes = document.createElement("button");
     btnDetalhes.className = "btn small";
-    btnDetalhes.textContent = "DETALHES";
+    setIconContent(btnDetalhes, "bi-eye", "Detalhes");
     btnDetalhes.addEventListener("click", () => {
       renderTrocaDetalhe(trocaDescricao);
       mostrarDetalheTroca();
@@ -1242,7 +1251,7 @@ function renderTrocaDetalhe(trocaDescricao) {
       img.alt = troca.getProdutoNome?.() || "Produto";
       image.appendChild(img);
     } else {
-      image.textContent = "IMG";
+      setIconContent(image, "bi-image", "IMG");
     }
 
     const info = document.createElement("div");
@@ -1429,7 +1438,7 @@ function renderCartoes(cartoes) {
   if (!cartoes.length) {
     const empty = document.createElement("div");
     empty.className = "cartao-card";
-    empty.textContent = SYSTEM_MESSAGES.perfil.empty.noCards;
+    setIconContent(empty, "bi-credit-card", SYSTEM_MESSAGES.perfil.empty.noCards);
     cartoesList.appendChild(empty);
     return;
   }
@@ -1470,7 +1479,7 @@ function renderCartoes(cartoes) {
     if (!cartao.isPreferencial?.()) {
       const btnPreferencial = document.createElement("button");
       btnPreferencial.className = "btn small";
-      btnPreferencial.textContent = "DEFINIR PREFERENCIAL";
+      setIconContent(btnPreferencial, "bi-star", "Definir preferencial");
       btnPreferencial.addEventListener("click", async () => {
         try {
           await definirCartaoPreferencialUsuario(cartao.id);
@@ -1484,7 +1493,7 @@ function renderCartoes(cartoes) {
 
     const btnExcluir = document.createElement("button");
     btnExcluir.className = "btn small";
-    btnExcluir.textContent = "EXCLUIR";
+    setIconContent(btnExcluir, "bi-trash3", "Excluir");
     btnExcluir.addEventListener("click", async () => {
       const confirmacao = window.confirm(SYSTEM_MESSAGES.perfil.confirmations.deleteCard);
       if (!confirmacao) {
@@ -1652,7 +1661,7 @@ editButton.addEventListener("click", async () => {
   setMessage("");
   if (!isEditing) {
     isEditing = true;
-    editButton.textContent = "SALVAR";
+    setIconContent(editButton, "bi-check2-circle", "Salvar");
     setEditable(true);
     return;
   }
@@ -1664,17 +1673,17 @@ editButton.addEventListener("click", async () => {
   }
 
   editButton.disabled = true;
-  editButton.textContent = "SALVANDO...";
+  setIconContent(editButton, "bi-hourglass-split", "Salvando...");
 
   try {
     await salvar();
     setMessage(SYSTEM_MESSAGES.perfil.success.updated);
     isEditing = false;
     setEditable(false);
-    editButton.textContent = "EDITAR DADOS";
+    setIconContent(editButton, "bi-pencil-square", "Editar dados");
   } catch (err) {
     setMessage(getErrorMessage(err, SYSTEM_MESSAGES.perfil.errors.updateFailed));
-    editButton.textContent = "SALVAR";
+    setIconContent(editButton, "bi-check2-circle", "Salvar");
   } finally {
     editButton.disabled = false;
   }
@@ -1703,7 +1712,7 @@ savePasswordButton.addEventListener("click", async () => {
   }
 
   savePasswordButton.disabled = true;
-  savePasswordButton.textContent = SYSTEM_MESSAGES.general.saving;
+  setIconContent(savePasswordButton, "bi-hourglass-split", SYSTEM_MESSAGES.general.saving);
 
   try {
     await alterarSenhaUsuario(passwordCurrentInput.value, passwordNewInput.value);
@@ -1713,7 +1722,7 @@ savePasswordButton.addEventListener("click", async () => {
     setPasswordModalMessage(getErrorMessage(error, SYSTEM_MESSAGES.auth.password.changeFailed));
   } finally {
     savePasswordButton.disabled = false;
-    savePasswordButton.textContent = "SALVAR";
+    setIconContent(savePasswordButton, "bi-check2-circle", "Salvar");
   }
 });
 
@@ -1725,9 +1734,9 @@ passwordConfirmInput.addEventListener("keydown", (event) => {
 
 carregarPerfil((perfil, error) => {
   if (perfil && perfil.nome) {
-    perfilButton.textContent = `PERFIL: ${perfil.nome.split(" ")[0].toUpperCase()}`;
+    setIconContent(perfilButton, "bi-person-circle", `Perfil: ${perfil.nome.split(" ")[0]}`);
   } else if (error) {
-    perfilButton.textContent = "PERFIL";
+    setIconContent(perfilButton, "bi-person-circle", "Perfil");
   }
 });
 
@@ -1803,7 +1812,7 @@ btnSaveTroca.addEventListener("click", async () => {
   }
 
   btnSaveTroca.disabled = true;
-  btnSaveTroca.textContent = "SOLICITANDO...";
+  setIconContent(btnSaveTroca, "bi-hourglass-split", "Solicitando...");
 
   try {
     await solicitarTrocaUsuario(payload);
@@ -1813,7 +1822,7 @@ btnSaveTroca.addEventListener("click", async () => {
     setMessage(getErrorMessage(err, SYSTEM_MESSAGES.perfil.errors.exchangeCreateFailed));
   } finally {
     btnSaveTroca.disabled = false;
-    btnSaveTroca.textContent = "SOLICITAR";
+    setIconContent(btnSaveTroca, "bi-check2-circle", "Solicitar");
   }
 });
 
@@ -1834,7 +1843,7 @@ btnSaveEndereco.addEventListener("click", async () => {
   }
 
   btnSaveEndereco.disabled = true;
-  btnSaveEndereco.textContent = "SALVANDO...";
+  setIconContent(btnSaveEndereco, "bi-hourglass-split", "Salvando...");
 
   const enderecoPayload = {
     tipoLogradouroId: getEnderecoValue("end-tipoLogradouro"),
@@ -1871,7 +1880,7 @@ btnSaveEndereco.addEventListener("click", async () => {
     setMessage(getErrorMessage(err, SYSTEM_MESSAGES.perfil.errors.addressSaveFailed));
   } finally {
     btnSaveEndereco.disabled = false;
-    btnSaveEndereco.textContent = "SALVAR";
+    setIconContent(btnSaveEndereco, "bi-check2-circle", "Salvar");
   }
 });
 
@@ -1892,7 +1901,7 @@ btnSaveCartao.addEventListener("click", async () => {
   }
 
   btnSaveCartao.disabled = true;
-  btnSaveCartao.textContent = "SALVANDO...";
+  setIconContent(btnSaveCartao, "bi-hourglass-split", "Salvando...");
 
   const payload = {
     cartao: {
@@ -1913,7 +1922,7 @@ btnSaveCartao.addEventListener("click", async () => {
     setMessage(getErrorMessage(err, SYSTEM_MESSAGES.perfil.errors.cardCreateFailed));
   } finally {
     btnSaveCartao.disabled = false;
-    btnSaveCartao.textContent = "SALVAR";
+    setIconContent(btnSaveCartao, "bi-check2-circle", "Salvar");
   }
 });
 

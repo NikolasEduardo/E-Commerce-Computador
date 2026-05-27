@@ -69,6 +69,46 @@ let selectedTroca = new Set();
 let cartoesExtras = [];
 let cartaoExtraSeq = 0;
 
+function setIconContent(element, iconClass, label) {
+  const icon = document.createElement("i");
+  icon.className = `bi ${iconClass}`;
+  icon.setAttribute("aria-hidden", "true");
+  const text = document.createElement("span");
+  text.textContent = label;
+  element.replaceChildren(icon, text);
+}
+
+function createDetailLine(iconClass, textValue) {
+  const line = document.createElement("span");
+  line.className = "detail-line";
+  const icon = document.createElement("i");
+  icon.className = `bi ${iconClass}`;
+  icon.setAttribute("aria-hidden", "true");
+  const text = document.createElement("span");
+  text.textContent = textValue;
+  line.appendChild(icon);
+  line.appendChild(text);
+  return line;
+}
+
+function createTotalLine(iconClass, labelText, valueText, strong = false) {
+  const line = document.createElement("div");
+  line.className = "total-line";
+  const label = document.createElement("span");
+  const icon = document.createElement("i");
+  icon.className = `bi ${iconClass}`;
+  icon.setAttribute("aria-hidden", "true");
+  const text = document.createElement("span");
+  text.textContent = labelText;
+  label.appendChild(icon);
+  label.appendChild(text);
+  const value = document.createElement(strong ? "strong" : "span");
+  value.textContent = valueText;
+  line.appendChild(label);
+  line.appendChild(value);
+  return line;
+}
+
 function formatCurrency(value) {
   if (!Number.isFinite(value)) {
     return "R$ 0,00";
@@ -278,8 +318,8 @@ function renderItems() {
   const ativos = carrinhoItens.filter((item) => Number(item.quantidade || 0) > 0);
   if (!ativos.length) {
     const empty = document.createElement("div");
-    empty.className = "checkout-item";
-    empty.textContent = SYSTEM_MESSAGES.checkout.empty.noItems;
+    empty.className = "checkout-item empty-card";
+    setIconContent(empty, "bi-cart-x", SYSTEM_MESSAGES.checkout.empty.noItems);
     itemsList.appendChild(empty);
     return;
   }
@@ -297,7 +337,7 @@ function renderItems() {
       img.alt = getItemNome(item) || "Produto";
       imageBox.appendChild(img);
     } else {
-      imageBox.textContent = "IMAGEM";
+      setIconContent(imageBox, "bi-image", "Imagem indisponivel");
     }
 
     const details = document.createElement("div");
@@ -305,15 +345,11 @@ function renderItems() {
 
     const title = document.createElement("strong");
     title.textContent = getItemNome(item);
-    const modelo = document.createElement("span");
     const modeloTexto = getItemModelo(item);
-    modelo.textContent = modeloTexto ? `Modelo: ${modeloTexto}` : "Modelo: -";
-    const precoUnit = document.createElement("span");
-    precoUnit.textContent = `Preco p/unidade: ${formatCurrency(getItemPrecoUnitario(item))}`;
-    const precoTotal = document.createElement("span");
-    precoTotal.textContent = `Preco total: ${formatCurrency(getItemPrecoTotal(item))}`;
-    const quantidade = document.createElement("span");
-    quantidade.textContent = `Quantidade: ${item.quantidade ?? 0}`;
+    const modelo = createDetailLine("bi-cpu", modeloTexto ? `Modelo: ${modeloTexto}` : "Modelo: -");
+    const precoUnit = createDetailLine("bi-cash-coin", `Preco p/unidade: ${formatCurrency(getItemPrecoUnitario(item))}`);
+    const precoTotal = createDetailLine("bi-receipt", `Preco total: ${formatCurrency(getItemPrecoTotal(item))}`);
+    const quantidade = createDetailLine("bi-box-seam", `Quantidade: ${item.quantidade ?? 0}`);
 
     details.appendChild(title);
     details.appendChild(modelo);
@@ -406,11 +442,11 @@ function renderCartoesExtras() {
     const header = document.createElement("div");
     header.className = "card-extra-header";
     const title = document.createElement("strong");
-    title.textContent = `Cartao adicional ${index + 1}`;
+    setIconContent(title, "bi-credit-card", `Cartao adicional ${index + 1}`);
     const removeBtn = document.createElement("button");
     removeBtn.className = "btn small";
     removeBtn.type = "button";
-    removeBtn.textContent = "REMOVER";
+    setIconContent(removeBtn, "bi-trash3", "Remover");
     removeBtn.addEventListener("click", () => {
       cartoesExtras = cartoesExtras.filter((item) => item.rowId !== row.rowId);
       atualizarResumo();
@@ -422,6 +458,7 @@ function renderCartoesExtras() {
     rowFields.className = "field-row double";
 
     const select = document.createElement("select");
+    select.className = "form-select";
     const options = getCartoesDisponiveisParaLinha(row.rowId);
     options.forEach((cartao) => {
       const option = document.createElement("option");
@@ -441,6 +478,7 @@ function renderCartoesExtras() {
     });
 
     const input = document.createElement("input");
+    input.className = "form-control";
     input.type = "text";
     input.inputMode = "decimal";
     input.placeholder = "Valor";
@@ -508,7 +546,7 @@ function renderCupons() {
   if (!cuponsTroca.length) {
     const empty = document.createElement("div");
     empty.className = "hint";
-    empty.textContent = SYSTEM_MESSAGES.checkout.empty.noExchangeCoupons;
+    setIconContent(empty, "bi-ticket-perforated", SYSTEM_MESSAGES.checkout.empty.noExchangeCoupons);
     cupomTrocaList.appendChild(empty);
     return;
   }
@@ -519,6 +557,7 @@ function renderCupons() {
 
     const checkbox = document.createElement("input");
     checkbox.type = "checkbox";
+    checkbox.className = "form-check-input";
     checkbox.value = cupom.id;
     checkbox.checked = selectedTroca.has(cupom.id);
     checkbox.addEventListener("change", () => {
@@ -749,27 +788,26 @@ function calcularPagamentosCartao(totais) {
 }
 
 function renderTotais(totais, pagamentos) {
-  const linhas = [
-    `Total produtos: ${formatCurrency(totais.totalProdutos)}`,
-    `Frete: ${formatCurrency(totais.frete)}`,
-    "SEPARADOR",
-    `Total a ser pago: ${formatCurrency(totais.totalBruto)}`,
-    `Cupom promocional: -${formatCurrency(totais.promoValor)}`,
-    `Cupom troca: -${formatCurrency(totais.trocaAplicada)}`
-  ];
+  totalsBox.innerHTML = "";
+  totalsBox.appendChild(createTotalLine("bi-bag", "Total produtos", formatCurrency(totais.totalProdutos)));
+  totalsBox.appendChild(createTotalLine("bi-truck", "Frete", formatCurrency(totais.frete)));
+
+  const separator = document.createElement("div");
+  separator.className = "separator";
+  totalsBox.appendChild(separator);
+
+  totalsBox.appendChild(createTotalLine("bi-receipt", "Total a ser pago", formatCurrency(totais.totalBruto), true));
+  totalsBox.appendChild(createTotalLine("bi-ticket-perforated", "Cupom promocional", `-${formatCurrency(totais.promoValor)}`));
+  totalsBox.appendChild(createTotalLine("bi-arrow-repeat", "Cupom troca", `-${formatCurrency(totais.trocaAplicada)}`));
 
   if (totais.trocaSobra > 0) {
-    linhas.push(`Sobra cupons troca: ${formatCurrency(totais.trocaSobra)}`);
+    totalsBox.appendChild(createTotalLine("bi-wallet2", "Sobra cupons troca", formatCurrency(totais.trocaSobra)));
   }
 
   pagamentos.extras.forEach((item, index) => {
-    linhas.push(`Cartao adicional ${index + 1}: ${formatCurrency(item.valor)}`);
+    totalsBox.appendChild(createTotalLine("bi-credit-card", `Cartao adicional ${index + 1}`, formatCurrency(item.valor)));
   });
-  linhas.push(`Cartao principal: ${formatCurrency(pagamentos.principal)}`);
-
-  totalsBox.innerHTML = linhas
-    .map((linha) => (linha === "SEPARADOR" ? `<div class="separator"></div>` : `<div>${linha}</div>`))
-    .join("");
+  totalsBox.appendChild(createTotalLine("bi-credit-card-2-front", "Cartao principal", formatCurrency(pagamentos.principal), true));
 }
 
 function atualizarResumo() {
@@ -1069,9 +1107,9 @@ async function carregarMetadataCheckout() {
 
 carregarPerfil((perfil, error) => {
   if (perfil && perfil.nome) {
-    perfilButton.textContent = `PERFIL: ${perfil.nome.split(" ")[0].toUpperCase()}`;
+    setIconContent(perfilButton, "bi-person-circle", `Perfil: ${perfil.nome.split(" ")[0]}`);
   } else if (error) {
-    perfilButton.textContent = "PERFIL";
+    setIconContent(perfilButton, "bi-person-circle", "Perfil");
   }
 });
 

@@ -149,7 +149,7 @@ REGRAS DE ESCOPO:
 - Para "mais potente", priorize desempenho dentro das opcoes do catalogo. Para "custo-beneficio", explique o equilibrio entre preco e necessidade.
 
 FORMATO OBRIGATORIO:
-Retorne exclusivamente JSON valido, sem Markdown e sem texto fora do JSON.
+Retorne exclusivamente JSON valido, sem Markdown e sem texto fora do JSON. NUNCA ESQUEÇA DE FECHAR AS CHAVES!
 Use este formato:
 {
   "mensagem": "texto para o usuario. Inclua links de produtos quando recomendar.",
