@@ -2,7 +2,8 @@ import { carregarPerfil } from "../../controller/PerfilController.js";
 import { carregarProdutosPopulares } from "../../controller/HomeController.js";
 import { adicionarAoCarrinho } from "../../controller/CarrinhoController.js";
 import { SYSTEM_MESSAGES, getErrorMessage } from "../../model/SystemMessages.js";
-import { initCartNotice, refreshCartNotice, showCartPopup } from "./cart-notice.js";
+import { initCartNotice, refreshCartNotice } from "./cart-notice.js";
+import { showToast, toastSuccess, toastWarning } from "./toast.js";
 
 const perfilButton = document.getElementById("perfil-btn");
 const carrinhoButton = document.getElementById("btn-carrinho");
@@ -154,35 +155,13 @@ function renderProdutos(produtos) {
       try {
         const resp = await adicionarAoCarrinho(produto.codigoProduto);
         if (resp?.warning) {
-          showCartPopup({
-            title: SYSTEM_MESSAGES.general.warningTitle,
-            message: resp.warning,
-            actions: [
-              {
-                label: SYSTEM_MESSAGES.general.close,
-                onClick: () => {
-                  const overlay = document.getElementById("cart-popup");
-                  if (overlay) overlay.classList.add("hidden");
-                }
-              }
-            ]
-          });
+          toastWarning(resp.warning);
+        } else {
+          toastSuccess("Produto inserido no carrinho.");
         }
         await refreshCartNotice();
       } catch (error) {
-        showCartPopup({
-          title: SYSTEM_MESSAGES.general.errorTitle,
-          message: getErrorMessage(error, SYSTEM_MESSAGES.carrinho.errors.addFailed),
-          actions: [
-            {
-              label: SYSTEM_MESSAGES.general.close,
-              onClick: () => {
-                const overlay = document.getElementById("cart-popup");
-                if (overlay) overlay.classList.add("hidden");
-              }
-            }
-          ]
-        });
+        showToast({ message: getErrorMessage(error, SYSTEM_MESSAGES.carrinho.errors.addFailed), variant: "danger" });
       }
     });
 
@@ -211,6 +190,7 @@ async function carregarProdutos() {
     renderProdutos(produtos);
   } catch (error) {
     productsList.innerHTML = `<article class="product-card">${getErrorMessage(error, SYSTEM_MESSAGES.produto.errors.loadListFailed)}</article>`;
+    showToast({ message: getErrorMessage(error, SYSTEM_MESSAGES.produto.errors.loadListFailed), variant: "danger" });
   }
 }
 

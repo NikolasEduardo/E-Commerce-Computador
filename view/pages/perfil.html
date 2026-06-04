@@ -7,6 +7,7 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
   <link rel="stylesheet" href="../../styles/perfil.css">
+  <link rel="stylesheet" href="../../styles/mobile-menu.css">
   <link rel="stylesheet" href="../../styles/cart-notice.css">
 </head>
 <body>
@@ -15,11 +16,16 @@
       <a class="logo site-logo" href="home.html" aria-label="Ir para a pagina inicial">
         <img src="../../images/logo encurtado.png" alt="Logo E-Commerce Computador">
       </a>
-      <a class="btn nav-action" href="ia.html"><i class="bi bi-stars" aria-hidden="true"></i><span>IA</span></a>
-      <div class="header-spacer"></div>
-      <button id="perfil-btn" class="btn nav-action" type="button"><i class="bi bi-person-circle" aria-hidden="true"></i><span>Perfil</span></button>
-      <button id="btn-carrinho" class="btn nav-action" type="button"><i class="bi bi-cart3" aria-hidden="true"></i><span>Carrinho</span></button>
-      <button id="btn-logout" class="btn nav-action danger" type="button"><i class="bi bi-box-arrow-right" aria-hidden="true"></i><span>Sair</span></button>
+      <button class="mobile-menu-toggle" type="button" aria-label="Abrir menu" aria-expanded="false" aria-controls="perfil-mobile-menu" data-bs-toggle="collapse" data-bs-target="#perfil-mobile-menu">
+        <i class="bi bi-list" aria-hidden="true"></i>
+      </button>
+      <nav id="perfil-mobile-menu" class="client-nav-menu collapse" aria-label="Menu do cliente">
+        <a class="btn nav-action" href="ia.html"><i class="bi bi-stars" aria-hidden="true"></i><span>IA</span></a>
+        <div class="header-spacer"></div>
+        <button id="perfil-btn" class="btn nav-action" type="button"><i class="bi bi-person-circle" aria-hidden="true"></i><span>Perfil</span></button>
+        <button id="btn-carrinho" class="btn nav-action" type="button"><i class="bi bi-cart3" aria-hidden="true"></i><span>Carrinho</span></button>
+        <button id="btn-logout" class="btn nav-action danger" type="button"><i class="bi bi-box-arrow-right" aria-hidden="true"></i><span>Sair</span></button>
+      </nav>
     </header>
 
     <div class="perfil-body">
@@ -415,6 +421,19 @@
     </div>
   </div>
 
+  <div id="perfil-confirm-modal" class="perfil-modal hidden" role="dialog" aria-modal="true" aria-labelledby="perfil-confirm-title">
+    <div class="perfil-modal-content perfil-confirm-content">
+      <button id="btn-close-confirm-modal" class="modal-close" type="button" aria-label="Fechar"><i class="bi bi-x-lg" aria-hidden="true"></i></button>
+      <h2 id="perfil-confirm-title"><i class="bi bi-exclamation-triangle" aria-hidden="true"></i><span>Confirmar acao</span></h2>
+      <p id="perfil-confirm-message"></p>
+      <div class="actions">
+        <button id="btn-cancel-confirm" class="btn secondary-action" type="button"><i class="bi bi-x-circle" aria-hidden="true"></i><span>Cancelar</span></button>
+        <button id="btn-confirm-action" class="btn primary-action" type="button"><i class="bi bi-check2-circle" aria-hidden="true"></i><span>Confirmar</span></button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   <script type="module" src="../scripts/perfil.js"></script>
 </body>
 </html>

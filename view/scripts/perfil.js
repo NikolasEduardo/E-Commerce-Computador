@@ -27,6 +27,7 @@ import { signOut } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-aut
 import { auth } from "../../model/firebaseApp.js";
 import { SYSTEM_MESSAGES, getErrorMessage } from "../../model/SystemMessages.js";
 import { initCartNotice, refreshCartNotice } from "./cart-notice.js";
+import { showToast, toastSuccess } from "./toast.js";
 
 const messageBox = document.getElementById("perfil-message");
 const editButton = document.getElementById("btn-edit");
@@ -89,6 +90,12 @@ const passwordCurrentInput = document.getElementById("password-current");
 const passwordNewInput = document.getElementById("password-new");
 const passwordConfirmInput = document.getElementById("password-confirm");
 const passwordModalMessage = document.getElementById("password-modal-message");
+const confirmModal = document.getElementById("perfil-confirm-modal");
+const confirmTitle = document.getElementById("perfil-confirm-title");
+const confirmMessage = document.getElementById("perfil-confirm-message");
+const closeConfirmModalButton = document.getElementById("btn-close-confirm-modal");
+const cancelConfirmButton = document.getElementById("btn-cancel-confirm");
+const confirmActionButton = document.getElementById("btn-confirm-action");
 
 const editableFields = [
   "nome",
@@ -117,6 +124,8 @@ let isEditing = false;
 let enderecoEditId = null;
 let pedidosTrocaCache = [];
 let pedidoTrocaSelecionado = null;
+let confirmResolver = null;
+let confirmPreviousFocus = null;
 
 let metadataCache = {
   tipoTelefones: [],
@@ -139,13 +148,44 @@ function setIconContent(element, iconClass, label) {
 }
 
 function setMessage(text) {
-  messageBox.textContent = text;
-  messageBox.classList.toggle("is-visible", Boolean(text));
+  messageBox.textContent = "";
+  messageBox.classList.remove("is-visible");
+  if (text) {
+    showToast({ message: text });
+  }
 }
 
 function setPasswordModalMessage(text) {
-  passwordModalMessage.textContent = text || "";
-  passwordModalMessage.classList.toggle("is-visible", Boolean(text));
+  passwordModalMessage.textContent = "";
+  passwordModalMessage.classList.remove("is-visible");
+  if (text) {
+    showToast({ message: text });
+  }
+}
+
+function fecharConfirmModal(confirmed) {
+  confirmModal.classList.add("hidden");
+  const resolver = confirmResolver;
+  confirmResolver = null;
+  if (confirmPreviousFocus?.focus) {
+    confirmPreviousFocus.focus();
+  }
+  confirmPreviousFocus = null;
+  resolver?.(confirmed);
+}
+
+function abrirConfirmModal({ title, message, confirmLabel = "Confirmar" }) {
+  setIconContent(confirmTitle, "bi-exclamation-triangle", title);
+  confirmMessage.textContent = message;
+  setIconContent(cancelConfirmButton, "bi-x-circle", "Cancelar");
+  setIconContent(confirmActionButton, "bi-check2-circle", confirmLabel);
+  confirmPreviousFocus = document.activeElement;
+  confirmModal.classList.remove("hidden");
+  confirmActionButton.focus();
+
+  return new Promise((resolve) => {
+    confirmResolver = resolve;
+  });
 }
 
 function limparPasswordModal() {
@@ -563,6 +603,7 @@ function renderEnderecos(enderecos) {
           await definirEnderecoResidencial(endereco.id);
           await carregarEnderecosLista();
           carregarDados();
+          toastSuccess("Endereco residencial atualizado.");
         } catch (error) {
           setMessage(getErrorMessage(error, SYSTEM_MESSAGES.perfil.errors.addressPrincipalFailed));
         }
@@ -575,13 +616,18 @@ function renderEnderecos(enderecos) {
     setIconContent(btnExcluir, "bi-trash3", "Excluir");
     btnExcluir.disabled = endereco.isPrincipal?.();
     btnExcluir.addEventListener("click", async () => {
-      const confirmacao = window.confirm(SYSTEM_MESSAGES.perfil.confirmations.deleteAddress);
+      const confirmacao = await abrirConfirmModal({
+        title: "Excluir endereco",
+        message: SYSTEM_MESSAGES.perfil.confirmations.deleteAddress,
+        confirmLabel: "Excluir"
+      });
       if (!confirmacao) {
         return;
       }
       try {
         await excluirEnderecoUsuario(endereco.id);
         await carregarEnderecosLista();
+        toastSuccess("Endereco excluido com sucesso.");
       } catch (error) {
         setMessage(getErrorMessage(error, SYSTEM_MESSAGES.perfil.errors.addressDeleteFailed));
       }
@@ -1484,6 +1530,7 @@ function renderCartoes(cartoes) {
         try {
           await definirCartaoPreferencialUsuario(cartao.id);
           await carregarCartoesLista();
+          toastSuccess("Cartao preferencial atualizado.");
         } catch (error) {
           setMessage(getErrorMessage(error, SYSTEM_MESSAGES.perfil.errors.cardPreferentialFailed));
         }
@@ -1495,13 +1542,18 @@ function renderCartoes(cartoes) {
     btnExcluir.className = "btn small";
     setIconContent(btnExcluir, "bi-trash3", "Excluir");
     btnExcluir.addEventListener("click", async () => {
-      const confirmacao = window.confirm(SYSTEM_MESSAGES.perfil.confirmations.deleteCard);
+      const confirmacao = await abrirConfirmModal({
+        title: "Excluir cartao",
+        message: SYSTEM_MESSAGES.perfil.confirmations.deleteCard,
+        confirmLabel: "Excluir"
+      });
       if (!confirmacao) {
         return;
       }
       try {
         await inativarCartaoUsuario(cartao.id);
         await carregarCartoesLista();
+        toastSuccess("Cartao excluido com sucesso.");
       } catch (error) {
         setMessage(getErrorMessage(error, SYSTEM_MESSAGES.perfil.errors.cardDeleteFailed));
       }
@@ -1703,6 +1755,23 @@ passwordModal.addEventListener("click", (event) => {
   }
 });
 
+closeConfirmModalButton.addEventListener("click", () => fecharConfirmModal(false));
+cancelConfirmButton.addEventListener("click", () => fecharConfirmModal(false));
+confirmActionButton.addEventListener("click", () => fecharConfirmModal(true));
+
+confirmModal.addEventListener("click", (event) => {
+  if (event.target === confirmModal) {
+    fecharConfirmModal(false);
+  }
+});
+
+document.addEventListener("keydown", (event) => {
+  if (event.key !== "Escape" || confirmModal.classList.contains("hidden")) {
+    return;
+  }
+  fecharConfirmModal(false);
+});
+
 savePasswordButton.addEventListener("click", async () => {
   setPasswordModalMessage("");
   const validationError = validarPasswordModal();
@@ -1859,6 +1928,7 @@ btnSaveEndereco.addEventListener("click", async () => {
   };
 
   const principal = Boolean(getEnderecoValue("end-residencial"));
+  const editandoEndereco = Boolean(enderecoEditId);
 
   try {
     if (enderecoEditId) {
@@ -1876,6 +1946,7 @@ btnSaveEndereco.addEventListener("click", async () => {
     fecharEnderecoForm();
     await carregarEnderecosLista();
     carregarDados();
+    toastSuccess(editandoEndereco ? "Endereco atualizado com sucesso." : "Endereco cadastrado com sucesso.");
   } catch (err) {
     setMessage(getErrorMessage(err, SYSTEM_MESSAGES.perfil.errors.addressSaveFailed));
   } finally {
@@ -1918,6 +1989,7 @@ btnSaveCartao.addEventListener("click", async () => {
     fecharCartaoForm();
     carregarCartoesLista();
     carregarCuponsLista();
+    toastSuccess("Cartao cadastrado com sucesso.");
   } catch (err) {
     setMessage(getErrorMessage(err, SYSTEM_MESSAGES.perfil.errors.cardCreateFailed));
   } finally {

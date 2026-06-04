@@ -7,6 +7,7 @@ import {
   formatSystemMessage,
   getErrorMessage
 } from "../../model/SystemMessages.js";
+import { showToast } from "./toast.js";
 
 const emailInput = document.getElementById("email");
 const senhaInput = document.getElementById("senha");
@@ -31,14 +32,31 @@ const MAX_RESET_ATTEMPTS = 10;
 let currentResetEmail = "";
 let cooldownTimer = null;
 
+function setButtonContent(button, label) {
+  const icon = button.dataset.icon;
+  button.replaceChildren();
+  if (icon) {
+    const iconEl = document.createElement("i");
+    iconEl.className = `bi ${icon}`;
+    iconEl.setAttribute("aria-hidden", "true");
+    button.append(iconEl);
+  }
+  const labelEl = document.createElement("span");
+  labelEl.textContent = label;
+  button.append(labelEl);
+}
+
 function setLoading(isLoading) {
   loginButton.disabled = isLoading;
-  loginButton.textContent = isLoading ? SYSTEM_MESSAGES.general.accessing : "ACESSAR";
+  setButtonContent(loginButton, isLoading ? SYSTEM_MESSAGES.general.accessing : "ACESSAR");
 }
 
 function showMessage(text) {
-  messageBox.textContent = text;
-  messageBox.classList.toggle("is-visible", Boolean(text));
+  messageBox.textContent = "";
+  messageBox.classList.remove("is-visible");
+  if (text) {
+    showToast({ message: text });
+  }
 }
 
 function normalizeEmail(email) {
@@ -101,8 +119,11 @@ function formatWait(ms) {
 }
 
 function setForgotMessage(target, text) {
-  target.textContent = text || "";
-  target.classList.toggle("is-visible", Boolean(text));
+  target.textContent = "";
+  target.classList.remove("is-visible");
+  if (text) {
+    showToast({ message: text });
+  }
 }
 
 function clearCooldownTimer() {
@@ -121,7 +142,7 @@ function updateResendButton() {
   const cache = getResetCache(currentResetEmail);
   if (cache.attempts >= MAX_RESET_ATTEMPTS) {
     forgotPasswordNo.disabled = true;
-    forgotPasswordNo.textContent = "LIMITE ATINGIDO";
+    setButtonContent(forgotPasswordNo, "LIMITE ATINGIDO");
     setForgotMessage(forgotPasswordConfirmAlert, SYSTEM_MESSAGES.auth.password.resetLimitReached);
     return;
   }
@@ -129,13 +150,13 @@ function updateResendButton() {
   const remaining = getRemainingCooldownMs(currentResetEmail);
   if (remaining > 0) {
     forgotPasswordNo.disabled = true;
-    forgotPasswordNo.textContent = `REENVIAR EM ${formatWait(remaining)}`;
+    setButtonContent(forgotPasswordNo, `REENVIAR EM ${formatWait(remaining)}`);
     cooldownTimer = setInterval(updateResendButton, 1000);
     return;
   }
 
   forgotPasswordNo.disabled = false;
-  forgotPasswordNo.textContent = "NAO, REENVIAR";
+  setButtonContent(forgotPasswordNo, "NAO, REENVIAR");
 }
 
 function showForgotRequestStage(message = "") {
@@ -158,7 +179,7 @@ function openForgotPasswordModal() {
   currentResetEmail = "";
   forgotPasswordEmail.value = emailInput.value.trim();
   forgotPasswordSubmit.disabled = false;
-  forgotPasswordSubmit.textContent = "SOLICITAR ALTERACAO";
+  setButtonContent(forgotPasswordSubmit, "SOLICITAR ALTERACAO");
   showForgotRequestStage("");
   forgotPasswordModal.classList.remove("hidden");
   forgotPasswordEmail.focus();
@@ -168,9 +189,9 @@ function closeForgotPasswordModal() {
   clearCooldownTimer();
   forgotPasswordModal.classList.add("hidden");
   forgotPasswordSubmit.disabled = false;
-  forgotPasswordSubmit.textContent = "SOLICITAR ALTERACAO";
+  setButtonContent(forgotPasswordSubmit, "SOLICITAR ALTERACAO");
   forgotPasswordNo.disabled = false;
-  forgotPasswordNo.textContent = "NAO, REENVIAR";
+  setButtonContent(forgotPasswordNo, "NAO, REENVIAR");
 }
 
 async function sendResetEmail(email, successMessage) {
@@ -259,7 +280,7 @@ forgotPasswordCancel.addEventListener("click", closeForgotPasswordModal);
 
 forgotPasswordSubmit.addEventListener("click", async () => {
   forgotPasswordSubmit.disabled = true;
-  forgotPasswordSubmit.textContent = SYSTEM_MESSAGES.general.loading;
+  setButtonContent(forgotPasswordSubmit, SYSTEM_MESSAGES.general.loading);
   setForgotMessage(forgotPasswordMessage, "");
 
   try {
@@ -268,7 +289,7 @@ forgotPasswordSubmit.addEventListener("click", async () => {
     setForgotMessage(forgotPasswordMessage, getErrorMessage(error, SYSTEM_MESSAGES.auth.password.resetFailed));
   } finally {
     forgotPasswordSubmit.disabled = false;
-    forgotPasswordSubmit.textContent = "SOLICITAR ALTERACAO";
+    setButtonContent(forgotPasswordSubmit, "SOLICITAR ALTERACAO");
   }
 });
 
@@ -284,7 +305,7 @@ forgotPasswordNo.addEventListener("click", async () => {
   }
 
   forgotPasswordNo.disabled = true;
-  forgotPasswordNo.textContent = SYSTEM_MESSAGES.general.loading;
+  setButtonContent(forgotPasswordNo, SYSTEM_MESSAGES.general.loading);
   setForgotMessage(forgotPasswordConfirmAlert, "");
 
   try {

@@ -1464,6 +1464,7 @@ async function fetchPedidoDetalhe(accessToken, pedidoId) {
             status { nome }
             produto {
               id
+              codigoProduto
               nome
               modelo
               imagemProdutos_on_produto(where: { capa: { eq: true } }, limit: 1) { url }
@@ -1527,6 +1528,10 @@ async function fetchPedidosPorUsuario(accessToken, usuarioId) {
           itemPedidos_on_pedido {
             quantidade
             status { nome }
+            produto {
+              id
+              codigoProduto
+            }
             trocas_on_item { id descricao { id status } }
           }
           trocas_on_pedido { id descricao { id status } }

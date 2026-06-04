@@ -5,7 +5,8 @@ import {
   removerItem
 } from "../../controller/CarrinhoController.js";
 import { SYSTEM_MESSAGES, getErrorMessage } from "../../model/SystemMessages.js";
-import { initCartNotice, refreshCartNotice, showCartPopup } from "./cart-notice.js";
+import { initCartNotice, refreshCartNotice } from "./cart-notice.js";
+import { showToast, toastSuccess, toastWarning } from "./toast.js";
 
 const perfilButton = document.getElementById("perfil-btn");
 const carrinhoButton = document.getElementById("btn-carrinho");
@@ -85,19 +86,7 @@ function renderSummary(valorTotal) {
 }
 
 function showWarning(message) {
-  showCartPopup({
-    title: SYSTEM_MESSAGES.general.warningTitle,
-    message,
-    actions: [
-      {
-        label: SYSTEM_MESSAGES.general.close,
-        onClick: () => {
-          const overlay = document.getElementById("cart-popup");
-          if (overlay) overlay.classList.add("hidden");
-        }
-      }
-    ]
-  });
+  showToast({ message, variant: "warning" });
 }
 
 function renderItems(itens) {
@@ -149,8 +138,9 @@ function renderItems(itens) {
         await removerItem(item.codigoProduto);
         await carregarCarrinhoPagina();
         await refreshCartNotice();
+        toastSuccess("Item removido do carrinho.");
       } catch (error) {
-        showWarning(getErrorMessage(error, SYSTEM_MESSAGES.carrinho.errors.removeFailed));
+        showToast({ message: getErrorMessage(error, SYSTEM_MESSAGES.carrinho.errors.removeFailed), variant: "danger" });
       }
     });
 
@@ -163,12 +153,14 @@ function renderItems(itens) {
       try {
         const resp = await atualizarQuantidadeItem(item.codigoProduto, novaQtd);
         if (resp?.warning) {
-          showWarning(resp.warning);
+          toastWarning(resp.warning);
+        } else {
+          toastSuccess("Quantidade atualizada.");
         }
         await carregarCarrinhoPagina();
         await refreshCartNotice();
       } catch (error) {
-        showWarning(getErrorMessage(error, SYSTEM_MESSAGES.carrinho.errors.updateQuantityFailed));
+        showToast({ message: getErrorMessage(error, SYSTEM_MESSAGES.carrinho.errors.updateQuantityFailed), variant: "danger" });
       }
     });
 
@@ -190,12 +182,14 @@ function renderItems(itens) {
       try {
         const resp = await atualizarQuantidadeItem(item.codigoProduto, novaQtd);
         if (resp?.warning) {
-          showWarning(resp.warning);
+          toastWarning(resp.warning);
+        } else {
+          toastSuccess("Quantidade atualizada.");
         }
         await carregarCarrinhoPagina();
         await refreshCartNotice();
       } catch (error) {
-        showWarning(getErrorMessage(error, SYSTEM_MESSAGES.carrinho.errors.updateQuantityFailed));
+        showToast({ message: getErrorMessage(error, SYSTEM_MESSAGES.carrinho.errors.updateQuantityFailed), variant: "danger" });
         qty.value = item.quantidade ?? 0;
       }
     };
@@ -225,12 +219,14 @@ function renderItems(itens) {
       try {
         const resp = await atualizarQuantidadeItem(item.codigoProduto, novaQtd);
         if (resp?.warning) {
-          showWarning(resp.warning);
+          toastWarning(resp.warning);
+        } else {
+          toastSuccess("Quantidade atualizada.");
         }
         await carregarCarrinhoPagina();
         await refreshCartNotice();
       } catch (error) {
-        showWarning(getErrorMessage(error, SYSTEM_MESSAGES.carrinho.errors.updateQuantityFailed));
+        showToast({ message: getErrorMessage(error, SYSTEM_MESSAGES.carrinho.errors.updateQuantityFailed), variant: "danger" });
       }
     });
 
@@ -284,13 +280,13 @@ btnFinalizar.addEventListener("click", () => {
 window.addEventListener("cart-updated", () => {
   carregarCarrinhoPagina().catch((error) => {
     renderItems([]);
-    showWarning(getErrorMessage(error, SYSTEM_MESSAGES.carrinho.errors.loadFailed));
+    showToast({ message: getErrorMessage(error, SYSTEM_MESSAGES.carrinho.errors.loadFailed), variant: "danger" });
   });
 });
 
 carregarCarrinhoPagina().catch((error) => {
   renderItems([]);
-  showWarning(getErrorMessage(error, SYSTEM_MESSAGES.carrinho.errors.loadFailed));
+  showToast({ message: getErrorMessage(error, SYSTEM_MESSAGES.carrinho.errors.loadFailed), variant: "danger" });
 });
 
 initCartNotice();

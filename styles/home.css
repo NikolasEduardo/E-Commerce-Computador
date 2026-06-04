@@ -149,19 +149,19 @@ input {
 
 .categories {
   display: grid;
-  grid-template-columns: repeat(6, minmax(128px, 1fr));
-  gap: 12px;
-  margin: 0 0 32px;
+  grid-template-columns: repeat(6, minmax(112px, 1fr));
+  gap: 10px;
+  margin: 0 0 28px;
 }
 
 .cat-btn {
   display: flex;
-  min-height: 92px;
+  min-height: 70px;
   align-items: center;
   justify-content: center;
   flex-direction: column;
-  gap: 10px;
-  padding: 14px 10px;
+  gap: 7px;
+  padding: 10px 8px;
   border: 1px solid var(--border);
   color: var(--text);
   background: var(--surface);
@@ -170,7 +170,7 @@ input {
 }
 
 .cat-btn i {
-  font-size: 1.45rem;
+  font-size: 1.22rem;
   color: var(--orange);
 }
 
@@ -178,6 +178,7 @@ input {
   width: 100%;
   overflow-wrap: anywhere;
   text-align: center;
+  font-size: 0.9rem;
   font-weight: 700;
 }
 
@@ -360,7 +361,15 @@ input {
   }
 
   .cat-btn {
-    min-height: 74px;
+    min-height: 56px;
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: 8px;
+    padding: 8px 10px;
+  }
+
+  .cat-btn span {
+    text-align: left;
   }
 
   .product-actions {

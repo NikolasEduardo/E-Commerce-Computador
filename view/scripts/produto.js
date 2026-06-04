@@ -2,7 +2,8 @@ import { carregarPerfil } from "../../controller/PerfilController.js";
 import { carregarProdutoPublico } from "../../controller/HomeController.js";
 import { adicionarAoCarrinho } from "../../controller/CarrinhoController.js";
 import { SYSTEM_MESSAGES, getErrorMessage } from "../../model/SystemMessages.js";
-import { initCartNotice, refreshCartNotice, showCartPopup } from "./cart-notice.js";
+import { initCartNotice, refreshCartNotice } from "./cart-notice.js";
+import { showToast, toastSuccess, toastWarning } from "./toast.js";
 
 const perfilButton = document.getElementById("perfil-btn");
 const carrinhoButton = document.getElementById("btn-carrinho");
@@ -31,6 +32,9 @@ function setIconContent(element, iconClass, label) {
 function setMessage(text) {
   messageBox.textContent = text || "";
   messageBox.classList.toggle("hidden", !text);
+  if (text) {
+    showToast({ message: text });
+  }
 }
 
 function formatCurrency(value) {
@@ -178,35 +182,13 @@ addCarrinhoButton.addEventListener("click", async () => {
   try {
     const resp = await adicionarAoCarrinho(codigoProdutoAtual);
     if (resp?.warning) {
-      showCartPopup({
-        title: SYSTEM_MESSAGES.general.warningTitle,
-        message: resp.warning,
-        actions: [
-          {
-            label: SYSTEM_MESSAGES.general.close,
-            onClick: () => {
-              const overlay = document.getElementById("cart-popup");
-              if (overlay) overlay.classList.add("hidden");
-            }
-          }
-        ]
-      });
+      toastWarning(resp.warning);
+    } else {
+      toastSuccess("Produto inserido no carrinho.");
     }
     await refreshCartNotice();
   } catch (error) {
-    showCartPopup({
-      title: SYSTEM_MESSAGES.general.errorTitle,
-      message: getErrorMessage(error, SYSTEM_MESSAGES.carrinho.errors.addFailed),
-      actions: [
-        {
-          label: SYSTEM_MESSAGES.general.close,
-          onClick: () => {
-            const overlay = document.getElementById("cart-popup");
-            if (overlay) overlay.classList.add("hidden");
-          }
-        }
-      ]
-    });
+    showToast({ message: getErrorMessage(error, SYSTEM_MESSAGES.carrinho.errors.addFailed), variant: "danger" });
   }
 });
 

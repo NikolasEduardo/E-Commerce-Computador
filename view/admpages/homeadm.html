@@ -4,43 +4,47 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Admin</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
   <link rel="stylesheet" href="../../styles/admin.css">
 </head>
 <body>
   <div id="admin-access-overlay" class="admin-access-overlay">
     <div class="admin-access-card">
-      <div id="admin-access-title" class="admin-access-title">VERIFICANDO ACESSO</div>
+      <div id="admin-access-title" class="admin-access-title"><i class="bi bi-shield-lock" aria-hidden="true"></i><span>VERIFICANDO ACESSO</span></div>
       <div id="admin-access-message" class="admin-access-message">
         Aguarde enquanto verificamos a autenticacao e as permissoes administrativas.
       </div>
-      <button id="admin-access-action" type="button" class="hidden">IR PARA O INICIO</button>
+      <button id="admin-access-action" type="button" class="hidden"><i class="bi bi-house-door" aria-hidden="true"></i><span>IR PARA O INICIO</span></button>
     </div>
   </div>
 
   <div class="admin-shell">
     <header class="admin-header">
-      <div class="admin-logo">LOGO</div>
-      <button id="btn-logout" type="button">DESCONECTAR</button>
+      <a class="admin-logo site-logo" href="../index.html" aria-label="Voltar para login">
+        <img src="../../images/logo encurtado.png" alt="Logo E-Commerce Computador">
+      </a>
+      <button id="btn-logout" type="button"><i class="bi bi-box-arrow-right" aria-hidden="true"></i><span>DESCONECTAR</span></button>
     </header>
 
     <div class="admin-body">
       <aside class="admin-nav">
-        <button id="nav-produtos" class="nav-item">PRODUTOS</button>
-        <button id="nav-clientes" class="nav-item is-active">CLIENTES</button>
-        <button id="nav-pedidos" class="nav-item">PEDIDOS</button>
-        <button id="nav-trocas" class="nav-item">TROCAS</button>
-        <button id="nav-estoque" class="nav-item">ESTOQUE</button>
-        <button id="nav-metas" class="nav-item">METAS</button>
-        <button id="nav-graficos" class="nav-item">GRAFICO</button>
+        <button id="nav-produtos" class="nav-item"><i class="bi bi-pc-display" aria-hidden="true"></i><span>PRODUTOS</span></button>
+        <button id="nav-clientes" class="nav-item is-active"><i class="bi bi-people" aria-hidden="true"></i><span>CLIENTES</span></button>
+        <button id="nav-pedidos" class="nav-item"><i class="bi bi-receipt" aria-hidden="true"></i><span>PEDIDOS</span></button>
+        <button id="nav-trocas" class="nav-item"><i class="bi bi-arrow-left-right" aria-hidden="true"></i><span>TROCAS</span></button>
+        <button id="nav-estoque" class="nav-item"><i class="bi bi-box-seam" aria-hidden="true"></i><span>ESTOQUE</span></button>
+        <button id="nav-metas" class="nav-item"><i class="bi bi-bullseye" aria-hidden="true"></i><span>METAS</span></button>
+        <button id="nav-graficos" class="nav-item"><i class="bi bi-bar-chart-line" aria-hidden="true"></i><span>GRAFICO</span></button>
       </aside>
 
       <main class="admin-content">
         <section id="pedidos-section" class="admin-section hidden">
           <section class="panel">
             <div class="panel-header">
-              <div class="tab">PESQUISA</div>
-              <div class="tab">FILTRAR POR</div>
-              <div class="tab">CLASSIFICAR POR</div>
+              <div class="tab"><i class="bi bi-search" aria-hidden="true"></i><span>PESQUISA</span></div>
+              <div class="tab"><i class="bi bi-funnel" aria-hidden="true"></i><span>FILTRAR POR</span></div>
+              <div class="tab"><i class="bi bi-sort-down" aria-hidden="true"></i><span>CLASSIFICAR POR</span></div>
             </div>
 
             <div class="panel-controls">
@@ -99,7 +103,7 @@
             </div>
 
             <div class="actions">
-              <button id="pedido-voltar" type="button">VOLTAR</button>
+              <button id="pedido-voltar" type="button"><i class="bi bi-arrow-left-circle" aria-hidden="true"></i><span>VOLTAR</span></button>
             </div>
           </div>
         </section>
@@ -121,8 +125,8 @@
             <div id="troca-itens-list" class="troca-itens-list"></div>
 
             <div class="actions">
-              <button id="troca-voltar" type="button">VOLTAR</button>
-              <button id="troca-finalizar" type="button">FINALIZAR AVALIACAO</button>
+              <button id="troca-voltar" type="button"><i class="bi bi-arrow-left-circle" aria-hidden="true"></i><span>VOLTAR</span></button>
+              <button id="troca-finalizar" type="button"><i class="bi bi-check2-circle" aria-hidden="true"></i><span>FINALIZAR AVALIACAO</span></button>
             </div>
           </div>
         </section>
@@ -130,9 +134,9 @@
         <section id="produtos-section" class="admin-section hidden">
           <section class="panel">
             <div class="panel-header">
-              <div class="tab">PESQUISA</div>
-              <div class="tab">FILTRAR POR</div>
-              <div class="tab">CLASSIFICAR POR</div>
+              <div class="tab"><i class="bi bi-search" aria-hidden="true"></i><span>PESQUISA</span></div>
+              <div class="tab"><i class="bi bi-funnel" aria-hidden="true"></i><span>FILTRAR POR</span></div>
+              <div class="tab"><i class="bi bi-sort-down" aria-hidden="true"></i><span>CLASSIFICAR POR</span></div>
             </div>
 
             <div class="panel-controls">
@@ -178,7 +182,7 @@
           </section>
 
           <div class="panel product-toolbar">
-            <button id="btn-add-produto" type="button">ADICIONAR PRODUTO</button>
+            <button id="btn-add-produto" type="button"><i class="bi bi-plus-circle" aria-hidden="true"></i><span>ADICIONAR PRODUTO</span></button>
           </div>
 
           <section id="produtosList" class="produtos-list"></section>
@@ -245,7 +249,7 @@
               </div>
               <div class="field">
                 <label>&nbsp;</label>
-                <button id="btn-add-categoria" type="button">ADICIONAR</button>
+                <button id="btn-add-categoria" type="button"><i class="bi bi-plus-circle" aria-hidden="true"></i><span>ADICIONAR</span></button>
               </div>
             </div>
 
@@ -261,24 +265,24 @@
               <textarea id="produto-especificacoes" rows="3" placeholder="ESPECIFICACOES TECNICAS"></textarea>
             </div>
 
-            <div class="field">
+            <div id="drop-area" class="field drop-area">
               <label for="produto-imagens">IMAGENS (SELECIONE 1 CAPA)</label>
-              <input type="file" id="produto-imagens" multiple accept="image/*">
+              <input type="file" id="produto-imagens" multiple accept=".png,.jpg,.jpeg,.webp,image/png,image/jpeg,image/webp">
             </div>
 
             <div id="imagens-preview" class="imagens-preview"></div>
 
             <div class="actions">
-              <button id="btn-cancel-produto" type="button">CANCELAR</button>
-              <button id="btn-save-produto" type="button">SALVAR</button>
+              <button id="btn-cancel-produto" type="button"><i class="bi bi-x-circle" aria-hidden="true"></i><span>CANCELAR</span></button>
+              <button id="btn-save-produto" type="button"><i class="bi bi-check2-circle" aria-hidden="true"></i><span>SALVAR</span></button>
             </div>
           </div>
         </section>
 
         <section id="estoque-section" class="admin-section hidden">
           <div class="panel estoque-toolbar">
-            <button id="btn-add-fornecedor" type="button">ADICIONAR FORNECEDOR</button>
-            <button id="btn-add-entrada" type="button">DAR ENTRADA DE ESTOQUE</button>
+            <button id="btn-add-fornecedor" type="button"><i class="bi bi-building-add" aria-hidden="true"></i><span>ADICIONAR FORNECEDOR</span></button>
+            <button id="btn-add-entrada" type="button"><i class="bi bi-box-arrow-in-down" aria-hidden="true"></i><span>DAR ENTRADA DE ESTOQUE</span></button>
             <div id="estoque-message" class="form-message hidden"></div>
           </div>
 
@@ -299,8 +303,8 @@
               </div>
             </div>
             <div class="actions">
-              <button id="btn-cancel-fornecedor" type="button">CANCELAR</button>
-              <button id="btn-save-fornecedor" type="button">SALVAR</button>
+              <button id="btn-cancel-fornecedor" type="button"><i class="bi bi-x-circle" aria-hidden="true"></i><span>CANCELAR</span></button>
+              <button id="btn-save-fornecedor" type="button"><i class="bi bi-check2-circle" aria-hidden="true"></i><span>SALVAR</span></button>
             </div>
           </div>
 
@@ -338,8 +342,8 @@
               </div>
             </div>
             <div class="actions">
-              <button id="btn-cancel-entrada" type="button">CANCELAR</button>
-              <button id="btn-save-entrada" type="button">SALVAR</button>
+              <button id="btn-cancel-entrada" type="button"><i class="bi bi-x-circle" aria-hidden="true"></i><span>CANCELAR</span></button>
+              <button id="btn-save-entrada" type="button"><i class="bi bi-check2-circle" aria-hidden="true"></i><span>SALVAR</span></button>
             </div>
           </div>
 
@@ -366,7 +370,7 @@
           <section class="panel">
             <div id="metasList" class="metas-list"></div>
             <div class="actions">
-              <button id="btn-save-metas" type="button">SALVAR METAS</button>
+              <button id="btn-save-metas" type="button"><i class="bi bi-check2-circle" aria-hidden="true"></i><span>SALVAR METAS</span></button>
             </div>
           </section>
         </section>
@@ -433,7 +437,7 @@
 
               <div class="field">
                 <label>&nbsp;</label>
-                <button id="btn-grafico-carregar" type="button">CARREGAR</button>
+                <button id="btn-grafico-carregar" type="button"><i class="bi bi-arrow-clockwise" aria-hidden="true"></i><span>CARREGAR</span></button>
               </div>
             </div>
           </section>
@@ -447,9 +451,9 @@
         <section id="clientes-section" class="admin-section">
           <section class="panel">
             <div class="panel-header">
-              <div class="tab">PESQUISA</div>
-              <div class="tab">FILTRAR POR</div>
-              <div class="tab">CLASSIFICAR POR</div>
+              <div class="tab"><i class="bi bi-search" aria-hidden="true"></i><span>PESQUISA</span></div>
+              <div class="tab"><i class="bi bi-funnel" aria-hidden="true"></i><span>FILTRAR POR</span></div>
+              <div class="tab"><i class="bi bi-sort-down" aria-hidden="true"></i><span>CLASSIFICAR POR</span></div>
             </div>
 
             <div class="panel-controls">
@@ -496,8 +500,8 @@
       <h3 id="pedido-confirm-title">CONFIRMAR ACAO</h3>
       <p id="pedido-confirm-text"></p>
       <div class="modal-actions">
-        <button id="pedido-confirm-cancel" type="button">CANCELAR</button>
-        <button id="pedido-confirm-ok" type="button">CONFIRMAR</button>
+        <button id="pedido-confirm-cancel" type="button"><i class="bi bi-x-circle" aria-hidden="true"></i><span>CANCELAR</span></button>
+        <button id="pedido-confirm-ok" type="button"><i class="bi bi-check2-circle" aria-hidden="true"></i><span>CONFIRMAR</span></button>
       </div>
     </div>
   </div>
@@ -511,8 +515,8 @@
       <label for="status-modal-descricao">DESCRICAO DA JUSTIFICATIVA</label>
       <textarea id="status-modal-descricao" rows="3" placeholder="DESCRICAO"></textarea>
       <div class="modal-actions">
-        <button id="status-modal-cancel" type="button">CANCELAR</button>
-        <button id="status-modal-confirm" type="button">CONFIRMAR</button>
+        <button id="status-modal-cancel" type="button"><i class="bi bi-x-circle" aria-hidden="true"></i><span>CANCELAR</span></button>
+        <button id="status-modal-confirm" type="button"><i class="bi bi-check2-circle" aria-hidden="true"></i><span>CONFIRMAR</span></button>
       </div>
     </div>
   </div>
@@ -546,8 +550,8 @@
       </div>
 
       <div class="modal-actions">
-        <button id="troca-avaliacao-cancel" type="button">CANCELAR</button>
-        <button id="troca-avaliacao-confirm" type="button">CONFIRMAR</button>
+        <button id="troca-avaliacao-cancel" type="button"><i class="bi bi-x-circle" aria-hidden="true"></i><span>CANCELAR</span></button>
+        <button id="troca-avaliacao-confirm" type="button"><i class="bi bi-check2-circle" aria-hidden="true"></i><span>CONFIRMAR</span></button>
       </div>
     </div>
   </div>

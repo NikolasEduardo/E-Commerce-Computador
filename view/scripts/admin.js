@@ -37,6 +37,7 @@ import {
 } from "../../controller/AdminMetasController.js";
 import { uploadImagemCloudinary } from "../../controller/CloudinaryController.js";
 import { SYSTEM_MESSAGES, getErrorMessage } from "../../model/SystemMessages.js";
+import { showToast, toastSuccess } from "./toast.js";
 
 const searchInput = document.getElementById("searchInput");
 const clientesList = document.getElementById("clientesList");
@@ -85,6 +86,7 @@ const btnAddCategoria = document.getElementById("btn-add-categoria");
 const categoriasSelecionadasEl = document.getElementById("categorias-selecionadas");
 const produtoDescricaoInput = document.getElementById("produto-descricao");
 const produtoEspecificacoesInput = document.getElementById("produto-especificacoes");
+const dropArea = document.getElementById("drop-area");
 const produtoImagensInput = document.getElementById("produto-imagens");
 const imagensPreview = document.getElementById("imagens-preview");
 const produtoFormMessage = document.getElementById("produto-form-message");
@@ -163,6 +165,12 @@ const sortButtons = Array.from(document.querySelectorAll(".client-sort-button"))
 const prodSortButtons = Array.from(document.querySelectorAll(".prod-sort-button"));
 const pedidoStatusCheckboxes = Array.from(document.querySelectorAll(".pedido-filter-status"));
 const pedidoSortButtons = Array.from(document.querySelectorAll(".pedido-sort-button"));
+
+const TIPOS_IMAGEM_PERMITIDOS = [
+  "image/png",
+  "image/jpeg",
+  "image/webp"
+];
 
 const clientesState = {
   search: "",
@@ -243,6 +251,10 @@ function showAccessOverlay(title, message, actionLabel = "", actionHandler = nul
       accessAction.onclick = null;
       accessAction.classList.add("hidden");
     }
+  }
+
+  if (title !== "VERIFICANDO ACESSO" && message) {
+    showToast({ message, variant: title.includes("NEGADO") || title.includes("BLOQUEADO") ? "danger" : undefined });
   }
 }
 
@@ -432,16 +444,29 @@ function setProdutoFormMessage(text) {
   if (!produtoFormMessage) {
     return;
   }
-  produtoFormMessage.textContent = text || "";
-  produtoFormMessage.classList.toggle("hidden", !text);
+  produtoFormMessage.textContent = "";
+  produtoFormMessage.classList.add("hidden");
+  if (text) {
+    showToast({ message: text });
+  }
 }
 
 function setEstoqueMessage(text) {
   if (!estoqueMessage) {
     return;
   }
-  estoqueMessage.textContent = text || "";
-  estoqueMessage.classList.toggle("hidden", !text);
+  estoqueMessage.textContent = "";
+  estoqueMessage.classList.add("hidden");
+  if (text) {
+    showToast({ message: text });
+  }
+}
+
+function renderErrorState(container, message) {
+  if (container) {
+    container.innerHTML = `<div class="empty-state">${message}</div>`;
+  }
+  showToast({ message, variant: "danger" });
 }
 
 function updateSortUI() {
@@ -541,8 +566,9 @@ function renderClientes(clientes) {
       try {
         await atualizarStatus(cliente.id, nextStatus, justificativa);
         await carregarClientes();
+        toastSuccess(`Cliente ${nextStatus === "ATIVO" ? "ativado" : "inativado"} com sucesso.`);
       } catch (error) {
-        clientesList.innerHTML = `<div class="empty-state">${getErrorMessage(error, SYSTEM_MESSAGES.admin.errors.updateStatusFailed)}</div>`;
+        renderErrorState(clientesList, getErrorMessage(error, SYSTEM_MESSAGES.admin.errors.updateStatusFailed));
       } finally {
         toggleButton.disabled = false;
       }
@@ -595,7 +621,7 @@ async function abrirPedidoDetalhe(pedidoId) {
     renderPedidoDetalhe(pedido);
     setAdminSection("pedido-detalhe");
   } catch (error) {
-    pedidosList.innerHTML = `<div class="empty-state">${getErrorMessage(error, SYSTEM_MESSAGES.admin.errors.loadPedidoFailed)}</div>`;
+    renderErrorState(pedidosList, getErrorMessage(error, SYSTEM_MESSAGES.admin.errors.loadPedidoFailed));
   }
 }
 
@@ -668,8 +694,9 @@ function renderPedidos(pedidos) {
         try {
           await atualizarStatusPedidoAdmin(pedido.id, "EM TRANSPORTE");
           await carregarPedidos();
+          toastSuccess("Pedido movido para transporte.");
         } catch (error) {
-          pedidosList.innerHTML = `<div class="empty-state">${getErrorMessage(error, SYSTEM_MESSAGES.admin.errors.updateStatusFailed)}</div>`;
+          renderErrorState(pedidosList, getErrorMessage(error, SYSTEM_MESSAGES.admin.errors.updateStatusFailed));
         }
       });
       actions.appendChild(btn);
@@ -685,8 +712,9 @@ function renderPedidos(pedidos) {
         try {
           await atualizarStatusPedidoAdmin(pedido.id, "ENTREGUE");
           await carregarPedidos();
+          toastSuccess("Entrega confirmada com sucesso.");
         } catch (error) {
-          pedidosList.innerHTML = `<div class="empty-state">${getErrorMessage(error, SYSTEM_MESSAGES.admin.errors.updateStatusFailed)}</div>`;
+          renderErrorState(pedidosList, getErrorMessage(error, SYSTEM_MESSAGES.admin.errors.updateStatusFailed));
         }
       });
       actions.appendChild(btn);
@@ -1074,8 +1102,9 @@ async function confirmarAvaliacaoTroca() {
   const normalized = normalizeTexto(classificacao);
 
   if (!classificacao || !descricaoTecnica || retornaEstoque === null) {
-    trocaAvaliacaoAlerta.textContent = "Informe a classificacao, a descricao e a decisao de estoque.";
-    trocaAvaliacaoAlerta.classList.remove("hidden");
+    trocaAvaliacaoAlerta.textContent = "";
+    trocaAvaliacaoAlerta.classList.add("hidden");
+    showToast({ message: "Informe a classificacao, a descricao e a decisao de estoque.", variant: "warning" });
     return;
   }
 
@@ -1102,12 +1131,14 @@ async function confirmarAvaliacaoTroca() {
     });
     fecharModalAvaliacaoTroca();
     await abrirTrocaDetalhe(trocaDetalheAtual.id);
+    toastSuccess("Produto devolvido avaliado com sucesso.");
   } catch (error) {
-    trocaAvaliacaoAlerta.textContent = getErrorMessage(
-      error,
-      SYSTEM_MESSAGES.admin.errors.exchangeEvaluateFailed
-    );
-    trocaAvaliacaoAlerta.classList.remove("hidden");
+    trocaAvaliacaoAlerta.textContent = "";
+    trocaAvaliacaoAlerta.classList.add("hidden");
+    showToast({
+      message: getErrorMessage(error, SYSTEM_MESSAGES.admin.errors.exchangeEvaluateFailed),
+      variant: "danger"
+    });
     trocaAvaliacaoModal.classList.remove("hidden");
   } finally {
     trocaAvaliacaoConfirm.disabled = false;
@@ -1225,6 +1256,9 @@ function setGraficoMessage(text = "") {
   }
   graficoMessage.textContent = text;
   graficoMessage.classList.toggle("hidden", !text);
+  if (text && text !== SYSTEM_MESSAGES.admin.empty.noGraficos) {
+    showToast({ message: text });
+  }
 }
 
 function initGraficoDefaults() {
@@ -1499,8 +1533,9 @@ function renderProdutos(produtos) {
           descricao: justificativa.descricao
         });
         await carregarProdutos();
+        toastSuccess(`Produto ${proximoStatus === "ATIVO" ? "ativado" : "inativado"} com sucesso.`);
       } catch (error) {
-        produtosList.innerHTML = `<div class="empty-state">${getErrorMessage(error, SYSTEM_MESSAGES.produto.errors.statusUpdateFailed)}</div>`;
+        renderErrorState(produtosList, getErrorMessage(error, SYSTEM_MESSAGES.produto.errors.statusUpdateFailed));
       } finally {
         btnToggle.disabled = false;
       }
@@ -1520,7 +1555,7 @@ function scheduleProdutosSearch() {
   clearTimeout(produtosDebounce);
   produtosDebounce = setTimeout(() => {
     carregarProdutos().catch((error) => {
-      produtosList.innerHTML = `<div class="empty-state">${getErrorMessage(error, SYSTEM_MESSAGES.produto.errors.loadListFailed)}</div>`;
+      renderErrorState(produtosList, getErrorMessage(error, SYSTEM_MESSAGES.produto.errors.loadListFailed));
     });
   }, 300);
 }
@@ -1541,6 +1576,92 @@ function renderCategoriasSelecionadas() {
     chip.appendChild(btn);
     categoriasSelecionadasEl.appendChild(chip);
   });
+}
+
+function validarImagens(files) {
+
+  const arquivos = Array.from(files || []);
+
+  if (!arquivos.length) {
+    return [];
+  }
+
+  const invalidos = arquivos.filter(file =>
+    !TIPOS_IMAGEM_PERMITIDOS.includes(file.type)
+  );
+
+  if (invalidos.length > 0) {
+
+    showToast(
+      "Apenas imagens PNG, JPEG e WEBP são permitidas.",
+      "error"
+    );
+
+    return null;
+  }
+
+  return arquivos;
+}
+
+async function processarImagens(files) {
+
+  const arquivosValidos = validarImagens(files);
+
+  if (!arquivosValidos) {
+    return;
+  }
+
+  uploadsPendentes += arquivosValidos.length;
+
+  setProdutoFormMessage("");
+
+  for (const file of arquivosValidos) {
+
+    try {
+
+      const data = await uploadImagemCloudinary(file, {
+        folder: "produtos"
+      });
+
+      const url = data?.secure_url || data?.url;
+
+      if (!url) {
+        throw new Error(
+          SYSTEM_MESSAGES.produto.errors.uploadMissingUrl
+        );
+      }
+
+      imagensSelecionadas.push({
+        url,
+        capa: imagensSelecionadas.length === 0
+      });
+
+    } catch (error) {
+
+      setProdutoFormMessage(
+        getErrorMessage(
+          error,
+          SYSTEM_MESSAGES.produto.errors.uploadFailed
+        )
+      );
+
+    } finally {
+
+      uploadsPendentes = Math.max(
+        0,
+        uploadsPendentes - 1
+      );
+
+      if (
+        !imagensSelecionadas.some((img) => img.capa)
+        && imagensSelecionadas.length
+      ) {
+        imagensSelecionadas[0].capa = true;
+      }
+
+      renderImagensPreview();
+    }
+  }
 }
 
 function renderImagensPreview() {
@@ -1888,8 +2009,11 @@ function setMetasMessage(text = "") {
   if (!metasMessage) {
     return;
   }
-  metasMessage.textContent = text;
-  metasMessage.classList.toggle("hidden", !text);
+  metasMessage.textContent = "";
+  metasMessage.classList.add("hidden");
+  if (text) {
+    showToast({ message: text });
+  }
 }
 
 function formatMetaPercentual(valor) {
@@ -1963,7 +2087,7 @@ function scheduleSearch() {
   clearTimeout(debounceTimer);
   debounceTimer = setTimeout(() => {
     carregarClientes().catch((error) => {
-      clientesList.innerHTML = `<div class="empty-state">${getErrorMessage(error, SYSTEM_MESSAGES.admin.errors.loadClientesFailed)}</div>`;
+      renderErrorState(clientesList, getErrorMessage(error, SYSTEM_MESSAGES.admin.errors.loadClientesFailed));
     });
   }, 300);
 }
@@ -1972,7 +2096,7 @@ function schedulePedidosSearch() {
   clearTimeout(pedidosDebounce);
   pedidosDebounce = setTimeout(() => {
     carregarPedidos().catch((error) => {
-      pedidosList.innerHTML = `<div class="empty-state">${getErrorMessage(error, SYSTEM_MESSAGES.admin.errors.loadPedidosFailed)}</div>`;
+      renderErrorState(pedidosList, getErrorMessage(error, SYSTEM_MESSAGES.admin.errors.loadPedidosFailed));
     });
   }, 300);
 }
@@ -2166,36 +2290,42 @@ btnAddCategoria.addEventListener("click", () => {
   renderCategoriasSelecionadas();
 });
 
-produtoImagensInput.addEventListener("change", async (event) => {
-  const files = Array.from(event.target.files || []);
+dropArea.addEventListener("dragover", (event) => {
+
+  event.preventDefault();
+
+  dropArea.classList.add("dragging");
+});
+
+dropArea.addEventListener("dragleave", () => {
+
+  dropArea.classList.remove("dragging");
+});
+
+dropArea.addEventListener("drop", async (event) => {
+
+  event.preventDefault();
+
+  dropArea.classList.remove("dragging");
+
+  const files = event.dataTransfer.files;
+
   if (!files.length) {
+
+    showToast(
+      "Nenhuma imagem encontrada.",
+      "error"
+    );
+
     return;
   }
 
-  uploadsPendentes += files.length;
-  setProdutoFormMessage("");
+  await processarImagens(files);
+});
 
-  for (const file of files) {
-    try {
-      const data = await uploadImagemCloudinary(file, { folder: "produtos" });
-      const url = data?.secure_url || data?.url;
-      if (!url) {
-        throw new Error(SYSTEM_MESSAGES.produto.errors.uploadMissingUrl);
-      }
-      imagensSelecionadas.push({
-        url,
-        capa: imagensSelecionadas.length === 0
-      });
-    } catch (error) {
-      setProdutoFormMessage(getErrorMessage(error, SYSTEM_MESSAGES.produto.errors.uploadFailed));
-    } finally {
-      uploadsPendentes = Math.max(0, uploadsPendentes - 1);
-      if (!imagensSelecionadas.some((img) => img.capa) && imagensSelecionadas.length) {
-        imagensSelecionadas[0].capa = true;
-      }
-      renderImagensPreview();
-    }
-  }
+produtoImagensInput.addEventListener("change", async (event) => {
+
+  await processarImagens(event.target.files);
 
   produtoImagensInput.value = "";
 });
@@ -2212,6 +2342,7 @@ btnSaveProduto.addEventListener("click", async () => {
   btnSaveProduto.textContent = "SALVANDO...";
 
   const marcaNova = produtoMarcaNovaInput.value.trim();
+  const editandoProduto = Boolean(produtoEditId);
   const produtoPayload = {
     nome: produtoNomeInput.value.trim(),
     modelo: produtoModeloInput.value.trim(),
@@ -2248,6 +2379,7 @@ btnSaveProduto.addEventListener("click", async () => {
     await carregarProdutosMetadataAdmin();
     limparProdutoForm();
     setAdminSection("produtos");
+    toastSuccess(editandoProduto ? "Produto atualizado com sucesso." : "Produto cadastrado com sucesso.");
   } catch (err) {
     setProdutoFormMessage(getErrorMessage(err, SYSTEM_MESSAGES.produto.errors.saveFailed));
   } finally {
@@ -2265,6 +2397,7 @@ statusModalConfirm.addEventListener("click", () => {
   const descricao = statusModalDescricao.value.trim();
   if (!titulo || !descricao) {
     statusModalContext.textContent = `${statusModalContextBase} (${SYSTEM_MESSAGES.produto.validation.justificationRequired})`;
+    showToast({ message: SYSTEM_MESSAGES.produto.validation.justificationRequired, variant: "warning" });
     return;
   }
   fecharModalStatus({ titulo, descricao });
@@ -2276,7 +2409,7 @@ navProdutos.addEventListener("click", async () => {
     await ensureProdutosMetadata();
     await carregarProdutos();
   } catch (error) {
-    produtosList.innerHTML = `<div class="empty-state">${getErrorMessage(error, SYSTEM_MESSAGES.produto.errors.loadListFailed)}</div>`;
+    renderErrorState(produtosList, getErrorMessage(error, SYSTEM_MESSAGES.produto.errors.loadListFailed));
   }
 });
 
@@ -2290,7 +2423,7 @@ navPedidos.addEventListener("click", async () => {
   try {
     await carregarPedidos();
   } catch (error) {
-    pedidosList.innerHTML = `<div class="empty-state">${getErrorMessage(error, SYSTEM_MESSAGES.admin.errors.loadPedidosFailed)}</div>`;
+    renderErrorState(pedidosList, getErrorMessage(error, SYSTEM_MESSAGES.admin.errors.loadPedidosFailed));
   }
 });
 
@@ -2299,7 +2432,7 @@ navTrocas.addEventListener("click", async () => {
   try {
     await carregarTrocas();
   } catch (error) {
-    trocasList.innerHTML = `<div class="empty-state">${getErrorMessage(error, SYSTEM_MESSAGES.admin.errors.loadTrocasFailed)}</div>`;
+    renderErrorState(trocasList, getErrorMessage(error, SYSTEM_MESSAGES.admin.errors.loadTrocasFailed));
   }
 });
 
@@ -2378,7 +2511,7 @@ pedidoVoltar.addEventListener("click", async () => {
   try {
     await carregarPedidos();
   } catch (error) {
-    pedidosList.innerHTML = `<div class="empty-state">${getErrorMessage(error, SYSTEM_MESSAGES.admin.errors.loadPedidosFailed)}</div>`;
+    renderErrorState(pedidosList, getErrorMessage(error, SYSTEM_MESSAGES.admin.errors.loadPedidosFailed));
   }
 });
 
@@ -2387,7 +2520,7 @@ trocaVoltar.addEventListener("click", async () => {
   try {
     await carregarTrocas();
   } catch (error) {
-    trocasList.innerHTML = `<div class="empty-state">${getErrorMessage(error, SYSTEM_MESSAGES.admin.errors.loadTrocasFailed)}</div>`;
+    renderErrorState(trocasList, getErrorMessage(error, SYSTEM_MESSAGES.admin.errors.loadTrocasFailed));
   }
 });
 
@@ -2421,8 +2554,12 @@ trocaFinalizar.addEventListener("click", async () => {
   try {
     await finalizarTroca(trocaDetalheAtual.id);
     await abrirTrocaDetalhe(trocaDetalheAtual.id);
+    toastSuccess("Avaliacao da troca finalizada com sucesso.");
   } catch (error) {
-    trocaDetalheMeta.innerHTML += `<div>${getErrorMessage(error, SYSTEM_MESSAGES.admin.errors.exchangeFinishFailed)}</div>`;
+    showToast({
+      message: getErrorMessage(error, SYSTEM_MESSAGES.admin.errors.exchangeFinishFailed),
+      variant: "danger"
+    });
     const trocas = trocaDetalheAtual?.getTrocas?.() || [];
     trocaFinalizar.disabled = !(trocas.length > 0 && trocas.every((troca) => troca.classificacaoTecnica));
     trocaFinalizar.textContent = "FINALIZAR AVALIACAO";
@@ -2455,6 +2592,7 @@ btnSaveFornecedor.addEventListener("click", async () => {
     await salvarFornecedor({ nome, emailContato, telefoneContato });
     await carregarEstoqueDados();
     fecharFornecedorForm();
+    toastSuccess("Fornecedor cadastrado com sucesso.");
   } catch (error) {
     setEstoqueMessage(getErrorMessage(error, SYSTEM_MESSAGES.admin.errors.fornecedorCreateFailed));
   } finally {
@@ -2498,6 +2636,7 @@ btnSaveEntrada.addEventListener("click", async () => {
     });
     await carregarEstoqueDados();
     fecharEntradaForm();
+    toastSuccess("Entrada de estoque registrada com sucesso.");
   } catch (error) {
     setEstoqueMessage(getErrorMessage(error, SYSTEM_MESSAGES.admin.errors.entradaCreateFailed));
   } finally {

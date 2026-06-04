@@ -3,6 +3,7 @@ import {
   estenderCarrinhoTempo,
   cancelarCarrinhoCompra
 } from "../../controller/CarrinhoController.js";
+import { showToast, toastSuccess } from "./toast.js";
 
 const DEFAULT_WARNING_MINUTES = 5;
 const DEFAULT_EXTEND_MINUTES = 10;
@@ -119,6 +120,9 @@ function showExpiracaoPopup(expiration) {
           dismissed = false;
           try {
             await estenderCarrinhoTempo();
+            toastSuccess(`Carrinho estendido por mais ${extendMinutes} minutos.`);
+          } catch (error) {
+            showToast({ message: "Erro ao estender carrinho.", variant: "danger" });
           } finally {
             emitCartUpdated();
             refreshCartNotice();
@@ -132,6 +136,9 @@ function showExpiracaoPopup(expiration) {
           dismissed = false;
           try {
             await cancelarCarrinhoCompra();
+            toastSuccess("Carrinho cancelado com sucesso.");
+          } catch (error) {
+            showToast({ message: "Erro ao cancelar carrinho.", variant: "danger" });
           } finally {
             emitCartUpdated();
             refreshCartNotice();

@@ -9,7 +9,8 @@ import {
 } from "../../controller/GamzuController.js";
 import { adicionarAoCarrinho } from "../../controller/CarrinhoController.js";
 import { SYSTEM_MESSAGES, getErrorMessage } from "../../model/SystemMessages.js";
-import { initCartNotice, refreshCartNotice, showCartPopup } from "./cart-notice.js";
+import { initCartNotice, refreshCartNotice } from "./cart-notice.js";
+import { showToast, toastSuccess, toastWarning } from "./toast.js";
 
 const perfilButton = document.getElementById("perfil-btn");
 const carrinhoButton = document.getElementById("btn-carrinho");
@@ -20,9 +21,17 @@ const messagesEl = document.getElementById("chat-messages");
 const chatForm = document.getElementById("chat-form");
 const chatInput = document.getElementById("chat-input");
 const chatSend = document.getElementById("chat-send");
+const confirmModal = document.getElementById("ia-confirm-modal");
+const confirmTitle = document.getElementById("ia-confirm-title");
+const confirmMessage = document.getElementById("ia-confirm-message");
+const confirmClose = document.getElementById("ia-confirm-close");
+const confirmCancel = document.getElementById("ia-confirm-cancel");
+const confirmOk = document.getElementById("ia-confirm-ok");
 
 let produtosCatalogo = [];
 let produtosPorCodigo = new Map();
+let confirmResolver = null;
+let confirmPreviousFocus = null;
 
 function setIconContent(element, iconClass, label) {
   const icon = document.createElement("i");
@@ -78,8 +87,34 @@ function setStatus(text = "") {
   chatStatus.innerHTML = "";
   if (text) {
     setIconContent(chatStatus, "bi-info-circle", text);
+    showToast({ message: text });
   }
   chatStatus.classList.toggle("hidden", !text);
+}
+
+function closeConfirmModal(confirmed) {
+  confirmModal.classList.add("hidden");
+  const resolver = confirmResolver;
+  confirmResolver = null;
+  if (confirmPreviousFocus?.focus) {
+    confirmPreviousFocus.focus();
+  }
+  confirmPreviousFocus = null;
+  resolver?.(confirmed);
+}
+
+function openConfirmModal({ title, message, confirmLabel }) {
+  setIconContent(confirmTitle, "bi-exclamation-triangle", title);
+  confirmMessage.textContent = message;
+  setIconContent(confirmCancel, "bi-x-circle", "Cancelar");
+  setIconContent(confirmOk, "bi-arrow-clockwise", confirmLabel);
+  confirmPreviousFocus = document.activeElement;
+  confirmModal.classList.remove("hidden");
+  confirmOk.focus();
+
+  return new Promise((resolve) => {
+    confirmResolver = resolve;
+  });
 }
 
 function syncBlockedState(blocked) {
@@ -113,13 +148,6 @@ function appendTextWithLinks(container, text) {
   });
 }
 
-function closePopup() {
-  const overlay = document.getElementById("cart-popup");
-  if (overlay) {
-    overlay.classList.add("hidden");
-  }
-}
-
 async function addProdutoCarrinho(codigoProduto, button) {
   if (!codigoProduto) {
     return;
@@ -130,18 +158,14 @@ async function addProdutoCarrinho(codigoProduto, button) {
   setIconContent(button, "bi-hourglass-split", "Inserindo...");
   try {
     const resp = await adicionarAoCarrinho(codigoProduto);
-    showCartPopup({
-      title: resp?.warning ? SYSTEM_MESSAGES.general.warningTitle : "Carrinho",
-      message: resp?.warning || "Produto inserido no carrinho.",
-      actions: [{ label: SYSTEM_MESSAGES.general.close, onClick: closePopup }]
-    });
+    if (resp?.warning) {
+      toastWarning(resp.warning);
+    } else {
+      toastSuccess("Produto inserido no carrinho.");
+    }
     await refreshCartNotice();
   } catch (error) {
-    showCartPopup({
-      title: SYSTEM_MESSAGES.general.errorTitle,
-      message: getErrorMessage(error, SYSTEM_MESSAGES.carrinho.errors.addFailed),
-      actions: [{ label: SYSTEM_MESSAGES.general.close, onClick: closePopup }]
-    });
+    showToast({ message: getErrorMessage(error, SYSTEM_MESSAGES.carrinho.errors.addFailed), variant: "danger" });
   } finally {
     button.disabled = false;
     setIconContent(button, "bi-cart-plus", label);
@@ -285,13 +309,36 @@ carrinhoButton.addEventListener("click", () => {
 });
 
 novaConversaButton.addEventListener("click", () => {
-  if (!window.confirm(SYSTEM_MESSAGES.ia.warnings.newConversation)) {
+  openConfirmModal({
+    title: "Iniciar nova conversa",
+    message: SYSTEM_MESSAGES.ia.warnings.newConversation,
+    confirmLabel: "Iniciar nova conversa"
+  }).then((confirmed) => {
+    if (!confirmed) {
+      return;
+    }
+    iniciarNovaConversaGamzu();
+    syncBlockedState(false);
+    renderMessages([]);
+    chatInput.focus();
+  });
+});
+
+confirmClose.addEventListener("click", () => closeConfirmModal(false));
+confirmCancel.addEventListener("click", () => closeConfirmModal(false));
+confirmOk.addEventListener("click", () => closeConfirmModal(true));
+
+confirmModal.addEventListener("click", (event) => {
+  if (event.target === confirmModal) {
+    closeConfirmModal(false);
+  }
+});
+
+document.addEventListener("keydown", (event) => {
+  if (event.key !== "Escape" || confirmModal.classList.contains("hidden")) {
     return;
   }
-  iniciarNovaConversaGamzu();
-  syncBlockedState(false);
-  renderMessages([]);
-  chatInput.focus();
+  closeConfirmModal(false);
 });
 
 chatForm.addEventListener("submit", async (event) => {

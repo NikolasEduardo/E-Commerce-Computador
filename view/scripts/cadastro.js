@@ -4,6 +4,7 @@ import {
   registrarNovoUsuario
 } from "../../controller/CadastroController.js";
 import { SYSTEM_MESSAGES, getErrorMessage } from "../../model/SystemMessages.js";
+import { showToast, toastSuccess } from "./toast.js";
 
 const step1 = document.getElementById("step-1");
 const step2 = document.getElementById("step-2");
@@ -19,13 +20,30 @@ const emailRegex = /^[^@\s]+@[^@\s]+$/;
 const senhaRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[^A-Za-z0-9]).{8,}$/;
 
 function setMessage(text) {
-  messageBox.textContent = text;
-  messageBox.classList.toggle("is-visible", Boolean(text));
+  messageBox.textContent = "";
+  messageBox.classList.remove("is-visible");
+  if (text) {
+    showToast({ message: text });
+  }
+}
+
+function setButtonContent(button, label) {
+  const icon = button.dataset.icon;
+  button.replaceChildren();
+  if (icon) {
+    const iconEl = document.createElement("i");
+    iconEl.className = `bi ${icon}`;
+    iconEl.setAttribute("aria-hidden", "true");
+    button.append(iconEl);
+  }
+  const labelEl = document.createElement("span");
+  labelEl.textContent = label;
+  button.append(labelEl);
 }
 
 function setLoading(button, isLoading, label) {
   button.disabled = isLoading;
-  button.textContent = isLoading ? SYSTEM_MESSAGES.general.loading : label;
+  setButtonContent(button, isLoading ? SYSTEM_MESSAGES.general.loading : label);
 }
 
 function showStep(step) {
@@ -287,7 +305,7 @@ btnSubmit.addEventListener("click", async () => {
     };
 
     await registrarNovoUsuario(payload);
-    setMessage(SYSTEM_MESSAGES.cadastro.success.completed);
+    toastSuccess(SYSTEM_MESSAGES.cadastro.success.completed);
     setTimeout(() => {
       window.location.href = "../index.html";
     }, 1200);

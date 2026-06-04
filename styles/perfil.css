@@ -580,6 +580,7 @@ textarea {
   align-items: center;
   gap: 8px;
   margin: 0;
+  padding-right: 42px;
   font-size: 1.15rem;
   font-weight: 800;
 }
@@ -608,6 +609,10 @@ textarea {
 .modal-close:hover,
 .modal-close:focus-visible {
   background: var(--surface-soft);
+}
+
+.perfil-confirm-content {
+  width: min(460px, 100%);
 }
 
 @media (max-width: 1040px) {

@@ -10,7 +10,8 @@ import { carregarCarrinho } from "../../controller/CarrinhoController.js";
 import { carregarCupons } from "../../controller/CupomController.js";
 import { concluirCompra } from "../../controller/CheckoutController.js";
 import { SYSTEM_MESSAGES, getErrorMessage } from "../../model/SystemMessages.js";
-import { initCartNotice, refreshCartNotice, showCartPopup } from "./cart-notice.js";
+import { initCartNotice, refreshCartNotice } from "./cart-notice.js";
+import { queueToast, showToast, toastSuccess } from "./toast.js";
 
 const perfilButton = document.getElementById("perfil-btn");
 const carrinhoButton = document.getElementById("btn-carrinho");
@@ -245,21 +246,16 @@ function calcularFrete(cep) {
 }
 
 function showWarning(message) {
-  showCartPopup({
-    title: SYSTEM_MESSAGES.general.warningTitle,
-    message,
-    actions: [
-      {
-        label: SYSTEM_MESSAGES.general.close,
-        onClick: () => {
-          const overlay = document.getElementById("cart-popup");
-          if (overlay) {
-            overlay.classList.add("hidden");
-          }
-        }
-      }
-    ]
-  });
+  showToast({ message });
+}
+
+function setModalFeedback(element, message) {
+  if (element) {
+    element.textContent = "";
+  }
+  if (message) {
+    showToast({ message });
+  }
 }
 
 function fillSelect(select, items, labelBuilder, placeholder = "") {
@@ -822,7 +818,7 @@ function atualizarResumo() {
 }
 
 function openEnderecoModal() {
-  enderecoModalMsg.textContent = "";
+  setModalFeedback(enderecoModalMsg, "");
   endPais.value = endPais.value || "Brasil";
   enderecoModal.classList.remove("hidden");
 }
@@ -832,7 +828,7 @@ function closeEnderecoModal() {
 }
 
 function limparCartaoModal() {
-  cartaoModalMsg.textContent = "";
+  setModalFeedback(cartaoModalMsg, "");
   modalCartaoBandeira.value = modalCartaoBandeira.options[0]?.value || "";
   modalCartaoNumero.value = "";
   modalCartaoNome.value = "";
@@ -856,28 +852,33 @@ function adicionarLinhaCartaoExtra() {
   const maxExtras = getMaxCartoesExtras(restante);
 
   if (!cartoes.length) {
-    cartaoMsg.textContent = SYSTEM_MESSAGES.checkout.errors.cardRequired;
+    cartaoMsg.textContent = "";
+    showWarning(SYSTEM_MESSAGES.checkout.errors.cardRequired);
     return;
   }
 
   if (restante <= 0) {
-    cartaoMsg.textContent = SYSTEM_MESSAGES.checkout.errors.cardRemainingCovered;
+    cartaoMsg.textContent = "";
+    showWarning(SYSTEM_MESSAGES.checkout.errors.cardRemainingCovered);
     return;
   }
 
   if (maxExtras <= 0) {
-    cartaoMsg.textContent = SYSTEM_MESSAGES.checkout.errors.cardRemainingTooSmall;
+    cartaoMsg.textContent = "";
+    showWarning(SYSTEM_MESSAGES.checkout.errors.cardRemainingTooSmall);
     return;
   }
 
   if (cartoesExtras.length >= maxExtras) {
-    cartaoMsg.textContent = SYSTEM_MESSAGES.checkout.errors.cardLimitByValue;
+    cartaoMsg.textContent = "";
+    showWarning(SYSTEM_MESSAGES.checkout.errors.cardLimitByValue);
     return;
   }
 
   const disponiveis = getCartoesDisponiveisParaLinha();
   if (!disponiveis.length) {
-    cartaoMsg.textContent = SYSTEM_MESSAGES.checkout.errors.noMoreCards;
+    cartaoMsg.textContent = "";
+    showWarning(SYSTEM_MESSAGES.checkout.errors.noMoreCards);
     return;
   }
 
@@ -922,7 +923,7 @@ function construirPayloadCompra() {
 }
 
 async function salvarNovoEndereco() {
-  enderecoModalMsg.textContent = "";
+  setModalFeedback(enderecoModalMsg, "");
 
   const endereco = {
     tipoResidenciaId: endTipoResidencia.value,
@@ -948,12 +949,12 @@ async function salvarNovoEndereco() {
     !endereco.estado ||
     !endereco.pais
   ) {
-    enderecoModalMsg.textContent = SYSTEM_MESSAGES.checkout.errors.addressFieldsRequired;
+    setModalFeedback(enderecoModalMsg, SYSTEM_MESSAGES.checkout.errors.addressFieldsRequired);
     return;
   }
 
   if (!cepRegex.test(endereco.cep)) {
-    enderecoModalMsg.textContent = SYSTEM_MESSAGES.checkout.errors.cepInvalidShort;
+    setModalFeedback(enderecoModalMsg, SYSTEM_MESSAGES.checkout.errors.cepInvalidShort);
     return;
   }
 
@@ -966,8 +967,9 @@ async function salvarNovoEndereco() {
       updateEnderecoInfo();
     }
     atualizarResumo();
+    toastSuccess("Endereco cadastrado com sucesso.");
   } catch (error) {
-    enderecoModalMsg.textContent = getErrorMessage(error, SYSTEM_MESSAGES.checkout.errors.addressCreateFailed);
+    setModalFeedback(enderecoModalMsg, getErrorMessage(error, SYSTEM_MESSAGES.checkout.errors.addressCreateFailed));
   }
 }
 
@@ -991,10 +993,10 @@ function validarCartaoModal() {
 }
 
 async function salvarNovoCartao() {
-  cartaoModalMsg.textContent = "";
+  setModalFeedback(cartaoModalMsg, "");
   const erro = validarCartaoModal();
   if (erro) {
-    cartaoModalMsg.textContent = erro;
+    setModalFeedback(cartaoModalMsg, erro);
     return;
   }
 
@@ -1018,8 +1020,9 @@ async function salvarNovoCartao() {
       cartaoPrincipalSelect.value = result.id;
     }
     atualizarResumo();
+    toastSuccess("Cartao cadastrado com sucesso.");
   } catch (error) {
-    cartaoModalMsg.textContent = getErrorMessage(error, SYSTEM_MESSAGES.checkout.errors.cardCreateFailed);
+    setModalFeedback(cartaoModalMsg, getErrorMessage(error, SYSTEM_MESSAGES.checkout.errors.cardCreateFailed));
   }
 }
 
@@ -1167,6 +1170,7 @@ btnComprar.addEventListener("click", async () => {
     const payload = construirPayloadCompra();
     await concluirCompra(payload);
     await refreshCartNotice();
+    queueToast({ message: "Compra finalizada com sucesso.", variant: "success" });
     window.location.href = "./perfil.html#pedidos";
   } catch (error) {
     showWarning(getErrorMessage(error, SYSTEM_MESSAGES.checkout.errors.finishFailed));

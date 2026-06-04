@@ -2,7 +2,8 @@ import { adicionarAoCarrinho } from "../../controller/CarrinhoController.js";
 import { carregarProdutosBusca } from "../../controller/HomeController.js";
 import { carregarPerfil } from "../../controller/PerfilController.js";
 import { SYSTEM_MESSAGES, getErrorMessage } from "../../model/SystemMessages.js";
-import { initCartNotice, refreshCartNotice, showCartPopup } from "./cart-notice.js";
+import { initCartNotice, refreshCartNotice } from "./cart-notice.js";
+import { showToast, toastSuccess, toastWarning } from "./toast.js";
 
 const MAIN_CATEGORIES = [
   "PLACA DE VIDEO",
@@ -198,13 +199,6 @@ function getProdutoPreco(produto) {
   return Number(produto?.getPreco?.() ?? 0);
 }
 
-function closeCartPopup() {
-  const overlay = document.getElementById("cart-popup");
-  if (overlay) {
-    overlay.classList.add("hidden");
-  }
-}
-
 function renderSortButtons() {
   sortButtons.forEach((button) => {
     const field = button.dataset.sortField || "";
@@ -352,19 +346,13 @@ function renderProdutos(produtos) {
       try {
         const resp = await adicionarAoCarrinho(produto.codigoProduto);
         if (resp?.warning) {
-          showCartPopup({
-            title: SYSTEM_MESSAGES.general.warningTitle,
-            message: resp.warning,
-            actions: [{ label: SYSTEM_MESSAGES.general.close, onClick: closeCartPopup }]
-          });
+          toastWarning(resp.warning);
+        } else {
+          toastSuccess("Produto inserido no carrinho.");
         }
         await refreshCartNotice();
       } catch (error) {
-        showCartPopup({
-          title: SYSTEM_MESSAGES.general.errorTitle,
-          message: getErrorMessage(error, SYSTEM_MESSAGES.carrinho.errors.addFailed),
-          actions: [{ label: SYSTEM_MESSAGES.general.close, onClick: closeCartPopup }]
-        });
+        showToast({ message: getErrorMessage(error, SYSTEM_MESSAGES.carrinho.errors.addFailed), variant: "danger" });
       }
     });
 
@@ -397,6 +385,7 @@ async function carregarResultados() {
     empty.className = "empty-results";
     setIconContent(empty, "bi-exclamation-triangle", getErrorMessage(error, SYSTEM_MESSAGES.produto.errors.loadListFailed));
     resultadosList.appendChild(empty);
+    showToast({ message: getErrorMessage(error, SYSTEM_MESSAGES.produto.errors.loadListFailed), variant: "danger" });
   }
 }
 

@@ -7,6 +7,7 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
   <link rel="stylesheet" href="../../styles/busca.css">
+  <link rel="stylesheet" href="../../styles/mobile-menu.css">
   <link rel="stylesheet" href="../../styles/cart-notice.css">
 </head>
 <body>
@@ -15,9 +16,14 @@
       <a class="logo site-logo" href="./home.html" aria-label="Ir para a pagina inicial">
         <img src="../../images/logo encurtado.png" alt="Logo E-Commerce Computador">
       </a>
-      <a class="btn nav-action" href="ia.html"><i class="bi bi-stars" aria-hidden="true"></i><span>IA</span></a>
-      <button id="perfil-btn" class="btn nav-action" type="button"><i class="bi bi-person-circle" aria-hidden="true"></i><span>Perfil</span></button>
-      <button id="btn-carrinho" class="btn nav-action" type="button"><i class="bi bi-cart3" aria-hidden="true"></i><span>Carrinho</span></button>
+      <button class="mobile-menu-toggle" type="button" aria-label="Abrir menu" aria-expanded="false" aria-controls="busca-mobile-menu" data-bs-toggle="collapse" data-bs-target="#busca-mobile-menu">
+        <i class="bi bi-list" aria-hidden="true"></i>
+      </button>
+      <nav id="busca-mobile-menu" class="client-nav-menu collapse" aria-label="Menu do cliente">
+        <a class="btn nav-action" href="ia.html"><i class="bi bi-stars" aria-hidden="true"></i><span>IA</span></a>
+        <button id="perfil-btn" class="btn nav-action" type="button"><i class="bi bi-person-circle" aria-hidden="true"></i><span>Perfil</span></button>
+        <button id="btn-carrinho" class="btn nav-action" type="button"><i class="bi bi-cart3" aria-hidden="true"></i><span>Carrinho</span></button>
+      </nav>
     </header>
 
     <main class="busca-main">
@@ -26,6 +32,9 @@
           <span class="input-group-text" aria-hidden="true"><i class="bi bi-search"></i></span>
           <input id="busca-input" class="form-control busca-input" type="text" placeholder="Pesquisar produtos">
         </div>
+        <button class="btn filters-toggle" type="button" aria-expanded="false" aria-controls="filters-panel" data-bs-toggle="collapse" data-bs-target="#filters-panel">
+          <i class="bi bi-list" aria-hidden="true"></i><span>Filtros</span>
+        </button>
         <div class="sort-panel" aria-label="Classificar produtos">
           <span class="sort-title"><i class="bi bi-arrow-down-up" aria-hidden="true"></i>Classificar por</span>
           <button class="btn sort-button" type="button" data-sort-field="popularidade" data-label="Popularidade" data-icon="bi-fire"><i class="bi bi-fire" aria-hidden="true"></i><span>Popularidade</span></button>
@@ -35,7 +44,7 @@
       </section>
 
       <section class="busca-content">
-        <aside class="filters-panel">
+        <aside id="filters-panel" class="filters-panel collapse">
           <h2><i class="bi bi-sliders" aria-hidden="true"></i><span>Filtrar por</span></h2>
 
           <div class="filter-group">
@@ -78,6 +87,7 @@
     </main>
   </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   <script type="module" src="../scripts/busca.js"></script>
 </body>
 </html>
