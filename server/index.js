@@ -45,7 +45,7 @@ const cpfRegex = /^\d{3}\.\d{3}\.\d{3}-\d{2}$/;
 const cepRegex = /^\d{5}-\d{3}$/;
 const TIPO_ENDERECO_PRINCIPAL = "Principal";
 const TIPO_ENDERECO_SECUNDARIO = "Secundario";
-const CARRINHO_STATUS_ID = "657ec9e6e2e743268c7afe6aeb0db479";
+const CARRINHO_STATUS_ID = "657ec9e6e2e743268c7afe6aeb0db479"; //trocar após repassar o banco de dados para outro, id do status carrinho é gerada aleatóriamente
 const CARRINHO_EXPIRACAO_MIN = 30; //30 min
 const CARRINHO_AVISO_MIN = 5; //5 min
 const CARRINHO_ESTENDER_MIN = 10; //10 min
@@ -1355,15 +1355,186 @@ function getGraficoBucketKey(tipo, data) {
   return data.getDate();
 }
 
+function formatDateKey(data) {
+  const ano = data.getFullYear();
+
+  const mes =
+    String(data.getMonth() + 1)
+      .padStart(2, "0");
+
+  const dia =
+    String(data.getDate())
+      .padStart(2, "0");
+
+  return `${ano}-${mes}-${dia}`;
+}
+
 async function fetchVendasGrafico(accessToken, filtros = {}) {
-  const tipo = ["ano", "dia"].includes(`${filtros.tipo || ""}`.toLowerCase())
-    ? `${filtros.tipo}`.toLowerCase()
-    : "mes";
-  const periodo = getGraficoPeriodo(tipo, filtros);
+  const meses = [
+    "JAN","FEV","MAR","ABR","MAI","JUN",
+    "JUL","AGO","SET","OUT","NOV","DEZ"
+  ];
+
   const produtoId = `${filtros.produtoId || ""}`.trim();
   const categoriaId = `${filtros.categoriaId || ""}`.trim();
-  const pontos = criarPontosGrafico(tipo, periodo);
-  const pontosPorKey = new Map(pontos.map((ponto) => [ponto.key, ponto]));
+
+  function parseLocalDate(dataStr) {
+    const [ano, mes, dia] = dataStr
+      .split("-")
+      .map(Number);
+
+    return new Date(
+      ano,
+      mes - 1,
+      dia,
+      0,
+      0,
+      0,
+      0
+    );
+  }
+
+  const dataInicial = parseLocalDate(filtros.dataInicial);
+
+  const dataFinal = parseLocalDate(filtros.dataFinal);
+
+  if (
+    Number.isNaN(dataInicial.getTime()) ||
+    Number.isNaN(dataFinal.getTime())
+  ) {
+    throw new Error("Periodo invalido.");
+  }
+
+  dataInicial.setHours(0, 0, 0, 0);
+  dataFinal.setHours(23, 59, 59, 999);
+
+  if (dataFinal < dataInicial) {
+    throw new Error("Data final menor que a inicial.");
+  }
+
+  const diasPeriodo =
+    Math.floor(
+      (dataFinal.getTime() - dataInicial.getTime()) /
+      86400000
+    ) + 1;
+
+  let modo;
+
+  if (diasPeriodo === 1) {
+    modo = "hora";
+  } else if (diasPeriodo <= 40) {
+    modo = "dia";
+  } else {
+    modo = "mes";
+  }
+
+  const pontos = [];
+  const pontosPorKey = new Map();
+
+  if (modo === "hora") {
+    for (let hora = 0; hora < 24; hora += 1) {
+      const ponto = {
+        key: hora,
+        label: `${String(hora).padStart(2, "0")}h`,
+        valor: 0
+      };
+
+      pontos.push(ponto);
+      pontosPorKey.set(hora, ponto);
+    }
+  }
+
+  else if (modo === "dia") {
+
+    const cursor = new Date(dataInicial);
+
+    while (cursor <= dataFinal) {
+
+      const key =
+        formatDateKey(cursor);
+
+      const ponto = {
+        key,
+        label:
+          `${String(cursor.getDate()).padStart(2, "0")}/${meses[cursor.getMonth()]}`,
+        valor: 0
+      };
+
+      pontos.push(ponto);
+      pontosPorKey.set(key, ponto);
+
+      cursor.setDate(cursor.getDate() + 1);
+    }
+  }
+
+  else {
+
+    const inicioMes =
+      new Date(
+        dataInicial.getFullYear(),
+        dataInicial.getMonth(),
+        1
+      );
+
+    const fimMes =
+      new Date(
+        dataFinal.getFullYear(),
+        dataFinal.getMonth(),
+        1
+      );
+
+    let quantidadeMeses =
+      (fimMes.getFullYear() - inicioMes.getFullYear()) * 12 +
+      (fimMes.getMonth() - inicioMes.getMonth()) + 1;
+
+    if (quantidadeMeses > 18) {
+      throw new Error(
+        "O periodo nao pode ultrapassar 18 meses."
+      );
+    }
+
+    const cursor = new Date(inicioMes);
+
+    let indice = 0;
+
+    while (cursor <= fimMes) {
+
+      const key =
+        `${cursor.getFullYear()}-${cursor.getMonth() + 1}`;
+
+      let label;
+
+      if (indice === 0) {
+        label =
+          `${String(dataInicial.getDate()).padStart(2, "0")}/${meses[cursor.getMonth()]}-${String(cursor.getFullYear()).slice(-2)}`;
+      }
+
+      else if (
+        cursor.getFullYear() === fimMes.getFullYear() &&
+        cursor.getMonth() === fimMes.getMonth()
+      ) {
+        label =
+          `${String(dataFinal.getDate()).padStart(2, "0")}/${meses[cursor.getMonth()]}-${String(cursor.getFullYear()).slice(-2)}`;
+      }
+
+      else {
+        label =
+          `${meses[cursor.getMonth()]}-${String(cursor.getFullYear()).slice(-2)}`;
+      }
+
+      const ponto = {
+        key,
+        label,
+        valor: 0
+      };
+
+      pontos.push(ponto);
+      pontosPorKey.set(key, ponto);
+
+      cursor.setMonth(cursor.getMonth() + 1);
+      indice++;
+    }
+  }
 
   const query = `
     query VendasGrafico($inicio: Timestamp!, $fim: Timestamp!) {
@@ -1371,7 +1542,7 @@ async function fetchVendasGrafico(accessToken, filtros = {}) {
         where: {
           _and: [
             { dataCriacao: { ge: $inicio } },
-            { dataCriacao: { lt: $fim } },
+            { dataCriacao: { le: $fim } },
             { status: { nome: { ne: "CARRINHO" } } },
             { status: { nome: { ne: "REPROVADA" } } }
           ]
@@ -1381,16 +1552,15 @@ async function fetchVendasGrafico(accessToken, filtros = {}) {
       ) {
         id
         dataCriacao
-        status { nome }
         itemPedidos_on_pedido {
           quantidade
           produtoId
           produto {
             id
-            nome
-            modelo
             produtoCategorias_on_produto {
-              categoria { id nome }
+              categoria {
+                id
+              }
             }
           }
         }
@@ -1398,52 +1568,91 @@ async function fetchVendasGrafico(accessToken, filtros = {}) {
     }
   `;
 
-  const data = await executeGraphql(accessToken, query, {
-    inicio: periodo.inicio.toISOString(),
-    fim: periodo.fim.toISOString()
-  });
+  const data = await executeGraphql(
+    accessToken,
+    query,
+    {
+      inicio: dataInicial.toISOString(),
+      fim: dataFinal.toISOString()
+    }
+  );
 
   let total = 0;
+
   (data?.pedidos || []).forEach((pedido) => {
-    const dataPedido = new Date(pedido?.dataCriacao || "");
-    if (Number.isNaN(dataPedido.getTime())) {
-      return;
+
+    const dataPedido =
+      new Date(pedido.dataCriacao);
+
+    let bucketKey;
+
+    if (modo === "hora") {
+      bucketKey = dataPedido.getHours();
     }
 
-    const bucket = pontosPorKey.get(getGraficoBucketKey(tipo, dataPedido));
+    else if (modo === "dia") {
+      bucketKey =
+        formatDateKey(dataPedido);
+    }
+
+    else {
+      bucketKey =
+        `${dataPedido.getFullYear()}-${dataPedido.getMonth() + 1}`;
+    }
+
+    const bucket =
+      pontosPorKey.get(bucketKey);
+
     if (!bucket) {
       return;
     }
 
-    (pedido?.itemPedidos_on_pedido || []).forEach((item) => {
-      const produto = item?.produto || {};
-      if (produtoId && produto.id !== produtoId && item?.produtoId !== produtoId) {
-        return;
-      }
+    (pedido.itemPedidos_on_pedido || []).forEach((item) => {
+
+      const produto = item.produto || {};
+
       if (
-        categoriaId &&
-        !(produto?.produtoCategorias_on_produto || []).some(
-          (produtoCategoria) => produtoCategoria?.categoria?.id === categoriaId
-        )
+        produtoId &&
+        produto.id !== produtoId &&
+        item.produtoId !== produtoId
       ) {
         return;
       }
 
-      const quantidade = Math.max(0, Number(item?.quantidade || 0));
+      if (
+        categoriaId &&
+        !(produto.produtoCategorias_on_produto || [])
+          .some(
+            (pc) =>
+              pc?.categoria?.id === categoriaId
+          )
+      ) {
+        return;
+      }
+
+      const quantidade =
+        Number(item.quantidade || 0);
+
       bucket.valor += quantidade;
       total += quantidade;
     });
   });
 
   return {
-    tipo,
+    modo,
+    total,
     filtros: {
-      ...periodo.filtros,
+      dataInicial: filtros.dataInicial,
+      dataFinal: filtros.dataFinal,
       produtoId,
       categoriaId
     },
-    total,
-    pontos: pontos.map(({ label, valor }) => ({ label, valor }))
+    pontos: pontos.map(
+      ({ label, valor }) => ({
+        label,
+        valor
+      })
+    )
   };
 }
 
@@ -5409,10 +5618,8 @@ const server = http.createServer(async (req, res) => {
     try {
       const accessToken = await getAccessToken();
       const data = await fetchVendasGrafico(accessToken, {
-        tipo: url.searchParams.get("tipo") || "mes",
-        ano: url.searchParams.get("ano"),
-        mes: url.searchParams.get("mes"),
-        dia: url.searchParams.get("dia"),
+        dataInicial: url.searchParams.get("dataInicial"),
+        dataFinal: url.searchParams.get("dataFinal"),
         produtoId: url.searchParams.get("produtoId"),
         categoriaId: url.searchParams.get("categoriaId")
       });
@@ -5881,7 +6088,7 @@ const server = http.createServer(async (req, res) => {
       }
 
       const agora = new Date();
-      const dataEntrada = agora.toISOString().split("T")[0];
+      const dataEntrada = formatDateKey(agora);
       const dataRestoque = agora.toISOString();
       const quantidadeFinal = Math.round(quantidade);
 

@@ -120,12 +120,8 @@ const entradasList = document.getElementById("entradasList");
 const metasMessage = document.getElementById("metas-message");
 const metasList = document.getElementById("metasList");
 const btnSaveMetas = document.getElementById("btn-save-metas");
-const graficoTipoSelect = document.getElementById("grafico-tipo");
-const graficoDiaField = document.getElementById("grafico-dia-field");
-const graficoMesField = document.getElementById("grafico-mes-field");
-const graficoDiaInput = document.getElementById("grafico-dia");
-const graficoMesSelect = document.getElementById("grafico-mes");
-const graficoAnoInput = document.getElementById("grafico-ano");
+const graficoDataInicialInput = document.getElementById("grafico-data-inicial");
+const graficoDataFinalInput = document.getElementById("grafico-data-final");
 const graficoProdutoSelect = document.getElementById("grafico-produto");
 const graficoCategoriaSelect = document.getElementById("grafico-categoria");
 const btnGraficoCarregar = document.getElementById("btn-grafico-carregar");
@@ -1261,82 +1257,59 @@ function setGraficoMessage(text = "") {
   }
 }
 
+function formatDateKey(data) {
+  const ano = data.getFullYear();
+
+  const mes =
+    String(data.getMonth() + 1)
+      .padStart(2, "0");
+
+  const dia =
+    String(data.getDate())
+      .padStart(2, "0");
+
+  return `${ano}-${mes}-${dia}`;
+}
+
 function initGraficoDefaults() {
-  if (!graficoAnoInput || !graficoMesSelect || !graficoDiaInput) {
-    return;
-  }
-
   const hoje = new Date();
-  graficoAnoInput.value = hoje.getFullYear();
-  graficoMesSelect.value = String(hoje.getMonth() + 1);
-  graficoDiaInput.value = hoje.getDate();
-  updateGraficoDateFields();
-}
 
-function getDiasGraficoMes() {
-  const ano = Number.parseInt(graficoAnoInput?.value || new Date().getFullYear(), 10);
-  const mes = Number.parseInt(graficoMesSelect?.value || new Date().getMonth() + 1, 10);
-  return new Date(ano, mes, 0).getDate();
-}
+  const primeiroDiaMes = new Date(
+    hoje.getFullYear(),
+    hoje.getMonth(),
+    1
+  );
 
-function updateGraficoDateFields() {
-  const tipo = graficoTipoSelect?.value || "mes";
-  graficoDiaField?.classList.toggle("hidden", tipo !== "dia");
-  graficoMesField?.classList.toggle("hidden", tipo === "ano");
+  graficoDataInicialInput.value =
+    formatDateKey(primeiroDiaMes);
 
-  if (graficoDiaInput) {
-    const dias = getDiasGraficoMes();
-    graficoDiaInput.max = String(dias);
-    const diaAtual = Number.parseInt(graficoDiaInput.value || "1", 10);
-    if (!Number.isInteger(diaAtual) || diaAtual < 1 || diaAtual > dias) {
-      graficoDiaInput.value = String(Math.min(dias, Math.max(1, diaAtual || 1)));
-    }
-  }
+  graficoDataFinalInput.value =
+    formatDateKey(hoje);
 }
 
 function getGraficoParams() {
-  const tipo = graficoTipoSelect?.value || "mes";
-  const params = {
-    tipo,
-    ano: graficoAnoInput?.value || new Date().getFullYear(),
+  return {
+    dataInicial: graficoDataInicialInput?.value || "",
+    dataFinal: graficoDataFinalInput?.value || "",
     produtoId: graficoProdutoSelect?.value || "",
     categoriaId: graficoCategoriaSelect?.value || ""
   };
-
-  if (tipo !== "ano") {
-    params.mes = graficoMesSelect?.value || new Date().getMonth() + 1;
-  }
-  if (tipo === "dia") {
-    params.dia = graficoDiaInput?.value || new Date().getDate();
-  }
-
-  return params;
 }
 
 function getGraficoPeriodoLabel(data) {
   const filtros = data?.filtros || {};
-  const meses = [
-    "JANEIRO",
-    "FEVEREIRO",
-    "MARCO",
-    "ABRIL",
-    "MAIO",
-    "JUNHO",
-    "JULHO",
-    "AGOSTO",
-    "SETEMBRO",
-    "OUTUBRO",
-    "NOVEMBRO",
-    "DEZEMBRO"
-  ];
 
-  if (data?.tipo === "ano") {
-    return `ANO ${filtros.ano}`;
+  if (!filtros.dataInicial || !filtros.dataFinal) {
+    return "PERIODO";
   }
-  if (data?.tipo === "dia") {
-    return `${String(filtros.dia).padStart(2, "0")} DE ${meses[(filtros.mes || 1) - 1]} DE ${filtros.ano}`;
-  }
-  return `${meses[(filtros.mes || 1) - 1]} DE ${filtros.ano}`;
+
+  const formatar = (dataString) => {
+    const [ano, mes, dia] = dataString.split("-");
+
+    return `${dia}/${mes}/${ano}`;
+  };
+
+  return `${formatar(filtros.dataInicial)} até ${formatar(filtros.dataFinal)}`;
 }
 
 function desenharGraficoVendas(data) {
@@ -2464,18 +2437,6 @@ navGraficos.addEventListener("click", async () => {
   } catch (error) {
     setGraficoMessage(getErrorMessage(error, SYSTEM_MESSAGES.admin.errors.loadGraficosFailed));
   }
-});
-
-graficoTipoSelect?.addEventListener("change", () => {
-  updateGraficoDateFields();
-});
-
-graficoMesSelect?.addEventListener("change", () => {
-  updateGraficoDateFields();
-});
-
-graficoAnoInput?.addEventListener("change", () => {
-  updateGraficoDateFields();
 });
 
 btnGraficoCarregar?.addEventListener("click", async () => {
